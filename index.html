@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="unsafe-url" />
+    <title>AfriTranslate AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      html {
+        scroll-behavior: smooth;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Poppins', 'sans-serif'],
+            },
+            colors: {
+              // Landing Page Palette
+              'brand-primary': '#F4A300', // gold
+              'brand-secondary': '#008037', // deep green
+              'brand-bg': '#1C160C', // very dark brown
+              'brand-surface': '#2D1E0E', // deep brown
+              'brand-text-primary': '#FDF8F2', // warm beige/off-white
+              'brand-text-secondary': '#A99F91', // muted beige for secondary text
+              
+              // App Theme Palette
+              'bg-main': '#121212',
+              'bg-surface': '#1E1E1E',
+              'border-default': '#333333',
+              'text-primary': '#E0E0E0',
+              'text-secondary': '#A0A0A0',
+              'accent': '#F4A300',
+            },
+            animation: {
+              'fade-in': 'fadeIn 0.5s ease-out forwards',
+              'slide-in-up': 'slideInUp 0.8s ease-out forwards',
+              'pulse-warm': 'pulseWarm 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              fadeIn: {
+                '0%': { opacity: 0 },
+                '100%': { opacity: 1 },
+              },
+              slideInUp: {
+                '0%': { opacity: 0, transform: 'translateY(30px)' },
+                '100%': { opacity: 1, transform: 'translateY(0)' },
+              },
+              pulseWarm: {
+                '50%': { opacity: .5 },
+              },
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.1.1",
+    "react-dom/client": "https://esm.sh/react-dom@^19.1.1/client",
+    "react/": "https://esm.sh/react@^19.1.1/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.15.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.1/"
+  }
+}
+</script>
+</head>
+  <body class="font-sans antialiased">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

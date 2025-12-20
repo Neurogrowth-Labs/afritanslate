@@ -1,0 +1,8 @@
+{
+  "name": "AfriTranslate AI",
+  "description": "AfriTranslate AI is a localized AI translator chatbot that performs real-time, culturally nuanced translations between global and African languages, with an emphasis on tone, regional expressions, idioms, and social norms.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}

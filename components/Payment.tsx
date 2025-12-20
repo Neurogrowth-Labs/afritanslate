@@ -1,0 +1,180 @@
+
+
+import React, { useState } from 'react';
+import { AFRITRANSLATE_MODELS, ADD_ONS } from '../constants';
+import { PayPalIcon, BankIcon, VisaIcon, MastercardIcon, AmexIcon } from './Icons';
+
+interface PaymentProps {
+    selectedItemName: string | null;
+    onBack: () => void;
+    onPaymentSuccess: (planName: string) => void;
+}
+
+const Spinner = () => <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
+
+const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSuccess }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'eft'>('card');
+
+    const planDetails = AFRITRANSLATE_MODELS.find(p => p.name === selectedItemName);
+    const addonDetails = ADD_ONS.find(a => a.name === selectedItemName);
+    const itemDetails = planDetails || addonDetails;
+    
+    if (!itemDetails) {
+        return (
+            <div className="max-w-3xl mx-auto py-12 text-center">
+                <h1 className="text-3xl font-bold text-text-primary mb-4">Purchase Item Not Found</h1>
+                <p className="text-text-secondary">The selected plan or add-on could not be found.</p>
+                <button onClick={onBack} className="mt-6 text-sm text-accent hover:underline font-semibold">
+                    &larr; Return to Pricing
+                </button>
+            </div>
+        );
+    }
+
+    const handleCardPayment = () => {
+        setIsLoading(true);
+        // Simulate API call for payment processing
+        setTimeout(() => {
+            if (selectedItemName) {
+                onPaymentSuccess(selectedItemName);
+            }
+            setIsLoading(false);
+        }, 2000);
+    };
+
+    const handlePayPalRedirect = () => {
+        setIsLoading(true);
+        
+        if (selectedItemName === 'Basic') {
+            window.open('https://www.paypal.com/ncp/payment/G636NNWVFJWLL', '_blank');
+        } else if (selectedItemName === 'Premium') {
+            window.open('https://www.paypal.com/ncp/payment/SPPVW8Q2PLRBN', '_blank');
+        } else {
+            // In a real app, you'd generate a payment link on the backend and redirect.
+            // For this demo, we'll just open PayPal's site and simulate success for other items.
+            window.open('https://www.paypal.com/signin', '_blank');
+        }
+
+        setTimeout(() => {
+             if (selectedItemName) {
+                onPaymentSuccess(selectedItemName);
+            }
+            setIsLoading(false);
+        }, 2500);
+    }
+
+    const price = 'price' in itemDetails ? itemDetails.price : undefined;
+    
+    return (
+        <div className="max-w-3xl mx-auto py-8 px-4 sm:px-0">
+            <div className="text-center mb-8">
+                <h1 className="text-3xl sm:text-4xl font-bold text-text-primary">Complete Your Purchase</h1>
+                <p className="text-lg text-text-secondary mt-2">You are purchasing the <span className="font-bold text-accent">{itemDetails.name}</span>.</p>
+            </div>
+            
+            <div className="bg-bg-surface p-4 sm:p-8 rounded-xl border border-border-default">
+                <div className="mb-6 pb-6 border-b border-border-default">
+                    <h2 className="text-xl font-semibold text-white">Order Summary</h2>
+                    <div className="flex justify-between items-center mt-4">
+                        <p className="text-text-primary">{itemDetails.name}</p>
+                        <p className="text-2xl font-bold text-white">{price}</p>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 className="text-xl font-semibold text-white mb-4">Payment Method</h2>
+                    
+                    {/* Payment Method Tabs */}
+                    <div className="flex flex-wrap border-b border-border-default mb-6">
+                        <button onClick={() => setPaymentMethod('card')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'card' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
+                            Card
+                        </button>
+                        <button onClick={() => setPaymentMethod('paypal')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'paypal' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
+                            <PayPalIcon className="w-5 h-5" />
+                            PayPal
+                        </button>
+                         <button onClick={() => setPaymentMethod('eft')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'eft' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
+                            <BankIcon className="w-5 h-5" />
+                            EFT / Bank
+                        </button>
+                    </div>
+
+                    {paymentMethod === 'card' && (
+                        <div className="space-y-4 animate-fade-in">
+                            <div className="p-4 rounded-lg bg-amber-900/50 border border-amber-700 text-amber-300 text-sm">
+                                <strong>Note:</strong> This is a UI demonstration. Card details are not collected. Clicking "Pay" will simulate a successful transaction.
+                            </div>
+                            <div>
+                                <label className="text-sm font-medium text-text-primary mb-1 block">Card Information</label>
+                                {/* This is the secure field placeholder */}
+                                <div className="bg-bg-main border border-border-default rounded-lg p-0 overflow-hidden">
+                                    <div className="p-3 flex items-center justify-between border-b border-border-default">
+                                        <span className="flex items-center gap-3 text-text-secondary">
+                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 21z" /></svg>
+                                            <span>Card number</span>
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <VisaIcon className="w-7"/>
+                                            <MastercardIcon className="w-7"/>
+                                            <AmexIcon className="w-7"/>
+                                        </div>
+                                    </div>
+                                    <div className="flex">
+                                        <div className="flex-1 p-3 text-text-secondary">Expiration date</div>
+                                        <div className="flex-1 p-3 text-text-secondary border-l border-border-default">CVC</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button 
+                                onClick={handleCardPayment} 
+                                disabled={isLoading}
+                                className="w-full py-3 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 transition-colors disabled:bg-border-default disabled:cursor-wait flex items-center justify-center"
+                            >
+                                {isLoading ? <Spinner /> : `Pay ${price}`}
+                            </button>
+                        </div>
+                    )}
+
+                    {paymentMethod === 'paypal' && (
+                        <div className="text-center p-4 animate-fade-in">
+                            <p className="text-text-secondary mb-6">You will be redirected to PayPal to complete your purchase securely. Once finished, you will be brought back to AfriTranslate AI.</p>
+                             <button 
+                                onClick={handlePayPalRedirect} 
+                                disabled={isLoading}
+                                className="w-full max-w-xs py-3 bg-[#0070BA] text-white font-semibold rounded-lg hover:bg-[#005ea6] transition-colors disabled:bg-border-default disabled:cursor-wait flex items-center justify-center"
+                            >
+                                {isLoading ? <Spinner /> : `Continue with PayPal`}
+                            </button>
+                        </div>
+                    )}
+                    
+                    {paymentMethod === 'eft' && (
+                         <div className="p-4 bg-bg-main border border-border-default rounded-lg animate-fade-in">
+                            <h3 className="font-semibold text-white mb-2">Electronic Funds Transfer (EFT) Details</h3>
+                            <p className="text-sm text-text-secondary mb-4">Please use the following details to make your payment. Use your email address as the payment reference.</p>
+                            <div className="space-y-2 text-sm">
+                                <p><strong className="text-text-primary w-28 inline-block">Bank Name:</strong> First National Bank of Culture</p>
+                                <p><strong className="text-text-primary w-28 inline-block">Account Name:</strong> AfriTranslate AI Inc.</p>
+                                <p><strong className="text-text-primary w-28 inline-block">Account No:</strong> 1234567890</p>
+                                <p><strong className="text-text-primary w-28 inline-block">Branch Code:</strong> 098765</p>
+                                <p><strong className="text-text-primary w-28 inline-block">Reference:</strong> Your Account Email</p>
+                            </div>
+                            <p className="text-xs text-text-secondary mt-4">Once payment is complete, please email proof of payment to <span className="text-accent">billing@afritranslate.ai</span>. Your plan will be activated within 24 hours.</p>
+                        </div>
+                    )}
+
+                </div>
+            </div>
+
+            <div className="text-center mt-6">
+                 <button onClick={onBack} className="text-sm text-text-secondary hover:text-white hover:underline">
+                    &larr; Back to Pricing
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default Payment;
