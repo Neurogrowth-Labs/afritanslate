@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { LibraryItem, User, LibraryItemType, UserPlan } from '../types';
 import { LANGUAGES, TONES } from '../constants';
@@ -40,7 +41,8 @@ const Dashboard: React.FC<{ users: User[], library: LibraryItem[] }> = ({ users,
         }, {} as Record<UserPlan, number>);
     }, [users]);
     
-    const recentUsers = useMemo(() => [...users].sort((a,b) => b.id - a.id).slice(0, 5), [users]);
+    // FIX: User IDs are strings and cannot be subtracted. Using `localeCompare` for sorting.
+    const recentUsers = useMemo(() => [...users].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 5), [users]);
     const recentItems = useMemo(() => [...library].sort((a,b) => b.id - a.id).slice(0, 5), [library]);
 
     return (
@@ -250,10 +252,9 @@ const UserManager: React.FC<{ users: User[] }> = ({ users }) => {
     );
 };
 
-// FIX: Defined the ITEM_TYPES constant.
-const ITEM_TYPES: LibraryItemType[] = ['Proverb', 'Idiom', 'Word', 'Phrase', 'Sentence', 'Paragraph'];
-
 const LibraryForm: React.FC<{ item: LibraryItem | Omit<LibraryItem, 'id'>, onSave: (data: any) => void, onClose: () => void }> = ({ item, onSave, onClose }) => {
+    // FIX: Defined the ITEM_TYPES constant.
+    const ITEM_TYPES: LibraryItemType[] = ['Proverb', 'Idiom', 'Word', 'Phrase', 'Sentence', 'Paragraph'];
     const isEditing = 'id' in item && item.id > 0;
     const [formData, setFormData] = useState<Omit<LibraryItem, 'id'>>({
         type: 'Proverb', text: '', meaning: '', source: 'en', target: 'sw', tone: 'Friendly', audioUrl: undefined,

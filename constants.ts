@@ -199,25 +199,6 @@ export const TONES: Tone[] = [
   { name: 'Diplomatic', emoji: '🤝', description: 'Tactful, polite, and careful for sensitive topics.' },
 ];
 
-export const DEFAULT_LIBRARY_ITEMS: LibraryItem[] = [
-    { id: 1, type: 'Proverb', text: "A roaring lion kills no game.", source: 'en', target: 'zu', tone: 'Poetic', meaning: "You cannot achieve anything by just talking about it; action is required." },
-    { id: 2, type: 'Proverb', text: "The ruin of a nation begins in the homes of its people.", source: 'en', target: 'sw', tone: 'Formal', meaning: "Societal collapse starts with the breakdown of family values and structures." },
-    { id: 3, type: 'Proverb', text: "If you want to go fast, go alone. If you want to go far, go together.", source: 'en', target: 'ha', tone: 'Friendly', meaning: "Collaboration and teamwork are essential for long-term success, even if individual work is quicker." },
-    { id: 4, type: 'Proverb', text: "A single bracelet does not jingle.", source: 'en', target: 'yo', tone: 'Poetic', meaning: "Teamwork and collaboration are necessary to achieve a significant impact." },
-    { id: 5, type: 'Proverb', text: "Wisdom is like a baobab tree; no one individual can embrace it.", source: 'en', target: 'ak', tone: 'Formal', meaning: "No single person can know everything; knowledge is collective and vast." },
-    { id: 6, type: 'Idiom', text: "He who is bitten by a snake fears a lizard.", source: 'en', target: 'ig', tone: 'Informal', meaning: "A bad experience can make someone overly cautious in the future." },
-    { id: 7, type: 'Idiom', text: "The best way to eat an elephant is to cut him up into pieces.", source: 'en', target: 'xh', tone: 'Humorous', meaning: "A large and daunting task can be accomplished by breaking it down into smaller, manageable parts." },
-    { id: 8, type: 'Proverb', text: "A wise person will always find a way.", source: 'en', target: 'rw', tone: 'Formal', meaning: "Intelligence and wisdom can overcome any obstacle." },
-    { id: 9, type: 'Proverb', text: "Do not call the forest that shelters you a jungle.", source: 'en', target: 'sn', tone: 'Poetic', meaning: "Do not disrespect or undervalue those who provide for and protect you." },
-    { id: 10, type: 'Proverb', text: "A bird that flies off the earth and lands on an anthill is still on the ground.", source: 'en', target: 'yo', tone: 'Poetic', meaning: "A superficial change in status or position does not alter one's fundamental nature or situation." },
-    { id: 11, type: 'Proverb', text: "The chameleon changes color to match the earth, the earth does not change color to match the chameleon.", source: 'en', target: 'sw', tone: 'Formal', meaning: "One must adapt to their environment and circumstances, not expect the world to adapt to them." },
-    { id: 12, type: 'Proverb', text: "A child's hand cannot reach the shelf, nor can an adult's hand enter the gourd.", source: 'en', target: 'ha', tone: 'Friendly', meaning: "Everyone, regardless of age or status, has unique abilities and limitations." },
-    { id: 13, type: 'Proverb', text: "The moon moves slowly, but it crosses the town.", source: 'en', target: 'ig', tone: 'Poetic', meaning: "Patience and persistence will eventually lead to achieving your goals, no matter how slow progress seems." },
-    { id: 14, type: 'Idiom', text: "Only a fool tests the depth of the water with both feet.", source: 'en', target: 'ak', tone: 'Informal', meaning: "It is wise to be cautious and not risk everything at once without knowing the situation." },
-    { id: 15, type: 'Proverb', text: "When the music changes, so does the dance.", source: 'en', target: 'zu', tone: 'Friendly', meaning: "One must be adaptable and change their approach when circumstances change." },
-];
-
-
 export const AFRITRANSLATE_MODELS: AfriTranslateModel[] = [
   { 
     name: 'Free', 

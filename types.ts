@@ -6,7 +6,7 @@ export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' 
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
-export type View = 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials';
+export type View = 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion';
 
 export type MeetingMode = 'live' | 'upload';
 
@@ -45,11 +45,9 @@ export interface GroundingSource {
 
 export interface ChatMessage {
   id: number;
+  conversation_id: number;
   role: 'user' | 'ai';
   originalText: string;
-  sourceLang: string;
-  targetLang: string;
-  tone: string;
   translation?: TranslationResult;
   rating?: 'good' | 'bad';
   attachments?: MessageAttachment[];
@@ -57,6 +55,7 @@ export interface ChatMessage {
   imageURL?: string;
   originalAudioFileName?: string;
   isOfflineTranslation?: boolean;
+  created_at: string;
 }
 
 export interface AfriTranslateModel {
@@ -68,11 +67,13 @@ export interface AfriTranslateModel {
 
 export interface Conversation {
   id: number;
+  user_id: string;
   title: string;
   messages: ChatMessage[];
   sourceLang: string;
   targetLang: string;
   tone: string;
+  created_at: string;
 }
 
 export interface AddOn {
@@ -101,10 +102,9 @@ export type UserPlan = 'Free' | 'Basic' | 'Premium' | 'Training' | 'Entreprise';
 export type UserRole = 'user' | 'admin';
 
 export interface User {
-  id: number;
+  id: string; // Supabase auth user id (UUID)
   name: string;
   email: string;
-  password: string; // In a real app, this would be a hash
   role: UserRole;
   plan: UserPlan;
 }

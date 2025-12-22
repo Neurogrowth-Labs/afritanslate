@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, Fragment } from 'react';
 import type { Conversation, User, TranslationMode, View } from '../types';
 import { ADD_ONS, FOOTER_LINKS } from '../constants';
@@ -31,9 +30,7 @@ const PlayIcon = () => (
 );
 
 interface SidebarProps {
-    // FIX: Changed Conversation[] to (Omit<Conversation, 'messages'>)[] to match the prop passed from App.tsx.
-    // The sidebar list does not need the 'messages' property.
-    conversations: (Omit<Conversation, 'messages'>)[];
+    conversations: Conversation[];
     currentConversationId: number | null;
     currentView: View;
     currentMode: TranslationMode;

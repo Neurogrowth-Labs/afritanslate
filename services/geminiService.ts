@@ -1,5 +1,4 @@
 
-
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { TranslationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle } from '../types';
 
@@ -259,6 +258,44 @@ export async function textToSpeech(text: string): Promise<string> {
         return response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || '';
     } catch (error) {
         throw handleApiError(error, "generating speech");
+    }
+}
+
+// --- Video Generation Service --- //
+
+export async function startVideoGeneration(prompt: string, imageFile?: File, config?: { resolution?: '720p' | '1080p', aspectRatio?: '16:9' | '9:16' }) {
+    try {
+        const localAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        let imagePart = undefined;
+        if (imageFile) {
+            const part = await fileToGenerativePart(imageFile);
+            imagePart = {
+                imageBytes: part.inlineData.data,
+                mimeType: part.inlineData.mimeType,
+            };
+        }
+
+        return await localAi.models.generateVideos({
+            model: 'veo-3.1-fast-generate-preview',
+            prompt,
+            image: imagePart,
+            config: {
+                numberOfVideos: 1,
+                resolution: config?.resolution || '720p',
+                aspectRatio: config?.aspectRatio || '16:9'
+            }
+        });
+    } catch (error) {
+        throw handleApiError(error, "starting video generation");
+    }
+}
+
+export async function pollVideoOperation(operation: any) {
+    try {
+        const localAi = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        return await localAi.operations.getVideosOperation({ operation });
+    } catch (error) {
+        throw handleApiError(error, "polling video operation");
     }
 }
 

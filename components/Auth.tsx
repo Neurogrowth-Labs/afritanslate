@@ -23,8 +23,8 @@ const GREETINGS = [
 ];
 
 interface AuthProps {
-    onLogin: (email: string, pass: string) => boolean;
-    onSignUp: (name: string, email: string, pass: string) => boolean;
+    onLogin: (email: string, pass: string) => Promise<boolean>;
+    onSignUp: (name: string, email: string, pass: string) => Promise<boolean>;
     error: string | null;
     setError: (error: string | null) => void;
 }
@@ -57,9 +57,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, error, setError }
         setError(null);
         setIsLoading(true);
 
-        // Simulate network delay for better UX
-        await new Promise(res => setTimeout(res, 500)); 
-
         let success = false;
         if (isLoginView) {
             if (!email || !password) {
@@ -67,14 +64,14 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, error, setError }
                 setIsLoading(false);
                 return;
             }
-            success = onLogin(email, password);
+            success = await onLogin(email, password);
         } else {
             if (!name || !email || !password) {
                 setError("All fields are required for sign up.");
                 setIsLoading(false);
                 return;
             }
-            success = onSignUp(name, email, password);
+            success = await onSignUp(name, email, password);
         }
         
         if (!success) {
