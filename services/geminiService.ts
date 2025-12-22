@@ -2,12 +2,6 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { TranslationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle } from '../types';
 
-if (!process.env.API_KEY) {
-  throw new Error("API_KEY environment variable not set");
-}
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 /**
  * Handles API errors by parsing them into user-friendly messages.
  * @param error The error caught from the API call.
@@ -21,8 +15,8 @@ function handleApiError(error: unknown, context: string): Error {
 
     if (error instanceof Error) {
         // Check for specific error messages from the Gemini API or underlying fetch issues
-        if (error.message.includes('API key not valid')) {
-            message = 'Authentication failed: Invalid API Key. Please ensure your API key is correctly configured.';
+        if (error.message.includes('API key not valid') || error.message.includes('API_KEY')) {
+            message = 'Authentication failed: Invalid API Key. Please ensure your API key is correctly configured in your deployment settings.';
         } else if (error.message.toLowerCase().includes('quota')) {
             message = 'Quota exceeded. You have reached your API usage limit. Please check your billing information or try again later.';
         } else if (error.message.includes('[429]')) {
@@ -89,6 +83,7 @@ export async function getNuancedTranslation(
   attachments: File[] = []
 ): Promise<TranslationResult> {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const model = "gemini-flash-lite-latest";
 
     let prompt = `You are an expert cultural and linguistic translator, deeply versed in the nuances of both ${sourceLang} and ${targetLang}. Your task is to translate the provided text, considering the specified tone: '${tone}'. 
@@ -138,6 +133,7 @@ export async function generateChatResponse(
     attachments: File[] = []
 ): Promise<{ text: string, groundingSources?: GroundingSource[] }> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = isThinkingMode ? "gemini-3-pro-preview" : "gemini-2.5-flash";
         const tools: any[] = [];
         const toolConfig: any = {};
@@ -190,6 +186,7 @@ export async function generateChatResponse(
 
 export async function generateImage(prompt: string): Promise<string> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash-image',
             contents: {
@@ -216,6 +213,7 @@ export async function generateImage(prompt: string): Promise<string> {
 
 export async function transcribeAudio(audioFile: File, style: TranscriptionStyle = 'normal'): Promise<string> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const audioPart = await fileToGenerativePart(audioFile);
         
         let prompt = '';
@@ -243,6 +241,7 @@ export async function transcribeAudio(audioFile: File, style: TranscriptionStyle
 
 export async function textToSpeech(text: string): Promise<string> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
             contents: [{ parts: [{ text }] }],
@@ -309,6 +308,7 @@ export async function translateScript(
   tone: string,
 ): Promise<string> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = "gemini-2.5-flash";
         const prompt = `You are a world-class script translator and cultural consultant, specializing in adapting creative works for film and theatre. Your task is to translate the following script from ${sourceLang} to ${targetLang} with a ${tone} tone. 
 
@@ -347,6 +347,7 @@ export async function translateBook(
   onProgress: (progress: number, translatedChunk: string) => void
 ): Promise<void> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = "gemini-2.5-flash";
         // Split book into paragraphs. A blank line is the delimiter.
         const chunks = bookText.split(/\n\s*\n/).filter(chunk => chunk.trim() !== '');
@@ -390,6 +391,7 @@ export async function summarizeMeeting(
   summaryLangName: string = 'English'
 ): Promise<string> {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const model = "gemini-2.5-flash";
     let prompt = `You are a highly efficient AI Meeting Assistant. Your task is to analyze the provided meeting transcript and generate a clear, concise, and structured summary in ${summaryLangName}. The summary must be in Markdown format.
 
@@ -424,6 +426,7 @@ export async function summarizeMeeting(
 
 export async function generateSynopsis(scriptText: string, targetLang: string): Promise<Synopsis> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = "gemini-2.5-flash";
         const prompt = `You are an expert script analyst and copywriter for the film industry. Analyze the following script, which is in ${targetLang}, and generate a compelling logline and a short synopsis.
 
@@ -461,6 +464,7 @@ export async function generateSynopsis(scriptText: string, targetLang: string): 
 
 export async function analyzeCharacters(scriptText: string, targetLang: string): Promise<CharacterProfile[]> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = "gemini-2.5-flash";
         const prompt = `You are a professional script doctor and character analyst with deep expertise in the culture associated with the ${targetLang} language. Read the following script, which has been translated into ${targetLang}, and provide a detailed analysis for up to the 3 main characters. Your analysis should consider how their personalities, motivations, and arcs might be perceived by an audience from a ${targetLang}-speaking culture.
 
@@ -506,6 +510,7 @@ export async function analyzeCharacters(scriptText: string, targetLang: string):
 
 export async function generateCulturalReport(originalScript: string, translatedScript: string, sourceLang: string, targetLang: string): Promise<CulturalReport> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = "gemini-2.5-flash";
         const prompt = `You are a cultural consultant and localization expert. You have been given an original script in ${sourceLang} and its translation into ${targetLang}. Your task is to generate a "Cultural Adaptation Report".
 
@@ -568,6 +573,7 @@ export async function generateCulturalReport(originalScript: string, translatedS
 // FIX: Added missing analyzeAudienceReception function.
 export async function analyzeAudienceReception(scriptText: string, targetLang: string): Promise<AudienceReception> {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = "gemini-2.5-flash";
         const prompt = `You are a film marketing and distribution expert with a deep understanding of audiences in ${targetLang}-speaking regions. Analyze the following script, which is in ${targetLang}, and provide a report on its potential audience reception.
 
