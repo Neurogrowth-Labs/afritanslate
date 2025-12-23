@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import type { Language } from '../types';
-import { SearchIcon } from './Icons';
+import { SearchIcon, CheckIcon } from './Icons';
 
 interface LanguageSelectorProps {
   label: string;
@@ -45,6 +45,24 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ label, languages, v
     setSearchTerm('');
   };
   
+  const getHighlightedText = (text: string, highlight: string) => {
+    if (!highlight.trim()) {
+        return <span>{text}</span>;
+    }
+    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+    return (
+        <span>
+            {parts.map((part, i) =>
+                part.toLowerCase() === highlight.toLowerCase() ? (
+                    <span key={i} className="font-bold text-accent bg-accent/20 rounded-sm">{part}</span>
+                ) : (
+                    part
+                )
+            )}
+        </span>
+    );
+  };
+  
   const id = `lang-selector-${label.toLowerCase()}`;
 
   return (
@@ -82,9 +100,10 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ label, languages, v
               <li
                 key={lang.code}
                 onClick={() => handleSelect(lang.code)}
-                className={`p-2 text-sm rounded-md cursor-pointer ${value === lang.code ? 'bg-accent text-white' : 'hover:bg-border-default text-text-primary'}`}
+                className={`p-2 text-sm rounded-md cursor-pointer flex items-center justify-between ${value === lang.code ? 'bg-accent text-white' : 'hover:bg-border-default text-text-primary'}`}
               >
-                {lang.name}
+                {getHighlightedText(lang.name, searchTerm)}
+                {value === lang.code && <CheckIcon className="w-5 h-5" />}
               </li>
             ))}
           </ul>

@@ -23,6 +23,7 @@ import BookTranslator from './components/BookTranslator';
 import MeetingSummarizer from './components/MeetingSummarizer';
 import UpgradeModal from './components/UpgradeModal';
 import Chat from './components/Chat';
+import Studio from './components/Studio';
 import AdminPortal from './components/AdminPortal';
 import LiveConversation from './components/LiveConversation';
 import AudioTranscriber from './components/AudioTranscriber';
@@ -72,11 +73,6 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     
-    // Chat settings state (lifted from Chat.tsx)
-    const [sourceLang, setSourceLang] = useState('en');
-    const [targetLang, setTargetLang] = useState('sw');
-    const [tone, setTone] = useState('Friendly');
-
     // Modals & Payment
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
@@ -216,9 +212,6 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
             const { data: messagesData, error: messagesError } = await supabase.from('chat_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
             if (messagesData) {
                 setActiveConversation({ ...convoData, messages: messagesData as ChatMessage[] });
-                setSourceLang(convoData.sourceLang);
-                setTargetLang(convoData.targetLang);
-                setTone(convoData.tone);
             }
         }
         setIsLoading(false);
@@ -239,85 +232,6 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
         }
         setIsDeleteModalOpen(false);
         setDeletingConversationId(null);
-    };
-    
-    const handleSendMessage = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
-        if (!currentUser) return;
-        setIsLoading(true);
-        
-        let currentConvo = activeConversation;
-        if (!currentConvo) {
-            const title = text.substring(0, 40) + (text.length > 40 ? '...' : '');
-            const { data } = await supabase.from('conversations').insert({ user_id: currentUser.id, title, source_lang: sourceLang, target_lang: targetLang, tone }).select().single();
-            if (data) {
-                currentConvo = { ...data, messages: [] };
-                setActiveConversation(currentConvo);
-                setConversations(prev => [data, ...prev]);
-            } else { setIsLoading(false); return; }
-        }
-
-        const userMsgToSave = { 
-            conversation_id: currentConvo.id, 
-            role: 'user' as const, 
-            original_text: text, 
-            attachments: attachments.map(f => ({ name: f.name, type: f.type })),
-            original_audio_file_name: audioSourceFileName
-        };
-        const { data: savedUserMsg } = await supabase.from('chat_messages').insert(userMsgToSave).select().single();
-        if(savedUserMsg) setActiveConversation(c => c ? ({ ...c, messages: [...c.messages, savedUserMsg as ChatMessage] }) : null);
-
-        try {
-            const result = isOffline ? getOfflineTranslation(text, sourceLang, targetLang) : await geminiService.getNuancedTranslation(text, sourceLang, targetLang, tone, attachments);
-            const aiMsgToSave = { conversation_id: currentConvo.id, role: 'ai' as const, original_text: result.culturallyAwareTranslation, translation: result, is_offline_translation: isOffline };
-            const { data: savedAiMsg } = await supabase.from('chat_messages').insert(aiMsgToSave).select().single();
-            if(savedAiMsg) setActiveConversation(c => c ? ({ ...c, messages: [...c.messages, savedAiMsg as ChatMessage] }) : null);
-        } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred.';
-            const errAiMsg = { conversation_id: currentConvo.id, role: 'ai' as const, original_text: `Sorry, I encountered an error: ${errorMsg}`};
-            const { data: savedErrAiMsg } = await supabase.from('chat_messages').insert(errAiMsg).select().single();
-            if(savedErrAiMsg) setActiveConversation(c => c ? ({ ...c, messages: [...c.messages, savedErrAiMsg as ChatMessage] }) : null);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    const handleRateMessage = async (messageId: number, rating: 'good' | 'bad') => {
-        if (!activeConversation) return;
-
-        const message = activeConversation.messages.find(m => m.id === messageId);
-        if (!message) return;
-        const currentRating = message.rating;
-        
-        const newRating = currentRating === rating ? undefined : rating;
-
-        setActiveConversation(prev => {
-            if (!prev) return null;
-            return {
-                ...prev,
-                messages: prev.messages.map(msg => 
-                    msg.id === messageId ? { ...msg, rating: newRating } : msg
-                )
-            };
-        });
-
-        const { error } = await supabase
-            .from('chat_messages')
-            .update({ rating: newRating })
-            .eq('id', messageId);
-        
-        if (error) {
-            console.error("Error updating rating:", error);
-            // Revert UI on error
-            setActiveConversation(prev => {
-                if (!prev) return null;
-                return {
-                    ...prev,
-                    messages: prev.messages.map(msg => 
-                        msg.id === messageId ? { ...msg, rating: currentRating } : msg
-                    )
-                };
-            });
-        }
     };
 
     const handlePaymentSuccess = async (plan: string) => {
@@ -357,19 +271,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
             case 'transcriber': return <AudioTranscriber />;
             case 'chat':
             default:
-                return <Chat 
-                            isOffline={isOffline} 
-                            messages={activeConversation?.messages || []}
-                            onSendMessage={handleSendMessage}
-                            onRateMessage={handleRateMessage}
-                            sourceLang={sourceLang}
-                            targetLang={targetLang}
-                            tone={tone}
-                            onSourceLangChange={setSourceLang}
-                            onTargetLangChange={setTargetLang}
-                            onToneChange={setTone}
-                            isLoading={isLoading}
-                        />;
+                return <Studio isOffline={isOffline} />;
         }
     };
     

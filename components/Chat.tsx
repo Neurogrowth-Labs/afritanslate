@@ -103,9 +103,9 @@ const Chat: React.FC<ChatProps> = ({
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
             const files = Array.from(event.target.files);
-            // FIX: Explicitly type `f` as `File` in the filter callbacks to resolve property access errors on `unknown` type.
-            const audioFiles = files.filter((f: File) => f.type.startsWith('audio/'));
-            const otherFiles = files.filter((f: File) => !f.type.startsWith('audio/'));
+            // FIX: Use a type guard to ensure `f` is a File and resolve property access errors on `unknown` type.
+            const audioFiles = files.filter((f): f is File => f instanceof File && f.type.startsWith('audio/'));
+            const otherFiles = files.filter((f): f is File => f instanceof File && !f.type.startsWith('audio/'));
             
             const audioToTranscribe = audioFiles[0];
 
