@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
@@ -43,7 +42,6 @@ const ImageGenerator: React.FC = () => (
     <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in">
         <h1 className="text-4xl font-bold text-text-primary">Image Generation</h1>
         <p className="text-lg text-text-secondary mt-2 max-w-2xl">Create stunning cultural visuals. Simply describe the scene you want to visualize.</p>
-        {/* FIX: Added missing props to satisfy ChatProps interface. */}
         <Chat isOffline={false} isVisualMode={true} messages={[]} onSendMessage={() => {}} sourceLang="en" targetLang="sw" tone="Friendly" isLoading={false} onSourceLangChange={() => {}} onTargetLangChange={() => {}} onToneChange={() => {}} />
     </div>
 );

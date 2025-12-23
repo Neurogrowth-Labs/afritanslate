@@ -563,14 +563,12 @@ export async function generateCulturalReport(originalScript: string, translatedS
                 temperature: 0.5,
             },
         });
-        // FIX: Added missing return statement.
         return JSON.parse(response.text.trim()) as CulturalReport;
     } catch (error) {
         throw handleApiError(error, "generating cultural report");
     }
 }
 
-// FIX: Added missing analyzeAudienceReception function.
 export async function analyzeAudienceReception(scriptText: string, targetLang: string): Promise<AudienceReception> {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
