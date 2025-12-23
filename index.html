@@ -14,6 +14,63 @@
       html {
         scroll-behavior: smooth;
       }
+      /* Custom prose styles for markdown rendering */
+      .prose {
+        color: #E0E0E0; /* text-primary */
+      }
+      .prose h1, .prose h2, .prose h3, .prose h4, .prose strong {
+        color: #FFFFFF;
+      }
+      .prose p, .prose ul, .prose ol, .prose blockquote {
+        margin-top: 0.75em;
+        margin-bottom: 0.75em;
+      }
+      .prose ul, .prose ol {
+        padding-left: 1.5em;
+      }
+      .prose ul {
+        list-style-type: disc;
+      }
+      .prose ol {
+        list-style-type: decimal;
+      }
+      .prose li {
+        margin-top: 0.25em;
+        margin-bottom: 0.25em;
+      }
+      .prose pre {
+        background-color: #121212; /* bg-main */
+        border: 1px solid #333333; /* border-default */
+        padding: 1em;
+        border-radius: 0.5rem;
+        overflow-x: auto;
+        font-size: 0.9em;
+      }
+      .prose code {
+        font-family: monospace;
+        background-color: #333333; /* border-default */
+        padding: 0.2em 0.4em;
+        border-radius: 0.25rem;
+        font-size: 85%;
+      }
+      .prose pre code {
+        background-color: transparent;
+        padding: 0;
+        font-size: 1em;
+      }
+      .prose a {
+        color: #F4A300; /* accent */
+        text-decoration: underline;
+      }
+      .prose a:hover {
+        opacity: 0.8;
+      }
+      .prose blockquote {
+        border-left: 0.25em solid #333333; /* border-default */
+        padding-left: 1em;
+        font-style: italic;
+        color: #A0A0A0; /* text-secondary */
+      }
     </style>
     <script>
       tailwind.config = {
@@ -69,7 +126,9 @@
     "react/": "https://esm.sh/react@^19.1.1/",
     "@google/genai": "https://esm.sh/@google/genai@^1.15.0",
     "react-dom/": "https://esm.sh/react-dom@^19.1.1/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.0"
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.45.0",
+    "marked": "https://esm.sh/marked@^13.0.2",
+    "dompurify": "https://esm.sh/dompurify@^3.1.6"
   }
 }
 </script>

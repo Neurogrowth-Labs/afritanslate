@@ -1,6 +1,6 @@
-
-
 import React, { useState } from 'react';
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import type { ChatMessage, GroundingSource } from '../types';
 import { AttachmentIcon, VolumeUpIcon, GlobeIcon, MicrophoneIcon, PronunciationIcon, EditIcon } from './Icons';
 
@@ -45,6 +45,18 @@ const ThumbsDownIcon = ({ filled }: { filled: boolean }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M7.477 13.917c-.806 0-1.533.422-2.031 1.08a9.04 9.04 0 00-2.86 2.4c-.723.384-1.35.956-1.653 1.715a4.498 4.498 0 00-.322 1.672V21a.75.75 0 00.75.75c.75 0 1.5-.224 2.176-.642a4.5 4.5 0 001.28-.678 4.5 4.5 0 001.28.678c.676.418 1.426.642 2.176.642a.75.75 0 00.75-.75v-1.313c0-.693-.257-1.355-.723-1.848-.266-.558.107-1.282.725-1.282h3.126c1.026 0 1.945-.694 2.054-1.715.045-.422.068.85.068-1.285a11.95 11.95 0 00-2.649-7.521c-.388-.482-.987.729-1.605-.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904M7.477 13.917v1.86m0-1.86c.43-.032.848-.113 1.228-.265A4.501 4.501 0 0110.79 12H11.25c.828 0 1.5-.672 1.5-1.5v-3.75c0-.828-.672-1.5-1.5-1.5H8.25a.75.75 0 00-.75.75v6c0 .414.336.75.75.75h2.25c.43 0 .848.113 1.228.265z" />
     </svg>
 );
+
+const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
+    const rawHtml = marked.parse(content, { gfm: true, breaks: true }) as string; 
+    const sanitizedHtml = DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
+    
+    return (
+        <div 
+            className="prose"
+            dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+        />
+    );
+};
 
 const GroundingSources: React.FC<{ sources: GroundingSource[] }> = ({ sources }) => (
     <div className="mt-3 pt-3 border-t border-border-default/50">
@@ -140,27 +152,6 @@ const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => 
     
     const textToPlay = message.translation ? message.translation.culturallyAwareTranslation : message.originalText;
 
-    const renderTextWithLinks = (text: string) => {
-        const urlRegex = /(https?:\/\/[^\s]+)/g;
-        const parts = text.split(urlRegex);
-        return parts.map((part, index) => {
-            if (part.match(urlRegex)) {
-                return (
-                    <a 
-                        key={index} 
-                        href={part} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-accent underline hover:opacity-80 break-all"
-                    >
-                        {part}
-                    </a>
-                );
-            }
-            return part;
-        });
-    };
-
     return (
         <div className="flex justify-start animate-fade-in">
             <div className="group relative max-w-xl">
@@ -175,7 +166,7 @@ const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => 
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-sm font-semibold text-accent mb-1">Culturally-Aware Translation</h3>
-                                <p className="text-base whitespace-pre-wrap">{message.translation.culturallyAwareTranslation}</p>
+                                <MarkdownRenderer content={message.translation.culturallyAwareTranslation} />
                                 
                                 {message.translation.pronunciation && (
                                     <div className="mt-3 pt-3 border-t border-border-default/50">
@@ -189,25 +180,29 @@ const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => 
                             </div>
                             <details className="group/details">
                                 <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-white list-none flex items-center">
-                                    Show direct translation & explanation
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3 h-3 ml-1 transition-transform group-hover/details:translate-x-1">
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="m13.5 4.5 6 6m0 0-6 6m6-6h-18" />
+                                    View Translation Details
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 ml-1.5 transition-transform group-open/details:rotate-90">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                                     </svg>
                                 </summary>
                                 <div className="mt-3 pt-3 border-t border-border-default space-y-3 animate-fade-in">
                                     <div>
                                         <h4 className="text-sm font-semibold text-text-primary mb-1">Direct Translation</h4>
-                                        <p className="text-sm text-text-secondary whitespace-pre-wrap italic">{message.translation.directTranslation}</p>
+                                        <div className="text-sm text-text-secondary italic">
+                                            <MarkdownRenderer content={message.translation.directTranslation} />
+                                        </div>
                                     </div>
                                     <div>
                                         <h4 className="text-sm font-semibold text-text-primary mb-1">Explanation of Nuances</h4>
-                                        <p className="text-sm text-text-secondary whitespace-pre-wrap">{message.translation.explanation}</p>
+                                        <div className="text-sm text-text-secondary">
+                                            <MarkdownRenderer content={message.translation.explanation} />
+                                        </div>
                                     </div>
                                 </div>
                             </details>
                         </div>
                     ) : (
-                        <p className="text-base whitespace-pre-wrap">{renderTextWithLinks(message.originalText)}</p>
+                        <MarkdownRenderer content={message.originalText} />
                     )}
                     {message.imageURL && <img src={message.imageURL} alt="Generated content" className="mt-3 rounded-lg" />}
                     {message.groundingSources && message.groundingSources.length > 0 && <GroundingSources sources={message.groundingSources} />}
