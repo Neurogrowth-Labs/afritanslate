@@ -1,5 +1,3 @@
-
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import type { ChatMessage, GeolocationCoordinates, MessageAttachment } from '../types';
 import { LANGUAGES, TONES } from '../constants';
@@ -45,7 +43,8 @@ interface ChatProps {
     isOffline: boolean;
     isVisualMode?: boolean;
     messages: ChatMessage[];
-    onSendMessage: (text: string, attachments: File[]) => void;
+    onSendMessage: (text: string, attachments: File[], audioSourceFileName: string | null) => void;
+    onRateMessage: (id: number, rating: 'good' | 'bad') => void;
     sourceLang: string;
     targetLang: string;
     tone: string;
@@ -60,6 +59,7 @@ const Chat: React.FC<ChatProps> = ({
     isVisualMode = false, 
     messages, 
     onSendMessage,
+    onRateMessage,
     sourceLang,
     targetLang,
     tone,
@@ -74,6 +74,8 @@ const Chat: React.FC<ChatProps> = ({
     const [isRecording, setIsRecording] = useState(false);
     const [isThinkingMode, setIsThinkingMode] = useState(false);
     const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
+    const [isTranscribing, setIsTranscribing] = useState(false);
+    const [transcribedFrom, setTranscribedFrom] = useState<string | null>(null);
     
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -87,16 +89,54 @@ const Chat: React.FC<ChatProps> = ({
 
     const handleSendMessage = () => {
         const textToSend = inputText.trim();
-        if (!textToSend && attachments.length === 0) return;
+        if (!textToSend && attachments.length === 0) {
+            setError("Please enter a message or add an attachment.");
+            return;
+        }
         setError(null);
-        onSendMessage(textToSend, attachments);
+        onSendMessage(textToSend, attachments, transcribedFrom);
         setInputText('');
         setAttachments([]);
+        setTranscribedFrom(null);
     };
     
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.files) {
-            setAttachments(prev => [...prev, ...Array.from(event.target.files!)]);
+            const files = Array.from(event.target.files);
+            // FIX: Explicitly type `f` as `File` in the filter callbacks to resolve property access errors on `unknown` type.
+            const audioFiles = files.filter((f: File) => f.type.startsWith('audio/'));
+            const otherFiles = files.filter((f: File) => !f.type.startsWith('audio/'));
+            
+            const audioToTranscribe = audioFiles[0];
+
+            setAttachments(prev => [...prev, ...otherFiles, ...audioFiles.slice(1)]);
+            if (error) setError(null);
+
+            if (audioToTranscribe) {
+                setIsTranscribing(true);
+                const originalInput = inputText;
+                setInputText('Transcribing audio file...');
+                try {
+                    const transcribedText = await geminiService.transcribeAudio(audioToTranscribe);
+                    setInputText(prev => (prev === 'Transcribing audio file...' ? transcribedText : `${originalInput}\n${transcribedText}`).trim());
+                    setTranscribedFrom(audioToTranscribe.name);
+                } catch (err) {
+                    setError(err instanceof Error ? err.message : 'Transcription failed.');
+                    setInputText(originalInput);
+                } finally {
+                    setIsTranscribing(false);
+                }
+            }
+        }
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setInputText(e.target.value);
+        if (error) {
+            setError(null);
         }
     };
 
@@ -116,10 +156,16 @@ const Chat: React.FC<ChatProps> = ({
                     stream.getTracks().forEach(track => track.stop());
                     
                     try {
+                        setIsTranscribing(true);
+                        setInputText('Transcribing your recording...');
                         const transcribedText = await geminiService.transcribeAudio(audioFile);
                         setInputText(transcribedText);
+                        setTranscribedFrom(audioFile.name);
                     } catch (err) {
                         setError(err instanceof Error ? err.message : 'Transcription failed.');
+                        setInputText('');
+                    } finally {
+                        setIsTranscribing(false);
                     }
                 };
                 mediaRecorderRef.current.start();
@@ -147,7 +193,6 @@ const Chat: React.FC<ChatProps> = ({
     };
     
     // These would eventually be passed up to App.tsx to update DB
-    const handleRateMessage = (id: number, rating: 'good' | 'bad') => { console.log('Rating:', {id, rating})};
     const handleRegenerate = (id: number) => { console.log('Regenerate:', id)};
     const handleSaveEdit = (id: number, newText: string) => { console.log('Save Edit:', {id, newText})};
 
@@ -178,7 +223,7 @@ const Chat: React.FC<ChatProps> = ({
                                 onSetEditing={setEditingMessageId}
                                 onSaveEdit={handleSaveEdit}
                                 onRegenerate={handleRegenerate}
-                                onRate={handleRateMessage}
+                                onRate={onRateMessage}
                                 onPlayTTS={handlePlayTTS}
                                 isOffline={isOffline}
                             />
@@ -214,12 +259,13 @@ const Chat: React.FC<ChatProps> = ({
                 <div className="relative">
                     <textarea
                         value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
+                        onChange={handleInputChange}
                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
-                        placeholder={isRecording ? "Recording..." : isVisualMode ? "Describe the image you want to create..." : "Type your message, or upload a file..."}
+                        placeholder={isTranscribing ? "Transcribing audio..." : isRecording ? "Recording..." : isVisualMode ? "Describe the image you want to create..." : "Type your message, or upload a file..."}
                         className="w-full p-3 pr-32 bg-bg-surface border border-border-default rounded-lg resize-none focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary placeholder:text-text-secondary"
                         rows={1}
                         style={{ minHeight: '48px', maxHeight: '200px' }}
+                        disabled={isTranscribing}
                     />
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                         {!isVisualMode && (
@@ -233,7 +279,7 @@ const Chat: React.FC<ChatProps> = ({
                                 </button>
                             </>
                         )}
-                        <button onClick={handleSendMessage} disabled={isLoading} className="p-2 text-white bg-accent rounded-full hover:bg-accent/90 disabled:bg-border-default transition-colors" title="Send message">
+                        <button onClick={handleSendMessage} disabled={isLoading || isTranscribing || (!inputText.trim() && attachments.length === 0)} className="p-2 text-white bg-accent rounded-full hover:bg-accent/90 disabled:bg-border-default transition-colors" title="Send message">
                             <SendIcon className="w-5 h-5" />
                         </button>
                     </div>

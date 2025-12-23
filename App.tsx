@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from './supabaseClient';
 
@@ -42,7 +41,7 @@ const ImageGenerator: React.FC = () => (
     <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in">
         <h1 className="text-4xl font-bold text-text-primary">Image Generation</h1>
         <p className="text-lg text-text-secondary mt-2 max-w-2xl">Create stunning cultural visuals. Simply describe the scene you want to visualize.</p>
-        <Chat isOffline={false} isVisualMode={true} messages={[]} onSendMessage={() => {}} sourceLang="en" targetLang="sw" tone="Friendly" isLoading={false} onSourceLangChange={() => {}} onTargetLangChange={() => {}} onToneChange={() => {}} />
+        <Chat isOffline={false} isVisualMode={true} messages={[]} onSendMessage={() => {}} onRateMessage={() => {}} sourceLang="en" targetLang="sw" tone="Friendly" isLoading={false} onSourceLangChange={() => {}} onTargetLangChange={() => {}} onToneChange={() => {}} />
     </div>
 );
 
@@ -242,7 +241,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
         setDeletingConversationId(null);
     };
     
-    const handleSendMessage = async (text: string, attachments: File[]) => {
+    const handleSendMessage = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
         if (!currentUser) return;
         setIsLoading(true);
         
@@ -257,18 +256,24 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
             } else { setIsLoading(false); return; }
         }
 
-        const userMsgToSave = { conversation_id: currentConvo.id, role: 'user', original_text: text, attachments: attachments.map(f => ({ name: f.name, type: f.type })) };
+        const userMsgToSave = { 
+            conversation_id: currentConvo.id, 
+            role: 'user' as const, 
+            original_text: text, 
+            attachments: attachments.map(f => ({ name: f.name, type: f.type })),
+            original_audio_file_name: audioSourceFileName
+        };
         const { data: savedUserMsg } = await supabase.from('chat_messages').insert(userMsgToSave).select().single();
         if(savedUserMsg) setActiveConversation(c => c ? ({ ...c, messages: [...c.messages, savedUserMsg as ChatMessage] }) : null);
 
         try {
             const result = isOffline ? getOfflineTranslation(text, sourceLang, targetLang) : await geminiService.getNuancedTranslation(text, sourceLang, targetLang, tone, attachments);
-            const aiMsgToSave = { conversation_id: currentConvo.id, role: 'ai', original_text: result.culturallyAwareTranslation, translation: result, is_offline_translation: isOffline };
+            const aiMsgToSave = { conversation_id: currentConvo.id, role: 'ai' as const, original_text: result.culturallyAwareTranslation, translation: result, is_offline_translation: isOffline };
             const { data: savedAiMsg } = await supabase.from('chat_messages').insert(aiMsgToSave).select().single();
             if(savedAiMsg) setActiveConversation(c => c ? ({ ...c, messages: [...c.messages, savedAiMsg as ChatMessage] }) : null);
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : 'An unknown error occurred.';
-            const errAiMsg = { conversation_id: currentConvo.id, role: 'ai', original_text: `Sorry, I encountered an error: ${errorMsg}`};
+            const errAiMsg = { conversation_id: currentConvo.id, role: 'ai' as const, original_text: `Sorry, I encountered an error: ${errorMsg}`};
             const { data: savedErrAiMsg } = await supabase.from('chat_messages').insert(errAiMsg).select().single();
             if(savedErrAiMsg) setActiveConversation(c => c ? ({ ...c, messages: [...c.messages, savedErrAiMsg as ChatMessage] }) : null);
         } finally {
@@ -276,6 +281,45 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
         }
     };
     
+    const handleRateMessage = async (messageId: number, rating: 'good' | 'bad') => {
+        if (!activeConversation) return;
+
+        const message = activeConversation.messages.find(m => m.id === messageId);
+        if (!message) return;
+        const currentRating = message.rating;
+        
+        const newRating = currentRating === rating ? undefined : rating;
+
+        setActiveConversation(prev => {
+            if (!prev) return null;
+            return {
+                ...prev,
+                messages: prev.messages.map(msg => 
+                    msg.id === messageId ? { ...msg, rating: newRating } : msg
+                )
+            };
+        });
+
+        const { error } = await supabase
+            .from('chat_messages')
+            .update({ rating: newRating })
+            .eq('id', messageId);
+        
+        if (error) {
+            console.error("Error updating rating:", error);
+            // Revert UI on error
+            setActiveConversation(prev => {
+                if (!prev) return null;
+                return {
+                    ...prev,
+                    messages: prev.messages.map(msg => 
+                        msg.id === messageId ? { ...msg, rating: currentRating } : msg
+                    )
+                };
+            });
+        }
+    };
+
     const handlePaymentSuccess = async (plan: string) => {
         if (currentUser) {
             const newPlan = plan as User['plan'];
@@ -317,6 +361,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
                             isOffline={isOffline} 
                             messages={activeConversation?.messages || []}
                             onSendMessage={handleSendMessage}
+                            onRateMessage={handleRateMessage}
                             sourceLang={sourceLang}
                             targetLang={targetLang}
                             tone={tone}
