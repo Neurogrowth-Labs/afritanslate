@@ -158,6 +158,15 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
         if (error) { setAuthError(error.message); return false; }
         setAuthError(null); return true;
     };
+
+    const handleGoogleLogin = async (): Promise<void> => {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+        });
+        if (error) {
+            setAuthError(error.message);
+        }
+    };
     
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -275,7 +284,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; }
         }
     };
     
-    if (!currentUser) return <Auth onLogin={handleLogin} onSignUp={handleSignUp} error={authError} setError={setAuthError} />;
+    if (!currentUser) return <Auth onLogin={handleLogin} onSignUp={handleSignUp} onGoogleLogin={handleGoogleLogin} error={authError} setError={setAuthError} />;
 
     if (currentUser.role === 'admin') {
         return <AdminPortal currentLibrary={libraryItems} users={allUsers} onAddItem={handleAddItem} onUpdateItem={handleUpdateLibraryItem} onDeleteItem={handleDeleteLibraryItem} onLogout={handleLogout} currentUser={currentUser} />;

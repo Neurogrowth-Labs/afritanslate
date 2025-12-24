@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { User } from '../types';
-import { UserIcon, EmailIcon, PasswordIcon } from './Icons';
+import { UserIcon, EmailIcon, PasswordIcon, GoogleIcon } from './Icons';
 
 const LogoIcon = () => (
     <div className="w-16 h-16 rounded-full bg-bg-main flex-shrink-0 flex items-center justify-center mb-4 border-2 border-border-default">
@@ -25,11 +25,12 @@ const GREETINGS = [
 interface AuthProps {
     onLogin: (email: string, pass: string) => Promise<boolean>;
     onSignUp: (name: string, email: string, pass: string) => Promise<boolean>;
+    onGoogleLogin: () => Promise<void>;
     error: string | null;
     setError: (error: string | null) => void;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, error, setError }) => {
+export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, error, setError }) => {
     const [isLoginView, setIsLoginView] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [greetingIndex, setGreetingIndex] = useState(0);
@@ -77,6 +78,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, error, setError }
         if (!success) {
             setIsLoading(false);
         }
+    };
+
+    const handleGoogleAuth = async () => {
+        setError(null);
+        setIsLoading(true);
+        await onGoogleLogin();
+        // Don't setIsLoading(false) as OAuth will cause a page reload
     };
 
     const toggleView = () => {
@@ -164,6 +172,21 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, error, setError }
                         {isLoading ? <Spinner /> : (isLogin ? (showAdminUI ? 'Access Portal' : 'Log In') : 'Create Account')}
                     </button>
                 </form>
+
+                 <div className="my-6 flex items-center">
+                    <div className="flex-grow border-t border-border-default"></div>
+                    <span className="flex-shrink mx-4 text-xs text-text-secondary">OR</span>
+                    <div className="flex-grow border-t border-border-default"></div>
+                </div>
+
+                <button
+                    onClick={handleGoogleAuth}
+                    disabled={isLoading}
+                    className="w-full py-3 bg-bg-main border border-border-default font-semibold rounded-lg transition-colors flex items-center justify-center gap-3 hover:bg-border-default/50 disabled:opacity-50 text-text-primary"
+                >
+                    <GoogleIcon className="w-5 h-5" />
+                    Sign in with Google
+                </button>
 
                 <p className="text-center text-sm text-text-secondary mt-6">
                     {isLogin ? "Don't have an account?" : "Already have an account?"}
