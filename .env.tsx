@@ -1,0 +1,2 @@
+NEXT_PUBLIC_SUPABASE_URL=https://avmbwggilwebofyroqol.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=sb_publishable_321p6UlNO4qelS7RzrrP4g_MV_XKR3J
