@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, Fragment } from 'react';
 import type { Conversation, User, TranslationMode, View } from '../types';
 import { ADD_ONS, FOOTER_LINKS } from '../constants';
@@ -51,16 +52,16 @@ interface SidebarProps {
 
 const NavButton: React.FC<{ label: string; icon: React.ReactNode; isActive: boolean; onClick: () => void; isLocked?: boolean; disabled?: boolean }> = ({ label, icon, isActive, onClick, isLocked, disabled }) => (
     <button
-        onClick={disabled ? undefined : onClick}
-        className={`flex items-center gap-3 w-full px-3 py-2 md:py-1.5 rounded text-[13px] font-medium transition-all group ${
+        onClick={onClick}
+        className={`flex items-center gap-3 w-full px-3 py-2 md:py-1.5 rounded text-[13px] font-medium transition-all group relative ${
             isActive 
             ? 'bg-accent/10 text-accent border border-accent/20' 
             : 'text-text-secondary hover:bg-white/5 hover:text-text-primary border border-transparent'
-        } ${disabled ? 'opacity-30 cursor-not-allowed' : ''}`}
+        } ${disabled ? 'opacity-30 cursor-not-allowed' : ''} ${isLocked ? 'opacity-70 hover:opacity-100' : ''}`}
     >
         <div className={`transition-colors ${isActive ? 'text-accent' : 'text-text-secondary group-hover:text-text-primary'}`}>{icon}</div>
         <span className="flex-1 text-left truncate">{label}</span>
-        {isLocked && <LockIcon className="w-3.5 h-3.5 opacity-40" />}
+        {isLocked && <LockIcon className="w-3.5 h-3.5 text-accent/70" />}
     </button>
 );
 
@@ -92,7 +93,43 @@ const Sidebar: React.FC<SidebarProps> = ({
         return conversations.filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [conversations, searchTerm]);
 
-    const hasPremiumAccess = ['Premium', 'Training', 'Entreprise'].includes(currentUser?.plan || '') || currentUser?.role === 'admin';
+    // Define Plan Levels for Feature Access
+    const planLevels: Record<string, number> = {
+        'Free': 0,
+        'Basic': 1,
+        'Premium': 2,
+        'Training': 3,
+        'Entreprise': 4
+    };
+
+    const userPlan = currentUser?.plan || 'Free';
+    const currentLevel = planLevels[userPlan] || 0;
+
+    // Access Helper
+    const hasAccess = (minLevel: number) => currentLevel >= minLevel;
+
+    // Feature Access Levels
+    // Free: Chat
+    // Basic: + Script, Book, Audio Transcriber
+    // Premium: + Live, Motion, Image, Meetings
+    const FEATURE_LEVELS = {
+        transcriber: 1,
+        script: 1,
+        book: 1,
+        live: 2,
+        motion: 2,
+        image: 2,
+        meetings: 2
+    };
+
+    const handleFeatureClick = (action: () => void, requiredLevel: number) => {
+        if (hasAccess(requiredLevel)) {
+            action();
+        } else {
+            onUpgrade();
+        }
+        setIsOpen(false);
+    };
 
     return (
         <aside className={`fixed md:relative inset-y-0 left-0 z-50 w-64 bg-bg-surface border-r border-border-default flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 h-screen overflow-hidden`}>
@@ -140,26 +177,80 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em]">Assistant</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Translation Studio" icon={<TranslateIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'chat'} onClick={() => { onSetView('chat'); onSetMode('chat'); setIsOpen(false); }} />
-                        <NavButton label="Live Conversation" icon={<LiveIcon className="w-4 h-4" />} isActive={currentView === 'live'} onClick={() => { onSetView('live'); setIsOpen(false); }} disabled={isOffline} />
-                        <NavButton label="Audio Transcriber" icon={<MicrophoneIcon className="w-4 h-4" />} isActive={currentMode === 'transcriber'} onClick={() => { onSetMode('transcriber'); setIsOpen(false); }} disabled={isOffline} />
+                        <NavButton 
+                            label="Translation Studio" 
+                            icon={<TranslateIcon className="w-4 h-4"/>} 
+                            isActive={currentView === 'chat' && currentMode === 'chat'} 
+                            onClick={() => { onSetView('chat'); onSetMode('chat'); setIsOpen(false); }} 
+                        />
+                        <NavButton 
+                            label="Live Conversation" 
+                            icon={<LiveIcon className="w-4 h-4" />} 
+                            isActive={currentView === 'live'} 
+                            onClick={() => handleFeatureClick(() => onSetView('live'), FEATURE_LEVELS.live)} 
+                            isLocked={!hasAccess(FEATURE_LEVELS.live)}
+                            disabled={isOffline} 
+                        />
+                        <NavButton 
+                            label="Audio Transcriber" 
+                            icon={<MicrophoneIcon className="w-4 h-4" />} 
+                            isActive={currentMode === 'transcriber'} 
+                            onClick={() => handleFeatureClick(() => onSetMode('transcriber'), FEATURE_LEVELS.transcriber)} 
+                            isLocked={!hasAccess(FEATURE_LEVELS.transcriber)}
+                            disabled={isOffline} 
+                        />
                     </div>
                 </div>
 
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em]">Creative Suite</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Motion Generator" icon={<PlayIcon />} isActive={currentView === 'motion'} onClick={hasPremiumAccess ? () => { onSetView('motion'); setIsOpen(false); } : onUpgrade} isLocked={!hasPremiumAccess} disabled={isOffline} />
-                        <NavButton label="Visual Arts" icon={<ImageIcon className="w-4 h-4" />} isActive={currentView === 'image'} onClick={hasPremiumAccess ? () => { onSetView('image'); setIsOpen(false); } : onUpgrade} isLocked={!hasPremiumAccess} disabled={isOffline} />
+                        <NavButton 
+                            label="Motion Generator" 
+                            icon={<PlayIcon />} 
+                            isActive={currentView === 'motion'} 
+                            onClick={() => handleFeatureClick(() => onSetView('motion'), FEATURE_LEVELS.motion)} 
+                            isLocked={!hasAccess(FEATURE_LEVELS.motion)} 
+                            disabled={isOffline} 
+                        />
+                        <NavButton 
+                            label="Visual Arts" 
+                            icon={<ImageIcon className="w-4 h-4" />} 
+                            isActive={currentView === 'image'} 
+                            onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} 
+                            isLocked={!hasAccess(FEATURE_LEVELS.image)} 
+                            disabled={isOffline} 
+                        />
                     </div>
                 </div>
 
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em]">Advanced Translators</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Script Translator" icon={<ScriptIcon className="w-4 h-4" />} isActive={currentMode === 'script'} onClick={hasPremiumAccess ? () => { onSetMode('script'); setIsOpen(false); } : onUpgrade} isLocked={!hasPremiumAccess} disabled={isOffline} />
-                        <NavButton label="Literary Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'book'} onClick={hasPremiumAccess ? () => { onSetMode('book'); setIsOpen(false); } : onUpgrade} isLocked={!hasPremiumAccess} disabled={isOffline} />
-                        <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={hasPremiumAccess ? () => { onSetMode('meetings'); setIsOpen(false); } : onUpgrade} isLocked={!hasPremiumAccess} disabled={isOffline} />
+                        <NavButton 
+                            label="Script Translator" 
+                            icon={<ScriptIcon className="w-4 h-4" />} 
+                            isActive={currentMode === 'script'} 
+                            onClick={() => handleFeatureClick(() => onSetMode('script'), FEATURE_LEVELS.script)} 
+                            isLocked={!hasAccess(FEATURE_LEVELS.script)} 
+                            disabled={isOffline} 
+                        />
+                        <NavButton 
+                            label="Literary Translator" 
+                            icon={<BookIcon className="w-4 h-4" />} 
+                            isActive={currentMode === 'book'} 
+                            onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} 
+                            isLocked={!hasAccess(FEATURE_LEVELS.book)} 
+                            disabled={isOffline} 
+                        />
+                        <NavButton 
+                            label="Meeting Insights" 
+                            icon={<MeetingIcon className="w-4 h-4" />} 
+                            isActive={currentMode === 'meetings'} 
+                            onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} 
+                            isLocked={!hasAccess(FEATURE_LEVELS.meetings)} 
+                            disabled={isOffline} 
+                        />
                     </div>
                 </div>
 
@@ -201,8 +292,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <span className="text-[10px] text-text-secondary font-bold uppercase">Plan Status</span>
                         <span className="text-xs font-bold text-accent">{currentUser?.plan || 'Free Member'}</span>
                     </div>
-                    {currentUser?.plan === 'Free' && (
-                        <button onClick={() => { onUpgrade(); setIsOpen(false); }} className="p-1 px-2 text-[10px] font-bold bg-white text-bg-main rounded hover:bg-white/90 transition-colors">UPGRADE</button>
+                    {currentUser?.plan !== 'Entreprise' && (
+                        <button
+                            onClick={onUpgrade}
+                            className="text-[10px] font-bold text-bg-main bg-accent px-2 py-1 rounded hover:bg-accent/90 transition-colors"
+                        >
+                            {userPlan === 'Free' ? 'Upgrade' : 'Change Plan'}
+                        </button>
                     )}
                 </div>
             </div>

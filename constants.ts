@@ -1,3 +1,4 @@
+
 import React from 'react';
 import type { Language, AfriTranslateModel, AddOn, LibraryItem, Tone } from './types';
 import { VoiceIcon, OfflineIcon, IndustryIcon } from './components/Icons';
@@ -210,7 +211,7 @@ export const AFRITRANSLATE_MODELS: AfriTranslateModel[] = [
   },
   { 
     name: 'Basic', 
-    price: '$9.99/mo',
+    price: '$2.99/month',
     features: [
         '1,000 translations/month',
         'Access to all African languages',
@@ -220,7 +221,7 @@ export const AFRITRANSLATE_MODELS: AfriTranslateModel[] = [
   },
   { 
     name: 'Premium', 
-    price: '$19.99/mo',
+    price: '$7.99/month',
     isFeatured: true,
     features: [
         'Unlimited translations',
@@ -232,7 +233,7 @@ export const AFRITRANSLATE_MODELS: AfriTranslateModel[] = [
   },
   { 
     name: 'Training', 
-    price: '$49/mo',
+    price: '$12.99/month',
     features: [
         'Up to 10 users',
         '10,000 translations/ month',

@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 
 // --- General App Icons --- //
@@ -96,7 +97,11 @@ export const AttachmentIcon: React.FC<{className?: string}> = ({ className }) =>
 
 export const MicrophoneIcon: React.FC<{className?: string}> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m12 7.5v-1.5a6 6 0 00-6-6m-6 6v-1.5a6 6 0 016-6m0 0a6 6 0 016 6v1.5m-6-7.5a6 6 0 00-6 6v1.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 1.5a3.75 3.75 0 0 0-3.75 3.75v6a3.75 3.75 0 0 0 7.5 0v-6A3.75 3.75 0 0 0 12 1.5Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 4.5h-6M15 7.5h-6M15 10.5h-6" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 11.25v.75a7.5 7.5 0 0 1-15 0v-.75" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 19.5v3.75" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 23.25h7.5" />
     </svg>
 );
 
@@ -132,7 +137,7 @@ export const MeetingIcon: React.FC<{className?: string}> = ({ className }) => (
 
 export const LiveIcon: React.FC<{className?: string}> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m12 7.5v-1.5a6 6 0 00-6-6m-6 6v-1.5a6 6 0 016-6m0 0a6 6 0 016 6v1.5m-6-7.5a6 6 0 00-6 6v1.5" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5.85 1.5 1.509 0 1.533-2.522 2.776-5.633 2.776-.326 0-.64-.014-.943-.04M5.25 5.25a3 3 0 013-3h8.25a3 3 0 013 3v5.25a3 3 0 01-3 3h-2.25l-3 3-3-3H8.25a3 3 0 01-3-3V5.25z" />
     </svg>
 );
 
@@ -213,12 +218,12 @@ export const PayPalIcon: React.FC<{className?: string}> = ({ className }) => (
     </svg>
 );
 export const BankIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className={className}>
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h6.375a.75.75 0 01.75.75v3.75a.75.75 0 01-.75.75H9V6.75z" />
     </svg>
 );
 export const VisaIcon: React.FC<{className?: string}> = ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="38" height="24" className={className} viewBox="0 0 38 24" role="img" aria-labelledby="pi-visa"><title id="pi-visa">Visa</title><path opacity=".07" d="M35 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.4 3 3 3h32c1.7 0 3-1.3 3-3V3c0-1.7-1.4-3-3-3z"/><path fill="#fff" d="M35 1c1.1 0 2 .9 2 2v18c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V3c0-1.1.9-2 2-2h32"/><path d="M28.8 10.1c-.1-3.4-3-5.5-6.3-5.5-3.3 0-5.6 2.1-5.6 5.5 0 3.4 2.3 5.5 5.6 5.5 3.3 0 6.2-2.1 6.3-5.5h-2.9c-.1 2-1.5 3.1-3.4 3.1-1.9 0-3.3-1.1-3.3-3.1 0-2 1.4-3.1 3.3-3.1 1.9 0 3.3 1.1 3.4 3.1h2.9zM21.6 15.6c-.6-1.1-1.3-1.8-2.3-2.3-.5-.2-1-.4-1.5-.5.5-.1.9-.3 1.4-.5.9-.4 1.6-1.2 2.2-2.2h3.1c-.6 1.1-1.3 1.8-2.3 2.3.5.2 1 .4 1.5.5-.5.1-.9.3-1.4-.5-.9-.4-1.6 1.2-2.2 2.2h-3.1zM11.1 4.6h-3.1c-.6 1.1-1.3 1.8-2.3 2.3-.5.2-1 .4-1.5.5.5.1.9.3 1.4.5.9.4 1.6 1.2 2.2 2.2h3.1c-.6-1.1-1.3-1.8-2.3-2.3.5-.2 1-.4 1.5-.5-.5-.1-.9.3-1.4-.5-.9-.4-1.6-1.2-2.2-2.2h3.1z" fill="#142688"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" width="38" height="24" className={className} viewBox="0 0 38 24" role="img" aria-labelledby="pi-visa"><title id="pi-visa">Visa</title><path opacity=".07" d="M35 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.4 3 3 3h32c1.7 0 3-1.3 3-3V3c0-1.7-1.4-3-3-3z"/><path fill="#fff" d="M35 1c1.1 0 2 .9 2 2v18c0 1.1-.9 2-2 2H3c-1.1 0-2-.9-2-2V3c0-1.1.9-2 2-2h32"/><path d="M28.8 10.1c-.1-3.4-3-5.5-6.3-5.5-3.3 0-5.6 2.1-5.6 5.5 0 3.4 2.3 5.5 5.6 5.5 3.3 0 6.2-2.1 6.3-5.5h-2.9c-.1 2-1.5 3.1-3.4 3.1-1.9 0-3.3-1.1-3.3-3.1 0-2 1.4-3.1 3.3-3.1 1.9 0 3.3 1.1 3.4 3.1h2.9zM21.6 15.6c-.6-1.1-1.3-1.8-2.3-2.3-.5-.2-1-.4-1.5-.5.5-.1.9-.3 1.4-.5.9-.4 1.6-1.2 2.2-2.2h3.1c-.6 1.1-1.3 1.8-2.3 2.3.5.2 1 .4 1.5.5-.5.1-.9.3-1.4-.5-.9-.4-1.6 1.2-2.2 2.2h-3.1zM11.1 4.6h-3.1c-.6 1.1-1.3 1.8-2.3 2.3-.5.2-1 .4-1.5.5.5.1.9.3 1.4.5.9.4 1.6 1.2 2.2 2.2h3.1c-.6-1.1-1.3-1.8-2.3-2.3.5-.2 1-.4 1.5-.5-.5-.1-.9.3-1.4-.5-.9-.4-1.6 1.2-2.2 2.2h3.1z" fill="#142688"/></svg>
 );
 
 export const MastercardIcon: React.FC<{className?: string}> = ({ className }) => (

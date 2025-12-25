@@ -1,6 +1,7 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '../types';
-import { InfoIcon, MenuIcon, WifiOffIcon, LogoutIcon } from './Icons';
+import { InfoIcon, MenuIcon, WifiOffIcon, LogoutIcon, BoltIcon } from './Icons';
 
 interface HeaderProps {
   sourceLangName?: string;
@@ -48,6 +49,15 @@ const Header: React.FC<HeaderProps> = ({ sourceLangName, targetLangName, isChatA
 
         {currentUser && (
             <div className="flex items-center gap-3 pl-4 border-l border-border-default h-6">
+                {(currentUser.plan !== 'Entreprise') && (
+                    <button 
+                        onClick={onUpgradeClick}
+                        className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-accent text-bg-main text-[10px] font-bold rounded-full hover:bg-accent/90 transition-colors shadow-sm mr-2 animate-pulse-slow"
+                    >
+                        <BoltIcon className="w-3 h-3" />
+                        <span>{currentUser.plan === 'Free' ? 'Upgrade' : 'Change Plan'}</span>
+                    </button>
+                )}
                 <button 
                     onClick={onProfileClick}
                     className="flex items-center gap-2 group cursor-pointer hover:opacity-80 transition-opacity"
@@ -57,7 +67,7 @@ const Header: React.FC<HeaderProps> = ({ sourceLangName, targetLangName, isChatA
                     </div>
                     <div className="hidden sm:block text-left">
                         <p className="text-[11px] font-bold text-white leading-none">{currentUser.name}</p>
-                        <p className="text-[9px] text-text-secondary leading-none mt-0.5 tracking-wider uppercase">{currentUser.plan}</p>
+                        <p className="text-[9px] text-text-secondary leading-none mt-0.5 tracking-wider uppercase">{currentUser.plan || 'Free'}</p>
                     </div>
                 </button>
                 <button 

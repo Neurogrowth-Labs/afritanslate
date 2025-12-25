@@ -160,12 +160,33 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         setIsLoading(false);
     };
 
+    const handlePaymentSuccess = async (planName: string) => {
+        if (!currentUser) return;
+
+        // Optimistically update local state to reflect plan change immediately
+        const updatedUser = { ...currentUser, plan: planName as any };
+        setCurrentUser(updatedUser);
+        setSelectedPlanForPayment(planName);
+
+        // Update database
+        try {
+            await supabase
+                .from('profiles')
+                .update({ plan: planName })
+                .eq('id', currentUser.id);
+        } catch (error) {
+            console.error("Error updating plan:", error);
+        }
+
+        setCurrentView('paymentSuccess');
+    };
+
     const renderContent = () => {
         if (currentView === 'onboarding' && currentUser) return <OnboardingAgent user={currentUser} onComplete={(u) => { setCurrentUser(u); setCurrentView('chat'); }} />;
         if (currentView === 'profile' && currentUser) return <ProfileDashboard user={currentUser} onUpdateUser={setCurrentUser} />;
         if (currentView === 'library') return <Library libraryItems={libraryItems} onSelectExample={() => {}} />;
         if (currentView === 'pricing') return <Pricing onChoosePlan={(plan) => {setSelectedPlanForPayment(plan); setCurrentView('payment');}} onContactSales={() => setCurrentView('contact')} currentUserPlan={currentUser?.plan || 'Free'} />;
-        if (currentView === 'payment') return <Payment selectedItemName={selectedPlanForPayment} onBack={() => setCurrentView('pricing')} onPaymentSuccess={(plan) => { setSelectedPlanForPayment(plan); setCurrentView('paymentSuccess'); }} />;
+        if (currentView === 'payment') return <Payment selectedItemName={selectedPlanForPayment} onBack={() => setCurrentView('pricing')} onPaymentSuccess={handlePaymentSuccess} />;
         if (currentView === 'paymentSuccess') return <PaymentSuccess planName={selectedPlanForPayment} onGoToDashboard={handleNewChat} />;
         if (currentView === 'terms') return <TermsOfService />;
         if (currentView === 'privacy') return <PrivacyPolicy />;

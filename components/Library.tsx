@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo } from 'react';
 import type { LibraryItem } from '../types';
 import { SearchIcon, TranslateIcon, VolumeUpIcon } from './Icons';
@@ -33,59 +32,61 @@ const Library: React.FC<LibraryProps> = ({ libraryItems, onSelectExample }) => {
   };
 
   return (
-    <div className="flex flex-col h-full animate-fade-in">
-        <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-text-primary">Content Library</h1>
-            <p className="text-lg text-text-secondary mt-4 max-w-2xl mx-auto">
-                Discover the rich wisdom woven into African languages. Search for a proverb, idiom, or phrase and explore the collection.
+    <div className="flex flex-col h-full animate-fade-in max-w-6xl mx-auto py-2 px-4">
+        <div className="text-center mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Content Library</h1>
+            <p className="text-sm text-text-secondary mt-1 max-w-xl mx-auto">
+                Discover rich wisdom in African languages. Search for proverbs, idioms, and phrases.
             </p>
         </div>
 
-        <div className="mb-8 sticky top-0 z-10 py-4 bg-bg-main/80 backdrop-blur-sm">
-            <div className="relative max-w-2xl mx-auto">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                    <SearchIcon className="w-5 h-5 text-text-secondary" />
+        <div className="mb-6 sticky top-0 z-10">
+            <div className="relative max-w-xl mx-auto">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <SearchIcon className="w-4 h-4 text-text-secondary" />
                 </div>
                 <input 
                     type="text"
                     placeholder="Search library..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full p-3 pl-12 bg-bg-surface border border-border-default rounded-lg text-lg focus:ring-2 focus:ring-accent focus:border-accent transition placeholder-text-secondary text-text-primary"
+                    className="w-full p-2 pl-10 bg-bg-surface border border-border-default rounded-lg text-sm focus:ring-1 focus:ring-accent focus:border-accent transition placeholder-text-secondary text-text-primary shadow-sm"
                 />
             </div>
         </div>
       
         {filteredItems.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredItems.map((item) => (
-                    <div key={item.id} className="bg-bg-surface p-6 rounded-xl border border-border-default flex flex-col group relative">
+                    <div key={item.id} className="bg-bg-surface p-4 rounded-lg border border-border-default flex flex-col group relative hover:border-accent/50 transition-all">
                         <div className="flex-grow">
-                             <span className="text-xs font-semibold uppercase tracking-wider text-accent bg-accent/10 px-2 py-1 rounded-full">{item.type}</span>
-                            <blockquote className="text-lg font-semibold text-text-primary leading-snug mt-3">
+                             <div className="flex justify-between items-start mb-2">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-accent bg-accent/10 px-2 py-0.5 rounded-full">{item.type}</span>
+                             </div>
+                            <blockquote className="text-sm font-semibold text-white leading-snug">
                                 "{item.text}"
                             </blockquote>
-                            <p className="text-base text-text-secondary mt-3 leading-relaxed">{item.meaning}</p>
+                            <p className="text-xs text-text-secondary mt-2 leading-relaxed line-clamp-3">{item.meaning}</p>
                         </div>
-                        <div className="mt-4 pt-4 border-t border-border-default flex items-center justify-between">
-                             <p className="text-sm text-text-secondary">{item.source} → {item.target}</p>
+                        <div className="mt-3 pt-3 border-t border-border-default flex items-center justify-between">
+                             <p className="text-[10px] font-mono text-text-secondary uppercase">{item.source} → {item.target}</p>
                              <div className="flex items-center gap-2">
                                 {item.audioUrl && (
                                     <button
                                         onClick={() => handlePlayAudio(item.audioUrl!)}
-                                        className="p-2 bg-bg-main text-text-secondary rounded-md hover:bg-border-default hover:text-white transition-colors"
-                                        title="Play audio pronunciation"
+                                        className="p-1.5 bg-bg-main text-text-secondary rounded hover:bg-border-default hover:text-white transition-colors"
+                                        title="Play audio"
                                     >
-                                        <VolumeUpIcon className="w-4 h-4" />
+                                        <VolumeUpIcon className="w-3.5 h-3.5" />
                                     </button>
                                 )}
                                 <button 
                                     onClick={() => onSelectExample(item)}
-                                    className="flex items-center gap-2 px-3 py-1.5 bg-accent/10 text-accent font-semibold rounded-md text-sm hover:bg-accent/20 transition-colors"
-                                    title="Translate this item"
+                                    className="flex items-center gap-1.5 px-2.5 py-1 bg-accent/10 text-accent font-bold rounded text-[10px] hover:bg-accent/20 transition-colors uppercase tracking-wide"
+                                    title="Translate"
                                 >
-                                    <TranslateIcon className="w-4 h-4" />
-                                    <span>Translate</span>
+                                    <TranslateIcon className="w-3.5 h-3.5" />
+                                    <span>Use</span>
                                 </button>
                              </div>
                         </div>
@@ -93,9 +94,9 @@ const Library: React.FC<LibraryProps> = ({ libraryItems, onSelectExample }) => {
                 ))}
             </div>
         ) : (
-            <div className="text-center py-16">
-                 <p className="text-xl text-text-primary">No items found.</p>
-                 <p className="text-text-secondary mt-2">Try searching for a different keyword.</p>
+            <div className="text-center py-12">
+                 <p className="text-sm text-text-primary">No items found.</p>
+                 <p className="text-xs text-text-secondary mt-1">Try a different keyword.</p>
             </div>
         )}
     </div>

@@ -118,6 +118,7 @@ export interface User {
   interests?: string;
   goals?: string;
   onboarding_completed?: boolean;
+  team_members?: string[];
 }
 
 // --- Script Translator AI Toolkit Types --- //
