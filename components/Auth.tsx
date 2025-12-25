@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { User } from '../types';
-import { UserIcon, EmailIcon, PasswordIcon, GoogleIcon, ZoomIcon } from './Icons';
+import { UserIcon, EmailIcon, PasswordIcon, GoogleIcon } from './Icons';
 
 const LogoIcon = () => (
     <div className="w-10 h-10 rounded-full bg-bg-main flex-shrink-0 flex items-center justify-center mb-2 border-2 border-border-default">
@@ -26,12 +26,11 @@ interface AuthProps {
     onLogin: (email: string, pass: string) => Promise<boolean>;
     onSignUp: (name: string, email: string, pass: string) => Promise<boolean>;
     onGoogleLogin: () => Promise<void>;
-    onZoomLogin: () => Promise<void>;
     error: string | null;
     setError: (error: string | null) => void;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, onZoomLogin, error, setError }) => {
+export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, error, setError }) => {
     const [isLoginView, setIsLoginView] = useState(true);
     const [isLoading, setIsLoading] = useState(false);
     const [greetingIndex, setGreetingIndex] = useState(0);
@@ -85,12 +84,6 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, on
         setError(null);
         setIsLoading(true);
         await onGoogleLogin();
-    };
-
-    const handleZoomAuth = async () => {
-        setError(null);
-        setIsLoading(true);
-        await onZoomLogin();
     };
 
     const toggleView = () => {
@@ -185,29 +178,14 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, on
                     <div className="flex-grow border-t border-border-default"></div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div>
                     <button
                         onClick={handleGoogleAuth}
                         disabled={isLoading}
-                        className="py-2 bg-bg-main border border-border-default font-semibold rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-border-default/50 disabled:opacity-50 text-text-primary text-[11px]"
+                        className="w-full py-2 bg-bg-main border border-border-default font-semibold rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-border-default/50 disabled:opacity-50 text-text-primary text-[11px]"
                     >
                         <GoogleIcon className="w-3.5 h-3.5" />
-                        Google
-                    </button>
-
-                    await supabase.auth.signInWithOAuth(
-  OAuthProvider.google,
-  redirectTo: kIsWeb ? null : 'my.scheme://my-host', // Optionally set the redirect link to bring back the user via deeplink.
-  authScreenLaunchMode:
-      kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication, // Launch the auth screen in a new webview on mobile.
-);
-                    <button
-                        onClick={handleZoomAuth}
-                        disabled={isLoading}
-                        className="py-2 bg-bg-main border border-border-default font-semibold rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-border-default/50 disabled:opacity-50 text-text-primary text-[11px]"
-                    >
-                        <ZoomIcon className="w-3.5 h-3.5" />
-                        Zoom
+                        Continue with Google
                     </button>
                 </div>
 

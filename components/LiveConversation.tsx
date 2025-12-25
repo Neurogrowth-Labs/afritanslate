@@ -127,7 +127,6 @@ const LiveConversation: React.FC = () => {
     const mediaStreamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
     const nextStartTimeRef = useRef(0);
     const audioSourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
-    const audioBufferQueueRef = useRef<MediaBlob[]>([]);
     const workletUrlRef = useRef<string | null>(null);
     
     const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -190,7 +189,6 @@ const LiveConversation: React.FC = () => {
         outputAudioContextRef.current = null;
         if (workletUrlRef.current) URL.revokeObjectURL(workletUrlRef.current);
         workletUrlRef.current = null;
-        audioBufferQueueRef.current = [];
         setIsLive(false);
         setStatus('idle');
         userTranscriptRef.current = '';
@@ -253,10 +251,11 @@ const LiveConversation: React.FC = () => {
                         await inputCtx.audioWorklet.addModule(workletUrlRef.current);
                         const workletNode = new AudioWorkletNode(inputCtx, 'audio-processor', { processorOptions: { bufferSize: 512 } });
                         audioWorkletNodeRef.current = workletNode;
+                        // FIX: Removed buffering logic to allow for barge-in and comply with API guidelines.
                         workletNode.port.onmessage = (event) => {
                             const pcmBlob = createBlob(event.data);
-                            if (audioSourcesRef.current.size > 0) { setStatus('buffering'); audioBufferQueueRef.current.push(pcmBlob); }
-                            else { setStatus('listening'); sessionPromiseRef.current?.then(s => s.sendRealtimeInput({ media: pcmBlob })); }
+                            setStatus('listening');
+                            sessionPromiseRef.current?.then(s => s.sendRealtimeInput({ media: pcmBlob }));
                         };
                         const analyser = inputCtx.createAnalyser();
                         analyser.fftSize = 128;
@@ -299,9 +298,6 @@ const LiveConversation: React.FC = () => {
                                 audioSourcesRef.current.delete(source);
                                 if (audioSourcesRef.current.size === 0) {
                                     setStatus('listening');
-                                    const queue = [...audioBufferQueueRef.current];
-                                    audioBufferQueueRef.current = [];
-                                    if (queue.length > 0) sessionPromiseRef.current?.then(s => queue.forEach(q => s.sendRealtimeInput({ media: q })));
                                 }
                             };
                             source.start(nextStartTimeRef.current);

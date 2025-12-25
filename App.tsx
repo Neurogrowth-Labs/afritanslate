@@ -340,6 +340,11 @@ const App: React.FC = () => {
         return !error;
     };
 
+    const handleGoogleLogin = async () => {
+        wasJustSignedUpRef.current = false;
+        await supabase.auth.signInWithOAuth({ provider: 'google' });
+    };
+
     if (loading) return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;
 
     // PUBLIC VIEWS - These don't require session unless the user wants to enter the 'Studio'
@@ -352,8 +357,7 @@ const App: React.FC = () => {
             return <Auth 
                 onLogin={handleLogin} 
                 onSignUp={handleSignUp} 
-                onGoogleLogin={async () => {}} 
-                onZoomLogin={async () => {}} 
+                onGoogleLogin={handleGoogleLogin} 
                 error={null} 
                 setError={() => {}} 
             />;

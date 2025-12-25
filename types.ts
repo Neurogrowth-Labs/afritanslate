@@ -1,3 +1,4 @@
+
 import type React from 'react';
 
 export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber';
@@ -150,4 +151,31 @@ export interface AudienceReception {
   keyStrengths: string[];
   potentialChallenges: string[];
   genreAppeal: string;
+}
+
+// --- Book Translator Types --- //
+export type BookGenre = 'Literary Fiction' | 'Academic' | 'Business' | 'Religious' | 'Children' | 'Poetry' | 'Non-Fiction';
+export type BookTranslationStyle = 'Literal' | 'Adaptive' | 'Culturally-Localized';
+export type BookDialect = 'Standard' | 'Regional' | 'Indigenous';
+
+export interface BookTranslationConfig {
+    culturalContext: string;
+    genre: BookGenre;
+    style: BookTranslationStyle;
+    dialect: BookDialect;
+}
+
+export type AnnotationType = 'idiom' | 'cultural' | 'proverb' | 'entity';
+
+export interface BookAnnotation {
+    originalPhrase: string;
+    type: AnnotationType;
+    explanation: string;
+}
+
+export interface TranslationMetrics {
+    culturalAccuracy: number;
+    idiomPreservation: number;
+    readability: number;
+    localizationDepth: number;
 }
