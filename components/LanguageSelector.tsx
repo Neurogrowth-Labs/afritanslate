@@ -10,7 +10,7 @@ interface LanguageSelectorProps {
 }
 
 const ChevronDownIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4 text-text-secondary">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 text-text-secondary">
         <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
     </svg>
 );
@@ -67,43 +67,43 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({ label, languages, v
 
   return (
     <div className="flex flex-col w-full relative" ref={dropdownRef}>
-      <label htmlFor={id} className="text-sm font-medium text-text-secondary mb-1">{label}</label>
+      <label htmlFor={id} className="text-[10px] font-medium text-text-secondary mb-1">{label}</label>
       <button
         id={id}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full p-2 flex items-center justify-between bg-bg-main border border-border-default rounded-md shadow-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary text-left"
+        className="w-full p-1.5 flex items-center justify-between bg-bg-main border border-border-default rounded shadow-sm focus:ring-1 focus:ring-accent outline-none transition text-text-primary text-left text-[12px]"
       >
-        <span>{selectedLanguage?.name || 'Select Language'}</span>
+        <span className="truncate">{selectedLanguage?.name || 'Select'}</span>
         <ChevronDownIcon />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-1 w-full bg-bg-surface border border-border-default rounded-md shadow-lg z-20 animate-fade-in">
-          <div className="p-2">
+        <div className="absolute top-full mt-1 w-full bg-bg-surface border border-border-default rounded shadow-lg z-50 animate-fade-in">
+          <div className="p-1.5">
             <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <SearchIcon className="w-4 h-4 text-text-secondary" />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-2 pointer-events-none">
+                    <SearchIcon className="w-3 h-3 text-text-secondary" />
                 </div>
                 <input
                     type="text"
-                    placeholder="Search language..."
+                    placeholder="Search..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="w-full p-2 pl-9 bg-bg-main border border-border-default rounded-md text-sm focus:ring-2 focus:ring-accent focus:border-accent transition placeholder-text-secondary"
+                    className="w-full p-1 pl-7 bg-bg-main border border-border-default rounded text-[11px] focus:ring-1 focus:ring-accent outline-none transition placeholder-text-secondary"
                     autoFocus
                 />
             </div>
           </div>
-          <ul className="max-h-60 overflow-y-auto p-1">
+          <ul className="max-h-48 overflow-y-auto p-1 custom-scrollbar">
             {filteredLanguages.map(lang => (
               <li
                 key={lang.code}
                 onClick={() => handleSelect(lang.code)}
-                className={`p-2 text-sm rounded-md cursor-pointer flex items-center justify-between ${value === lang.code ? 'bg-accent text-white' : 'hover:bg-border-default text-text-primary'}`}
+                className={`p-1.5 text-[11px] rounded cursor-pointer flex items-center justify-between ${value === lang.code ? 'bg-accent text-bg-main font-bold' : 'hover:bg-border-default text-text-primary'}`}
               >
                 {getHighlightedText(lang.name, searchTerm)}
-                {value === lang.code && <CheckIcon className="w-5 h-5" />}
+                {value === lang.code && <CheckIcon className="w-3.5 h-3.5" />}
               </li>
             ))}
           </ul>

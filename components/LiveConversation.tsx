@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { LANGUAGES, TONES, LIVE_VOICES } from '../constants';
@@ -10,11 +9,6 @@ interface MediaBlob {
     data: string;
     mimeType: string;
 }
-
-/**
- * --- Audio Helper Functions ---
- * Gemini Live API sends/receives raw PCM. These helpers manage base64 encoding/decoding.
- */
 
 function decode(base64: string): Uint8Array {
     const binaryString = atob(base64);
@@ -66,7 +60,6 @@ function createBlob(data: Float32Array): MediaBlob {
     };
 }
 
-// Audio Worklet code as a string for inline loading
 const audioWorkletCode = `
 class AudioProcessor extends AudioWorkletProcessor {
   constructor(options) {
@@ -93,47 +86,20 @@ registerProcessor('audio-processor', AudioProcessor);
 `;
 
 const StatusIndicator: React.FC<{ status: 'idle' | 'connecting' | 'listening' | 'speaking' | 'buffering' }> = ({ status }) => {
-    let text, pingColor, dotColor, textColor;
+    let text, dotColor, textColor;
 
     switch (status) {
-        case 'connecting':
-            text = 'Verifying Session...';
-            pingColor = 'bg-blue-400';
-            dotColor = 'bg-blue-500';
-            textColor = 'text-blue-400';
-            break;
-        case 'listening':
-            text = 'Listening...';
-            pingColor = 'bg-green-400';
-            dotColor = 'bg-green-500';
-            textColor = 'text-green-400';
-            break;
-        case 'speaking':
-            text = 'AI Speaking...';
-            pingColor = 'bg-yellow-400';
-            dotColor = 'bg-yellow-500';
-            textColor = 'text-yellow-400';
-            break;
-        case 'buffering':
-            text = 'Ghost Buffering...';
-            pingColor = 'bg-orange-400';
-            dotColor = 'bg-orange-500';
-            textColor = 'text-orange-400';
-            break;
+        case 'connecting': text = 'Syncing...'; dotColor = 'bg-blue-500'; textColor = 'text-blue-400'; break;
+        case 'listening': text = 'Ready'; dotColor = 'bg-green-500'; textColor = 'text-green-400'; break;
+        case 'speaking': text = 'AI Active'; dotColor = 'bg-yellow-500'; textColor = 'text-yellow-400'; break;
+        case 'buffering': text = 'Buffering'; dotColor = 'bg-orange-500'; textColor = 'text-orange-400'; break;
         case 'idle':
-        default:
-            text = 'Session Idle';
-            pingColor = '';
-            dotColor = 'bg-gray-500';
-            textColor = 'text-gray-400';
+        default: text = 'Idle'; dotColor = 'bg-gray-500'; textColor = 'text-gray-400';
     }
 
     return (
-        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
-            <span className="relative flex h-2 w-2">
-                {status !== 'idle' && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${pingColor} opacity-75`}></span>}
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColor}`}></span>
-            </span>
+        <div className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest">
+            <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${status !== 'idle' ? 'animate-pulse' : ''}`}></span>
             <span className={textColor}>{text}</span>
         </div>
     );
@@ -148,13 +114,11 @@ const LiveConversation: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [status, setStatus] = useState<'idle' | 'connecting' | 'listening' | 'speaking' | 'buffering'>('idle');
 
-    // Transcription state
-    const [conversationHistory, setConversationHistory] = useState<{ role: 'user' | 'ai', text: string }[]>([]);
+    const [conversationHistory, setConversationHistory] = useState<{ role: 'user' | 'ai', text: string, mode: string }[]>([]);
     const [currentTurn, setCurrentTurn] = useState({ user: '', ai: '' });
     const userTranscriptRef = useRef('');
     const aiTranscriptRef = useRef('');
 
-    // Refs for API and Audio
     const aiRef = useRef<GoogleGenAI | null>(null);
     const sessionPromiseRef = useRef<Promise<any> | null>(null);
     const inputAudioContextRef = useRef<AudioContext | null>(null);
@@ -166,7 +130,6 @@ const LiveConversation: React.FC = () => {
     const audioBufferQueueRef = useRef<MediaBlob[]>([]);
     const workletUrlRef = useRef<string | null>(null);
     
-    // Visualization
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const analyserNodeRef = useRef<AnalyserNode | null>(null);
     const animationFrameIdRef = useRef<number>(0);
@@ -192,11 +155,11 @@ const LiveConversation: React.FC = () => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const barWidth = (canvas.width / bufferLength) * 2.5;
+        const barWidth = (canvas.width / bufferLength) * 2;
         let x = 0;
         for (let i = 0; i < bufferLength; i++) {
-            const barHeight = dataArray[i] / 4;
-            ctx.fillStyle = `rgba(244, 163, 0, ${barHeight / 60})`;
+            const barHeight = dataArray[i] / 5;
+            ctx.fillStyle = `rgba(244, 163, 0, ${barHeight / 50})`;
             ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
             x += barWidth + 1;
         }
@@ -243,7 +206,7 @@ const LiveConversation: React.FC = () => {
         setConversationHistory([]);
 
         if (!aiRef.current) {
-            setError("Access Denied. Verification Required.");
+            setError("Linguistic Neural Engine Initialization Failed.");
             setStatus('idle');
             return;
         }
@@ -259,19 +222,14 @@ const LiveConversation: React.FC = () => {
             const targetLangName = LANGUAGES.find(l => l.code === targetLang)?.name;
             const toneName = TONES.find(t => t.name === tone)?.name;
 
-            const systemInstruction = `You are a Verification-Gated Live AI Translator.
-            
-            VERIFICATION RULES:
-            1. You MUST assume you are in a gated session. 
-            2. If the prompt context lacks a valid backend verification object (verified=true), DO NOT proceed with high-stakes cultural translations.
-            3. AUDIT BEHAVIOR: Silently acknowledge verification internally once granted.
-            
-            TRANSLATION PROTOCOL:
-            - Translate user speech into ${targetLangName} immediately.
-            - Tone: ${toneName}. Mode: ${nuanceLevel}.
-            - Handle multi-speaker environments by prioritizing the dominant voice.
-            - Focus on cultural resonance. Never speak in the source language.
-            - If interrupted, wait for the user to finish buffering before responding.`;
+            let modeInstruction = "";
+            if (nuanceLevel === 'nuanced') {
+                modeInstruction = `You are a Cultural Ambassador. Goal: CULTURAL RESONANCE. Translate speech into ${targetLangName} using a ${toneName} tone. Aggressively adapt idioms, metaphors, and social etiquette to sound like a local native speaker. Adopt an authentic regional accent. Prioritize feeling over word-for-word accuracy.`;
+            } else {
+                modeInstruction = `You are a strict Linguistic Engine. Goal: LITERAL ACCURACY. Translate speech into ${targetLangName} exactly as spoken. Do not adapt idioms—translate them word-for-word even if they sound unusual. Prioritize verbatim meaning. Sound like a precise technical translator.`;
+            }
+
+            const systemInstruction = `${modeInstruction} Respond using the specified voice: ${voice}. Responses must be in ${targetLangName} only.`;
 
             sessionPromiseRef.current = aiRef.current.live.connect({
                 model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -288,51 +246,24 @@ const LiveConversation: React.FC = () => {
                     onopen: async () => {
                         setIsLive(true);
                         setStatus('listening');
-                        
                         if (!workletUrlRef.current) {
                            const workletBlob = new Blob([audioWorkletCode], { type: 'application/javascript' });
                            workletUrlRef.current = URL.createObjectURL(workletBlob);
                         }
-
                         await inputCtx.audioWorklet.addModule(workletUrlRef.current);
-                        const workletNode = new AudioWorkletNode(inputCtx, 'audio-processor', {
-                            processorOptions: { bufferSize: 512 }
-                        });
+                        const workletNode = new AudioWorkletNode(inputCtx, 'audio-processor', { processorOptions: { bufferSize: 512 } });
                         audioWorkletNodeRef.current = workletNode;
-
                         workletNode.port.onmessage = (event) => {
                             const pcmBlob = createBlob(event.data);
-                            // Sequential check: If AI is currently outputting audio, ghost buffer the user's input
-                            if (audioSourcesRef.current.size > 0) {
-                                setStatus('buffering');
-                                audioBufferQueueRef.current.push(pcmBlob);
-                            } else {
-                                setStatus('listening');
-                                sessionPromiseRef.current?.then(s => s.sendRealtimeInput({ media: pcmBlob }));
-                            }
+                            if (audioSourcesRef.current.size > 0) { setStatus('buffering'); audioBufferQueueRef.current.push(pcmBlob); }
+                            else { setStatus('listening'); sessionPromiseRef.current?.then(s => s.sendRealtimeInput({ media: pcmBlob })); }
                         };
-                        
-                        // Higher pre-amp gain for distant capture
-                        const gainNode = inputCtx.createGain();
-                        gainNode.gain.setValueAtTime(15.0, inputCtx.currentTime);
-
-                        // Aggressive compression to normalize environmental noise
-                        const compressor = inputCtx.createDynamicsCompressor();
-                        compressor.threshold.setValueAtTime(-50, inputCtx.currentTime);
-                        compressor.knee.setValueAtTime(40, inputCtx.currentTime);
-                        compressor.ratio.setValueAtTime(12, inputCtx.currentTime);
-                        compressor.attack.setValueAtTime(0, inputCtx.currentTime);
-                        compressor.release.setValueAtTime(0.25, inputCtx.currentTime);
-
                         const analyser = inputCtx.createAnalyser();
-                        analyser.fftSize = 256;
+                        analyser.fftSize = 128;
                         analyserNodeRef.current = analyser;
                         drawVisualizer();
-
                         mediaStreamSourceRef.current = inputCtx.createMediaStreamSource(stream);
-                        mediaStreamSourceRef.current.connect(gainNode);
-                        gainNode.connect(compressor);
-                        compressor.connect(analyser);
+                        mediaStreamSourceRef.current.connect(analyser);
                         analyser.connect(workletNode);
                         workletNode.connect(inputCtx.destination);
                     },
@@ -348,156 +279,127 @@ const LiveConversation: React.FC = () => {
                         if (msg.serverContent?.turnComplete) {
                             setConversationHistory(prev => [
                                 ...prev,
-                                { role: 'user', text: userTranscriptRef.current },
-                                { role: 'ai', text: aiTranscriptRef.current }
+                                { role: 'user', text: userTranscriptRef.current, mode: 'user' },
+                                { role: 'ai', text: aiTranscriptRef.current, mode: nuanceLevel }
                             ]);
-                            userTranscriptRef.current = '';
-                            aiTranscriptRef.current = '';
+                            userTranscriptRef.current = ''; aiTranscriptRef.current = '';
                             setCurrentTurn({ user: '', ai: '' });
                         }
-
                         const audioData = msg.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
                         if (audioData) {
                             setStatus('speaking');
                             const audioContext = outputAudioContextRef.current!;
                             nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioContext.currentTime);
-                            
                             const audioBuffer = await decodeAudioData(decode(audioData), audioContext, 24000, 1);
                             const source = audioContext.createBufferSource();
                             source.buffer = audioBuffer;
                             source.connect(audioContext.destination);
                             audioSourcesRef.current.add(source);
-
                             source.onended = () => {
                                 audioSourcesRef.current.delete(source);
                                 if (audioSourcesRef.current.size === 0) {
                                     setStatus('listening');
-                                    // Flush ghost buffer now that AI is silent
                                     const queue = [...audioBufferQueueRef.current];
                                     audioBufferQueueRef.current = [];
-                                    if (queue.length > 0) {
-                                      sessionPromiseRef.current?.then(s => {
-                                          queue.forEach(q => s.sendRealtimeInput({ media: q }));
-                                      });
-                                    }
+                                    if (queue.length > 0) sessionPromiseRef.current?.then(s => queue.forEach(q => s.sendRealtimeInput({ media: q })));
                                 }
                             };
                             source.start(nextStartTimeRef.current);
                             nextStartTimeRef.current += audioBuffer.duration;
                         }
                     },
-                    onerror: (e: any) => {
-                        setError(`Session Error: ${e.message || 'Check verification credentials.'}`);
-                        handleStopConversation();
-                    },
+                    onerror: (e: any) => { setError(`Linguistic conflict: ${e.message || 'System error.'}`); handleStopConversation(); },
                     onclose: () => handleStopConversation(),
                 },
             });
-        } catch (err) {
-            setError("Could not start session. Please ensure microphone access.");
-            setStatus('idle');
-        }
+        } catch (err) { setError("Could not engage audio input."); setStatus('idle'); }
     };
     
     if (!isLive) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-6">
-                <div className="max-w-xl w-full">
-                    <h1 className="text-4xl font-extrabold text-text-primary tracking-tight">Live Translator</h1>
-                    <p className="text-lg text-text-secondary mt-3">
-                        Professional real-time translation with distance capture.
-                    </p>
-                    <div className="mt-10 p-8 bg-bg-surface rounded-2xl border border-border-default space-y-6 shadow-2xl">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left">
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-text-secondary uppercase">Input Detection</label>
-                                <div className="w-full p-3 bg-bg-main border border-border-default rounded-xl font-semibold text-accent flex items-center gap-2">
-                                    <span className="w-2 h-2 bg-accent rounded-full animate-pulse"></span> AI Auto-Detect
-                                </div>
-                            </div>
-                            <LanguageSelector label="Translate to" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left">
-                            <ToneSelector label="Persona Tone" tones={TONES} value={tone} onChange={setTone} />
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-text-secondary uppercase">AI Voice</label>
-                                <select 
-                                    value={voice} 
-                                    onChange={e => setVoice(e.target.value)} 
-                                    className="w-full p-3 bg-bg-main border border-border-default rounded-xl text-text-primary appearance-none focus:ring-2 focus:ring-accent"
-                                >
-                                    {LIVE_VOICES.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="space-y-2 text-left">
-                            <label className="text-xs font-bold text-text-secondary uppercase">Processing Mode</label>
-                            <div className="flex bg-bg-main border border-border-default rounded-xl p-1.5">
-                                <button onClick={() => setNuanceLevel('nuanced')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${nuanceLevel === 'nuanced' ? 'bg-accent text-brand-bg shadow-lg' : 'text-text-secondary hover:text-white'}`}>Nuanced</button>
-                                <button onClick={() => setNuanceLevel('literal')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${nuanceLevel === 'literal' ? 'bg-accent text-brand-bg shadow-lg' : 'text-text-secondary hover:text-white'}`}>Literal</button>
-                            </div>
-                        </div>
-                         <button onClick={handleStartConversation} disabled={status === 'connecting'} className="w-full py-4 bg-accent text-brand-bg text-lg font-black rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50">
-                            {status === 'connecting' ? 'INITIALIZING PROTOCOL...' : 'START LIVE SESSION'}
-                        </button>
+            <div className="flex items-center justify-center h-full animate-fade-in p-4 sm:p-6 bg-bg-main overflow-y-auto custom-scrollbar">
+                <div className="max-w-[420px] w-full bg-bg-surface p-6 sm:p-8 rounded-2xl border border-border-default space-y-6 shadow-2xl">
+                    <div className="text-center">
+                        <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Voice Studio</h1>
+                        <p className="text-[10px] text-text-secondary mt-1 uppercase tracking-[0.2em] font-bold">Real-time Cultural Relay</p>
                     </div>
-                     {error && <p className="text-red-400 font-bold mt-6 text-sm bg-red-500/10 p-3 rounded-xl border border-red-500/20">{error}</p>}
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <LanguageSelector label="Output" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-text-secondary uppercase">Voice Persona</label>
+                            <select value={voice} onChange={e => setVoice(e.target.value)} className="w-full p-1.5 bg-bg-main border border-border-default rounded-lg text-[12px] text-text-primary outline-none focus:ring-1 focus:ring-accent">
+                                {LIVE_VOICES.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 gap-4">
+                        <ToneSelector label="Target Tone" tones={TONES} value={tone} onChange={setTone} />
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-text-secondary uppercase">Philosophy</label>
+                            <div className="flex bg-bg-main border border-border-default rounded-lg p-1 gap-1">
+                                <button onClick={() => setNuanceLevel('nuanced')} className={`flex-1 py-1.5 rounded text-[10px] font-black transition-all uppercase ${nuanceLevel === 'nuanced' ? 'bg-accent text-bg-main shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}>Nuanced</button>
+                                <button onClick={() => setNuanceLevel('literal')} className={`flex-1 py-1.5 rounded text-[10px] font-black transition-all uppercase ${nuanceLevel === 'literal' ? 'bg-accent text-bg-main shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}>Literal</button>
+                            </div>
+                            <p className="text-[9px] text-text-secondary leading-relaxed italic text-center px-2">
+                                {nuanceLevel === 'nuanced' ? "Nuanced: Prioritizes cultural context, idioms, and local accents." : "Literal: Prioritizes word-for-word accuracy and technical precision."}
+                            </p>
+                        </div>
+                    </div>
+
+                    <button onClick={handleStartConversation} disabled={status === 'connecting'} className="w-full py-3.5 bg-accent text-bg-main text-sm font-black rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2">
+                        {status === 'connecting' ? 'SYNCING...' : 'ENGAGE VOICE RELAY'}
+                    </button>
+                    {error && <p className="text-red-400 text-center text-[10px] font-bold bg-red-500/5 p-2 rounded border border-red-500/10 uppercase">{error}</p>}
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col h-full animate-fade-in bg-bg-main">
-            <header className="flex-shrink-0 p-4 border-b border-border-default flex items-center justify-between bg-bg-surface/50 backdrop-blur-md sticky top-0 z-10">
+        <div className="flex flex-col h-full animate-fade-in bg-bg-main overflow-hidden">
+            <header className="flex-shrink-0 p-3 border-b border-border-default flex items-center justify-between bg-bg-surface/50 backdrop-blur-md">
                 <StatusIndicator status={status} />
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-bg-main border border-border-default rounded-full text-[10px] font-black text-text-secondary uppercase">
-                    Secure Pipeline: Verified
+                <div className="flex items-center gap-3">
+                    <div className="bg-bg-main px-2 py-1 rounded border border-border-default text-[8px] font-black text-accent uppercase tracking-widest">{nuanceLevel} mode</div>
+                    <button onClick={handleStopConversation} className="px-3 py-1.5 bg-red-600/90 text-white text-[10px] font-black rounded-lg hover:bg-red-600 transition-all flex items-center gap-1.5 uppercase tracking-wider">
+                        <StopIcon className="w-2.5 h-2.5" /> Stop
+                    </button>
                 </div>
-                <button onClick={handleStopConversation} className="px-5 py-2 bg-red-600/90 text-white font-bold rounded-full hover:bg-red-600 transition-all flex items-center gap-2 shadow-lg hover:scale-105 active:scale-95">
-                    <StopIcon className="w-4 h-4" /> STOP SESSION
-                </button>
             </header>
             
-            <main className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+            <main className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
                  {conversationHistory.map((turn, idx) => (
-                    <div key={idx} className={`flex ${turn.role === 'user' ? 'justify-end' : 'justify-start'} animate-slide-in-up`}>
-                        <div className={`p-4 rounded-2xl max-w-lg shadow-sm border ${turn.role === 'user' ? 'bg-accent text-brand-bg rounded-tr-none border-accent' : 'bg-bg-surface text-text-primary rounded-tl-none border-border-default'}`}>
-                            <p className="text-sm leading-relaxed">{turn.text}</p>
+                    <div key={idx} className={`flex ${turn.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`p-2.5 rounded-xl max-w-[85%] text-xs shadow-sm border ${
+                            turn.role === 'user' 
+                            ? 'bg-accent/10 text-accent rounded-tr-none border-accent/20' 
+                            : 'bg-bg-surface text-text-primary rounded-tl-none border-border-default'
+                        }`}>
+                            <div className="flex items-center justify-between gap-4 mb-1">
+                                <span className={`text-[8px] font-black uppercase tracking-widest ${turn.role === 'user' ? 'text-accent/60' : 'text-text-secondary'}`}>{turn.role === 'user' ? 'You' : 'AI'}</span>
+                                {turn.role === 'ai' && <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-bg-main text-text-secondary uppercase">{turn.mode}</span>}
+                            </div>
+                            <p className="leading-relaxed">{turn.text}</p>
                         </div>
                     </div>
                 ))}
                 {(currentTurn.user || currentTurn.ai) && (
-                    <div className="space-y-4">
-                        {currentTurn.user && (
-                             <div className="flex justify-end opacity-40 italic">
-                                <div className="bg-accent text-brand-bg p-3 rounded-2xl rounded-tr-none max-w-lg text-xs">{currentTurn.user}</div>
-                            </div>
-                        )}
-                        {currentTurn.ai && (
-                             <div className="flex justify-start opacity-40 italic">
-                                <div className="bg-bg-surface text-text-primary p-3 rounded-2xl rounded-tl-none max-w-lg border border-border-default text-xs">{currentTurn.ai}</div>
-                            </div>
-                        )}
+                    <div className="space-y-3 opacity-40 italic">
+                        {currentTurn.user && <div className="flex justify-end"><div className="bg-accent/5 p-2 rounded-lg max-w-[80%] text-[11px] border border-accent/10">{currentTurn.user}</div></div>}
+                        {currentTurn.ai && <div className="flex justify-start"><div className="bg-bg-surface p-2 rounded-lg max-w-[80%] text-[11px] border border-border-default">{currentTurn.ai}</div></div>}
                     </div>
                 )}
                 <div ref={transcriptEndRef}></div>
             </main>
 
-             <footer className="flex-shrink-0 p-8 border-t border-border-default bg-bg-surface/30 flex flex-col items-center gap-6">
-                <canvas ref={canvasRef} width="300" height="40" className="w-full max-w-xs opacity-50"></canvas>
-                 <div className="relative w-24 h-24 flex items-center justify-center">
-                    {status === 'listening' && <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping"></div>}
-                    {status === 'buffering' && <div className="absolute inset-0 bg-orange-500/20 rounded-full animate-pulse"></div>}
-                    <div className={`relative w-20 h-20 rounded-full flex items-center justify-center transition-all duration-500 border-4 ${status === 'listening' ? 'bg-green-500/40 border-green-500 scale-110 shadow-[0_0_30px_rgba(34,197,94,0.4)]' : 'bg-bg-main border-border-default'} ${status === 'speaking' ? 'border-yellow-500 bg-yellow-500/20' : ''} ${status === 'buffering' ? 'border-orange-500 bg-orange-500/20' : ''}`}>
-                        <MicrophoneIcon className={`w-10 h-10 ${status === 'listening' ? 'text-green-400' : 'text-text-secondary opacity-50'}`} />
-                    </div>
+             <footer className="flex-shrink-0 p-4 border-t border-border-default bg-bg-surface/30 flex flex-col items-center gap-3">
+                <canvas ref={canvasRef} width="180" height="15" className="opacity-30"></canvas>
+                <div className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 border-2 ${status === 'listening' ? 'bg-green-500/10 border-green-500 scale-110 shadow-[0_0_15px_rgba(34,197,94,0.2)]' : 'bg-bg-main border-border-default opacity-50'} ${status === 'speaking' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : ''}`}>
+                    <MicrophoneIcon className={`w-5 h-5 ${status === 'listening' ? 'text-green-400' : 'text-text-secondary'}`} />
                 </div>
-                <div className="text-center">
-                    <p className="text-[10px] text-text-secondary font-black tracking-[0.2em] uppercase">
-                        {status === 'buffering' ? 'Speech Queued: Sequential Protection Active' : 'Real-Time Neural Processing'}
-                    </p>
-                </div>
+                <p className="text-[8px] text-text-secondary font-black uppercase tracking-[0.3em] opacity-50">Neural Relay Active</p>
              </footer>
         </div>
     );

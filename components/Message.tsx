@@ -249,12 +249,13 @@ const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => 
 const LoadingMessage: React.FC = () => {
   return (
     <div className="flex justify-start animate-fade-in">
-        <div className="bg-bg-surface text-text-primary p-4 rounded-xl rounded-bl-lg shadow-sm border border-border-default">
+        <div className="bg-bg-surface text-text-primary p-4 rounded-xl rounded-bl-lg shadow-sm border border-border-default flex flex-col gap-2 min-w-[180px]">
             <div className="flex items-center space-x-1.5">
                 <span className="h-2 w-2 bg-accent rounded-full animate-pulse-warm [animation-delay:-0.3s]"></span>
                 <span className="h-2 w-2 bg-accent rounded-full animate-pulse-warm [animation-delay:-0.15s]"></span>
                 <span className="h-2 w-2 bg-accent rounded-full animate-pulse-warm"></span>
             </div>
+            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.1em] animate-pulse">AfriTranslate is thinking...</p>
         </div>
     </div>
   );

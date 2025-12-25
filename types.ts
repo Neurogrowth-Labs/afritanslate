@@ -1,12 +1,10 @@
-
-
 import type React from 'react';
 
 export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber';
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
-export type View = 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion';
+export type View = 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding';
 
 export type MeetingMode = 'live' | 'upload';
 
@@ -31,6 +29,12 @@ export interface TranslationResult {
   culturallyAwareTranslation: string;
   explanation: string;
   pronunciation?: string;
+}
+
+export interface EmailLocalizationResult {
+  subject: string;
+  body: string;
+  culturalTips: string[];
 }
 
 export interface MessageAttachment {
@@ -107,6 +111,11 @@ export interface User {
   email: string;
   role: UserRole;
   plan: UserPlan;
+  bio?: string;
+  profession?: string;
+  interests?: string;
+  goals?: string;
+  onboarding_completed?: boolean;
 }
 
 // --- Script Translator AI Toolkit Types --- //

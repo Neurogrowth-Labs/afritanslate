@@ -3,8 +3,8 @@ import type { User } from '../types';
 import { UserIcon, EmailIcon, PasswordIcon, GoogleIcon, ZoomIcon } from './Icons';
 
 const LogoIcon = () => (
-    <div className="w-16 h-16 rounded-full bg-bg-main flex-shrink-0 flex items-center justify-center mb-4 border-2 border-border-default">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-accent">
+    <div className="w-10 h-10 rounded-full bg-bg-main flex-shrink-0 flex items-center justify-center mb-2 border-2 border-border-default">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-accent">
             <circle cx="12" cy="12" r="10"></circle>
             <line x1="2" y1="12" x2="22" y2="12"></line>
             <path d="M12 2a15.3 15.3 0 0 1 4 18 15.3 15.3 0 0 1-8 0 15.3 15.3 0 0 1 4-18z"></path>
@@ -85,14 +85,12 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, on
         setError(null);
         setIsLoading(true);
         await onGoogleLogin();
-        // Don't setIsLoading(false) as OAuth will cause a page reload
     };
 
     const handleZoomAuth = async () => {
         setError(null);
         setIsLoading(true);
         await onZoomLogin();
-        // Don't setIsLoading(false) as OAuth will cause a page reload
     };
 
     const toggleView = () => {
@@ -110,70 +108,70 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, on
         const showAdminUI = isLogin && isAdminLogin;
 
         return (
-            <div className="w-1/2 flex-shrink-0 p-8 flex flex-col justify-center">
+            <div className="w-1/2 flex-shrink-0 p-5 sm:p-6 flex flex-col justify-center h-full">
                 <div className="text-center w-full">
                     <div className="flex justify-center">
                         <LogoIcon />
                     </div>
-                    <h1 className="text-3xl font-bold text-white mb-2">{showAdminUI ? 'Admin Portal' : 'AfriTranslate AI'}</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">{showAdminUI ? 'Admin Portal' : 'AfriTranslate AI'}</h1>
                      { showAdminUI ? (
-                        <p className="text-text-primary h-12 flex flex-col items-center justify-center">
-                            <span className="text-lg font-semibold text-amber-500 animate-fade-in">Administrator Access</span>
+                        <p className="text-text-primary h-10 flex flex-col items-center justify-center">
+                            <span className="text-sm font-semibold text-amber-500 animate-fade-in">Administrator Access</span>
                         </p>
                     ) : (
-                        <p className="text-text-secondary h-12 flex flex-col items-center justify-center">
-                            <span className="text-2xl font-semibold text-accent animate-fade-in">{text}</span>
-                            <span className="text-xs text-text-secondary animate-fade-in">A {lang} Greeting</span>
+                        <p className="text-text-secondary h-10 flex flex-col items-center justify-center">
+                            <span className="text-lg font-semibold text-accent animate-fade-in leading-tight">{text}</span>
+                            <span className="text-[9px] text-text-secondary animate-fade-in uppercase tracking-widest mt-0.5">{lang} Greeting</span>
                         </p>
                     )}
                 </div>
 
-                <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 mt-8">
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-2.5 mt-4">
                     {!isLogin && (
                         <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"><UserIcon /></span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"><UserIcon className="w-3.5 h-3.5" /></span>
                             <input
                                 type="text"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                className="w-full pl-10 p-3 bg-bg-main border border-border-default rounded-lg shadow-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary placeholder-text-secondary"
+                                className="w-full pl-9 p-2.5 bg-bg-main border border-border-default rounded-xl shadow-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary placeholder-text-secondary/50 text-xs"
                                 placeholder="Full Name"
                                 required={!isLogin}
                             />
                         </div>
                     )}
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"><EmailIcon /></span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"><EmailIcon className="w-3.5 h-3.5" /></span>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full pl-10 p-3 bg-bg-main border border-border-default rounded-lg shadow-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary placeholder-text-secondary"
+                            className="w-full pl-9 p-2.5 bg-bg-main border border-border-default rounded-xl shadow-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary placeholder-text-secondary/50 text-xs"
                             placeholder="Email Address"
                             required
                         />
                     </div>
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"><PasswordIcon /></span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary"><PasswordIcon className="w-3.5 h-3.5" /></span>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full pl-10 p-3 bg-bg-main border border-border-default rounded-lg shadow-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary placeholder-text-secondary"
+                            className="w-full pl-9 p-2.5 bg-bg-main border border-border-default rounded-xl shadow-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary placeholder-text-secondary/50 text-xs"
                             placeholder="Password"
                             required
                         />
                     </div>
 
-                    {error && <p className="text-red-400 text-center text-sm font-medium animate-fade-in">{error}</p>}
+                    {error && <p className="text-red-400 text-center text-[10px] font-medium animate-fade-in leading-tight">{error}</p>}
 
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className={`w-full py-3 text-white font-semibold rounded-lg transition-colors flex items-center justify-center
+                        className={`w-full py-2.5 text-white font-bold rounded-xl transition-all active:scale-95 flex items-center justify-center text-sm
                           ${showAdminUI 
-                            ? 'bg-amber-600 hover:bg-amber-700 disabled:bg-amber-600/50' 
-                            : 'bg-accent hover:bg-accent/90 disabled:bg-accent/50'
+                            ? 'bg-amber-600 hover:bg-amber-700 shadow-lg shadow-amber-900/20' 
+                            : 'bg-accent hover:bg-accent/90 shadow-lg shadow-accent/10'
                           }`
                         }
                     >
@@ -181,35 +179,35 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, on
                     </button>
                 </form>
 
-                 <div className="my-6 flex items-center">
+                 <div className="my-4 flex items-center">
                     <div className="flex-grow border-t border-border-default"></div>
-                    <span className="flex-shrink mx-4 text-xs text-text-secondary">OR</span>
+                    <span className="flex-shrink mx-3 text-[9px] text-text-secondary font-bold uppercase">OR</span>
                     <div className="flex-grow border-t border-border-default"></div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
                     <button
                         onClick={handleGoogleAuth}
                         disabled={isLoading}
-                        className="w-full py-3 bg-bg-main border border-border-default font-semibold rounded-lg transition-colors flex items-center justify-center gap-3 hover:bg-border-default/50 disabled:opacity-50 text-text-primary"
+                        className="py-2 bg-bg-main border border-border-default font-semibold rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-border-default/50 disabled:opacity-50 text-text-primary text-[11px]"
                     >
-                        <GoogleIcon className="w-5 h-5" />
-                        Sign in with Google
+                        <GoogleIcon className="w-3.5 h-3.5" />
+                        Google
                     </button>
                     <button
                         onClick={handleZoomAuth}
                         disabled={isLoading}
-                        className="w-full py-3 bg-bg-main border border-border-default font-semibold rounded-lg transition-colors flex items-center justify-center gap-3 hover:bg-border-default/50 disabled:opacity-50 text-text-primary"
+                        className="py-2 bg-bg-main border border-border-default font-semibold rounded-xl transition-all flex items-center justify-center gap-2 hover:bg-border-default/50 disabled:opacity-50 text-text-primary text-[11px]"
                     >
-                        <ZoomIcon className="w-5 h-5" />
-                        Sign in with Zoom
+                        <ZoomIcon className="w-3.5 h-3.5" />
+                        Zoom
                     </button>
                 </div>
 
-                <p className="text-center text-sm text-text-secondary mt-6">
-                    {isLogin ? "Don't have an account?" : "Already have an account?"}
-                    <button onClick={toggleView} className="font-semibold text-accent hover:underline ml-1">
-                        {isLogin ? 'Sign Up' : 'Log In'}
+                <p className="text-center text-[11px] text-text-secondary mt-5">
+                    {isLogin ? "New to AfriTranslate?" : "Have an account?"}
+                    <button onClick={toggleView} className="font-bold text-accent hover:underline ml-1">
+                        {isLogin ? 'Join now' : 'Sign in'}
                     </button>
                 </p>
             </div>
@@ -217,16 +215,16 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, on
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-bg-main text-text-primary p-4">
+        <div className="min-h-screen flex items-center justify-center bg-bg-main text-text-primary p-4 overflow-y-auto">
             <div 
                 className={`
-                    w-full max-w-md bg-bg-surface rounded-2xl shadow-2xl border border-border-default 
-                    animate-fade-in overflow-hidden relative transition-all duration-300
+                    w-full max-w-[360px] bg-bg-surface rounded-2xl shadow-2xl border border-border-default 
+                    animate-fade-in overflow-hidden relative transition-all duration-300 my-auto
                     ${isAdminLogin ? 'ring-2 ring-amber-500 ring-offset-4 ring-offset-bg-main' : ''}
                 `}
             >
                 <div 
-                    className="flex w-[200%] transition-transform duration-700 ease-in-out"
+                    className="flex w-[200%] transition-transform duration-500 ease-in-out"
                     style={{ transform: isLoginView ? 'translateX(0%)' : 'translateX(-50%)' }}
                 >
                    {formContent(true)}
