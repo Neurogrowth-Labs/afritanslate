@@ -1,3 +1,5 @@
+
+
 import type React from 'react';
 
 export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber';

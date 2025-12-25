@@ -98,7 +98,7 @@ const ProfileDashboard: React.FC<ProfileDashboardProps> = ({ user, onUpdateUser 
     };
 
     return (
-        <div className="max-w-4xl mx-auto py-4 px-3 sm:px-6 animate-fade-in">
+        <div className="max-w-4xl mx-auto animate-fade-in">
             <div className="flex flex-col md:flex-row gap-5">
                 {/* Left Profile Summary */}
                 <div className="w-full md:w-[260px] space-y-4">

@@ -6,22 +6,22 @@ const UseCasesPage: React.FC = () => {
         {
             title: "Business & Marketing",
             icon: BusinessIcon,
-            description: "Craft marketing campaigns that resonate deeply with local audiences. Translate business proposals, reports, and communications with the right professional tone and cultural sensitivity to build trust and close deals faster."
+            description: "Craft resonant marketing campaigns and translate business documents with the right cultural tone to build trust and close deals."
         },
         {
             title: "Media & Creatives",
             icon: MediaIcon,
-            description: "Translate scripts, novels, and subtitles while preserving the original artistic intent, humor, and emotion. Our AI acts as a cultural consultant, ensuring your creative work connects with a new audience authentically."
+            description: "Translate scripts, novels, and subtitles while preserving artistic intent. Our AI acts as a cultural consultant to ensure your work connects authentically."
         },
         {
             title: "Education & Research",
             icon: EducationIcon,
-            description: "Make educational materials accessible across linguistic barriers. Translate academic papers, research, and historical documents with high accuracy, facilitating cross-cultural collaboration and knowledge sharing."
+            description: "Make educational materials accessible across linguistic barriers. Accurately translate academic papers and research to facilitate global collaboration."
         },
         {
             title: "Healthcare & NGOs",
             icon: HealthcareIcon,
-            description: "Communicate vital health information clearly and respectfully. Translate patient instructions, community outreach materials, and reports with the empathy and clarity required for sensitive cross-cultural interactions."
+            description: "Communicate vital health information with clarity and respect. Translate patient instructions and outreach materials with the required empathy for sensitive interactions."
         }
     ];
 

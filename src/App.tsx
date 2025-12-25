@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
@@ -250,7 +251,6 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
 
 // --- LANDING PAGE --- //
 const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void }> = ({ initialView = 'home', onStart }) => {
-    // FIX: With 'home' added to the View type, the 'as any' cast is no longer needed.
     const [currentView, setCurrentView] = useState<View>(initialView);
 
     const renderContent = () => {

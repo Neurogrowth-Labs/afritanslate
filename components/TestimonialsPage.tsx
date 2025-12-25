@@ -3,25 +3,25 @@ import React from 'react';
 const TestimonialsPage: React.FC = () => {
     const testimonials = [
         {
-            quote: "This is a game-changer for our international marketing. The tone adjustment ensures our copy is always culturally appropriate, which has significantly improved engagement with local partners in Africa.",
+            quote: "A game-changer for our international marketing. The tone adjustment ensures our copy is always culturally appropriate, significantly improving engagement in Africa.",
             name: "Amara Koffi",
             title: "Marketing Director, TechInnovate",
             initials: "AK"
         },
         {
-            quote: "As a writer, translating my work felt like losing its soul. AfriTranslate's nuance engine helped me adapt my book into Swahili in a way that preserved my voice and the story's emotional core.",
+            quote: "Translating my work used to feel like losing its soul. AfriTranslate's nuance engine helped adapt my book while preserving my voice and its emotional core.",
             name: "Femi Sowande",
             title: "Author & Playwright",
             initials: "FS"
         },
         {
-            quote: "Our research team collaborates with universities across the continent. This tool has been invaluable for translating academic papers and ensuring our findings are communicated accurately and respectfully.",
+            quote: "This tool has been invaluable for our cross-continent collaborations. It ensures our academic findings are communicated accurately and respectfully.",
             name: "Dr. Chidi Okoro",
             title: "Lead Researcher, Pan-African Institute",
             initials: "CO"
         },
         {
-            quote: "I'm a second-generation diaspora member, and AfriTranslate's idiom explanations have been an incredible learning tool, helping me understand the wisdom behind the words my elders use.",
+            quote: "As a diaspora member, the idiom explanations have been an incredible tool for understanding the wisdom behind the words my elders use.",
             name: "Nneka Adebayo",
             title: "Cultural Enthusiast",
             initials: "NA"
