@@ -194,6 +194,13 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, on
                         <GoogleIcon className="w-3.5 h-3.5" />
                         Google
                     </button>
+
+                    await supabase.auth.signInWithOAuth(
+  OAuthProvider.google,
+  redirectTo: kIsWeb ? null : 'my.scheme://my-host', // Optionally set the redirect link to bring back the user via deeplink.
+  authScreenLaunchMode:
+      kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication, // Launch the auth screen in a new webview on mobile.
+);
                     <button
                         onClick={handleZoomAuth}
                         disabled={isLoading}
