@@ -168,12 +168,25 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         setCurrentUser(updatedUser);
         setSelectedPlanForPayment(planName);
 
-        // Update database
+        // Update database and verify
         try {
-            await supabase
+            const { error } = await supabase
                 .from('profiles')
                 .update({ plan: planName })
                 .eq('id', currentUser.id);
+            
+            if (error) throw error;
+
+            // Re-fetch profile to ensure sync and get any triggered fields
+            const { data: refreshedData } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', currentUser.id)
+                .single();
+            
+            if (refreshedData) {
+                setCurrentUser(refreshedData as User);
+            }
         } catch (error) {
             console.error("Error updating plan:", error);
         }
