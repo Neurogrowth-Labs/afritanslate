@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="dark">
   <head>
@@ -28,32 +29,32 @@
 
       body {
         font-size: 13px;
-        background-color: var(--bg-main);
+        /* Subtle radial gradient to give depth to the dark mode */
+        background: radial-gradient(circle at top center, #1f1f1f 0%, #121212 60%);
         color: #e5e5e5;
         font-family: 'Inter', sans-serif;
         line-height: 1.35;
       }
 
-      /* Visible High-Quality Scrollbar */
+      /* Slim, premium scrollbars */
       ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
+        width: 6px;
+        height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: rgba(0, 0, 0, 0.1);
+        background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #333;
-        border-radius: 4px;
-        border: 2px solid var(--bg-main);
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: var(--accent);
+        background: rgba(244, 163, 0, 0.5); /* Accent color with opacity */
       }
 
       * {
         scrollbar-width: thin;
-        scrollbar-color: #333 transparent;
+        scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
       }
 
       .custom-scrollbar {
@@ -64,16 +65,16 @@
       .prose {
         color: #a3a3a3;
         font-size: 13px;
-        line-height: 1.4;
+        line-height: 1.6; /* Improved readability */
       }
-      .prose strong { color: #fff; }
-      .prose h1, .prose h2, .prose h3 { color: #fff; margin-top: 0.5em; margin-bottom: 0.3em; font-size: 1.05em; }
+      .prose strong { color: #fff; font-weight: 600; }
+      .prose h1, .prose h2, .prose h3 { color: #fff; margin-top: 1em; margin-bottom: 0.5em; font-weight: 600; }
       
       .animate-fade-in {
-        animation: fadeIn 0.2s ease-out forwards;
+        animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
       @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(2px); }
+        from { opacity: 0; transform: translateY(4px); }
         to { opacity: 1; transform: translateY(0); }
       }
 
@@ -106,6 +107,9 @@
               'text-primary': '#e5e5e5',
               'text-secondary': '#737373',
               'accent': '#F4A300',
+            },
+            animation: {
+                'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
             }
           }
         }
@@ -125,8 +129,9 @@
 }
 </script>
 </head>
-  <body class="antialiased">
+  <body class="antialiased selection:bg-accent/30 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
+    

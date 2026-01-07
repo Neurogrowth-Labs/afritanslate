@@ -1,3 +1,4 @@
+
 import type { TranslationResult } from '../types';
 
 // A simple dictionary for offline demonstration purposes.
@@ -121,4 +122,15 @@ export function getOfflineTranslation(
     culturallyAwareTranslation: translatedText,
     explanation: 'This is a basic, literal translation performed while offline. Cultural nuances and complex grammar are not available without an internet connection.'
   };
+}
+
+export function getBatchOfflineTranslations(
+  texts: string[],
+  sourceLang: string,
+  targetLang: string
+): Promise<TranslationResult[]> {
+    return Promise.resolve(texts.map(text => {
+        const res = getOfflineTranslation(text, sourceLang, targetLang);
+        return { ...res, original: text };
+    }));
 }

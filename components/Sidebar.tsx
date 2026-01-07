@@ -11,7 +11,7 @@ import {
 
 
 const PlusIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
     </svg>
 );
@@ -53,10 +53,10 @@ interface SidebarProps {
 const NavButton: React.FC<{ label: string; icon: React.ReactNode; isActive: boolean; onClick: () => void; isLocked?: boolean; disabled?: boolean }> = ({ label, icon, isActive, onClick, isLocked, disabled }) => (
     <button
         onClick={onClick}
-        className={`flex items-center gap-3 w-full px-3 py-2 md:py-1.5 rounded text-[13px] font-medium transition-all group relative ${
+        className={`flex items-center gap-3 w-full px-3 py-2 md:py-2 rounded-lg text-[13px] font-medium transition-all group relative ${
             isActive 
-            ? 'bg-accent/10 text-accent border border-accent/20' 
-            : 'text-text-secondary hover:bg-white/5 hover:text-text-primary border border-transparent'
+            ? 'bg-gradient-to-r from-accent/10 to-transparent text-white border-l-2 border-accent' 
+            : 'text-text-secondary hover:bg-white/5 hover:text-text-primary border-l-2 border-transparent'
         } ${disabled ? 'opacity-30 cursor-not-allowed' : ''} ${isLocked ? 'opacity-70 hover:opacity-100' : ''}`}
     >
         <div className={`transition-colors ${isActive ? 'text-accent' : 'text-text-secondary group-hover:text-text-primary'}`}>{icon}</div>
@@ -93,34 +93,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         return conversations.filter(c => c.title.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [conversations, searchTerm]);
 
-    // Define Plan Levels for Feature Access
     const planLevels: Record<string, number> = {
-        'Free': 0,
-        'Basic': 1,
-        'Premium': 2,
-        'Training': 3,
-        'Entreprise': 4
+        'Free': 0, 'Basic': 1, 'Premium': 2, 'Training': 3, 'Entreprise': 4
     };
-
     const userPlan = currentUser?.plan || 'Free';
     const currentLevel = planLevels[userPlan] || 0;
-
-    // Access Helper
     const hasAccess = (minLevel: number) => currentLevel >= minLevel;
 
-    // Feature Access Levels
-    // Free: Chat
-    // Basic: + Script, Book, Audio Transcriber
-    // Premium: + Live, Motion, Image, Meetings
-    const FEATURE_LEVELS = {
-        transcriber: 1,
-        script: 1,
-        book: 1,
-        live: 2,
-        motion: 2,
-        image: 2,
-        meetings: 2
-    };
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -132,17 +112,21 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
 
     return (
-        <aside className={`fixed md:relative inset-y-0 left-0 z-50 w-64 bg-bg-surface border-r border-border-default flex flex-col transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 h-screen overflow-hidden`}>
+        <aside className={`
+            fixed md:relative inset-y-0 left-0 z-50 w-64 
+            bg-bg-surface/80 backdrop-blur-xl border-r border-white/5
+            flex flex-col transform transition-transform duration-300 ease-in-out 
+            ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 h-screen overflow-hidden shadow-2xl md:shadow-none
+        `}>
             {/* Header: Brand & New Chat */}
             <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center shadow-lg shadow-accent/20">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#121212" strokeWidth="2.5" className="w-5 h-5"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 18 15.3 15.3 0 0 1-8 0 15.3 15.3 0 0 1 4-18z"></path></svg>
                         </div>
                         <span className="font-brand font-bold text-lg text-white tracking-tight">Studio AI</span>
                     </div>
-                    {/* Explicit Close Button for Mobile */}
                     <button 
                         onClick={() => setIsOpen(false)}
                         className="md:hidden p-1.5 text-text-secondary hover:text-white"
@@ -154,123 +138,69 @@ const Sidebar: React.FC<SidebarProps> = ({
                 
                 <button 
                     onClick={() => { onNewChat(); setIsOpen(false); }}
-                    className="w-full h-10 md:h-9 bg-accent text-bg-main font-bold rounded flex items-center justify-center gap-2 hover:bg-accent/90 transition-all shadow-sm"
+                    className="w-full h-10 md:h-10 bg-white/5 border border-white/10 text-white font-semibold rounded-lg flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all shadow-sm group"
                 >
                     <PlusIcon />
-                    <span>New Project</span>
+                    <span className="group-hover:text-accent transition-colors">New Project</span>
                 </button>
 
-                <div className="relative">
-                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary" />
+                <div className="relative group">
+                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary group-focus-within:text-accent transition-colors" />
                     <input 
                         type="text"
-                        placeholder="Quick search..."
+                        placeholder="Search projects..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full h-9 md:h-8 pl-8 pr-3 bg-bg-main border border-border-default rounded text-[11px] text-text-primary focus:ring-1 focus:ring-accent outline-none placeholder:text-text-secondary/50"
+                        className="w-full h-9 md:h-9 pl-8 pr-3 bg-black/20 border border-white/5 rounded-lg text-[11px] text-text-primary focus:ring-1 focus:ring-accent/50 focus:border-accent/50 outline-none placeholder:text-text-secondary/50 transition-all"
                     />
                 </div>
             </div>
 
             {/* Main Navigation Sections */}
-            <div className="flex-1 overflow-y-auto px-2 space-y-6 custom-scrollbar pb-6">
+            <div className="flex-1 overflow-y-auto px-3 space-y-6 custom-scrollbar pb-6">
                 <div>
-                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em]">Assistant</h4>
+                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Tools</h4>
                     <div className="space-y-0.5">
-                        <NavButton 
-                            label="Translation Studio" 
-                            icon={<TranslateIcon className="w-4 h-4"/>} 
-                            isActive={currentView === 'chat' && currentMode === 'chat'} 
-                            onClick={() => { onSetView('chat'); onSetMode('chat'); setIsOpen(false); }} 
-                        />
-                        <NavButton 
-                            label="Live Conversation" 
-                            icon={<LiveIcon className="w-4 h-4" />} 
-                            isActive={currentView === 'live'} 
-                            onClick={() => handleFeatureClick(() => onSetView('live'), FEATURE_LEVELS.live)} 
-                            isLocked={!hasAccess(FEATURE_LEVELS.live)}
-                            disabled={isOffline} 
-                        />
-                        <NavButton 
-                            label="Audio Transcriber" 
-                            icon={<MicrophoneIcon className="w-4 h-4" />} 
-                            isActive={currentMode === 'transcriber'} 
-                            onClick={() => handleFeatureClick(() => onSetMode('transcriber'), FEATURE_LEVELS.transcriber)} 
-                            isLocked={!hasAccess(FEATURE_LEVELS.transcriber)}
-                            disabled={isOffline} 
-                        />
+                        <NavButton label="Translation Studio" icon={<TranslateIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'chat'} onClick={() => { onSetView('chat'); onSetMode('chat'); setIsOpen(false); }} />
+                        <NavButton label="Live Conversation" icon={<LiveIcon className="w-4 h-4" />} isActive={currentView === 'live'} onClick={() => handleFeatureClick(() => onSetView('live'), FEATURE_LEVELS.live)} isLocked={!hasAccess(FEATURE_LEVELS.live)} disabled={isOffline} />
+                        <NavButton label="Audio Transcriber" icon={<MicrophoneIcon className="w-4 h-4" />} isActive={currentMode === 'transcriber'} onClick={() => handleFeatureClick(() => onSetMode('transcriber'), FEATURE_LEVELS.transcriber)} isLocked={!hasAccess(FEATURE_LEVELS.transcriber)} disabled={isOffline} />
                     </div>
                 </div>
 
                 <div>
-                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em]">Creative Suite</h4>
+                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Creative</h4>
                     <div className="space-y-0.5">
-                        <NavButton 
-                            label="Motion Generator" 
-                            icon={<PlayIcon />} 
-                            isActive={currentView === 'motion'} 
-                            onClick={() => handleFeatureClick(() => onSetView('motion'), FEATURE_LEVELS.motion)} 
-                            isLocked={!hasAccess(FEATURE_LEVELS.motion)} 
-                            disabled={isOffline} 
-                        />
-                        <NavButton 
-                            label="Visual Arts" 
-                            icon={<ImageIcon className="w-4 h-4" />} 
-                            isActive={currentView === 'image'} 
-                            onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} 
-                            isLocked={!hasAccess(FEATURE_LEVELS.image)} 
-                            disabled={isOffline} 
-                        />
+                        <NavButton label="Motion Generator" icon={<PlayIcon />} isActive={currentView === 'motion'} onClick={() => handleFeatureClick(() => onSetView('motion'), FEATURE_LEVELS.motion)} isLocked={!hasAccess(FEATURE_LEVELS.motion)} disabled={isOffline} />
+                        <NavButton label="Visual Arts" icon={<ImageIcon className="w-4 h-4" />} isActive={currentView === 'image'} onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} isLocked={!hasAccess(FEATURE_LEVELS.image)} disabled={isOffline} />
                     </div>
                 </div>
 
                 <div>
-                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em]">Advanced Translators</h4>
+                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Professional</h4>
                     <div className="space-y-0.5">
-                        <NavButton 
-                            label="Script Translator" 
-                            icon={<ScriptIcon className="w-4 h-4" />} 
-                            isActive={currentMode === 'script'} 
-                            onClick={() => handleFeatureClick(() => onSetMode('script'), FEATURE_LEVELS.script)} 
-                            isLocked={!hasAccess(FEATURE_LEVELS.script)} 
-                            disabled={isOffline} 
-                        />
-                        <NavButton 
-                            label="Literary Translator" 
-                            icon={<BookIcon className="w-4 h-4" />} 
-                            isActive={currentMode === 'book'} 
-                            onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} 
-                            isLocked={!hasAccess(FEATURE_LEVELS.book)} 
-                            disabled={isOffline} 
-                        />
-                        <NavButton 
-                            label="Meeting Insights" 
-                            icon={<MeetingIcon className="w-4 h-4" />} 
-                            isActive={currentMode === 'meetings'} 
-                            onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} 
-                            isLocked={!hasAccess(FEATURE_LEVELS.meetings)} 
-                            disabled={isOffline} 
-                        />
+                        <NavButton label="Script Translator" icon={<ScriptIcon className="w-4 h-4" />} isActive={currentMode === 'script'} onClick={() => handleFeatureClick(() => onSetMode('script'), FEATURE_LEVELS.script)} isLocked={!hasAccess(FEATURE_LEVELS.script)} disabled={isOffline} />
+                        <NavButton label="Literary Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'book'} onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} isLocked={!hasAccess(FEATURE_LEVELS.book)} disabled={isOffline} />
+                        <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={!hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
                     </div>
                 </div>
 
                 {filteredConversations.length > 0 && (
                     <div>
-                        <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em]">Recent Sessions</h4>
+                        <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">History</h4>
                         <div className="space-y-0.5">
                             {filteredConversations.map(convo => (
-                                <div key={convo.id} className="group relative px-2">
+                                <div key={convo.id} className="group relative px-1">
                                     <button
                                         onClick={() => { onSelectConversation(convo.id); setIsOpen(false); }}
-                                        className={`w-full text-left px-2 py-2 md:py-1.5 rounded text-xs truncate transition-all ${
-                                            currentConversationId === convo.id ? 'bg-white/10 text-white font-semibold' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
+                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs truncate transition-all ${
+                                            currentConversationId === convo.id ? 'bg-white/10 text-white font-medium' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
                                         }`}
                                     >
                                         {convo.title}
                                     </button>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onDeleteConversation(convo.id); }}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                                     >
                                         <TrashIcon />
                                     </button>
@@ -282,22 +212,22 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* Bottom Meta Sections */}
-            <div className="p-2 border-t border-border-default space-y-1 bg-bg-surface">
+            <div className="p-3 border-t border-white/5 bg-black/20 backdrop-blur-md">
                 <NavButton label="My Profile" icon={<UserIcon className="w-4 h-4" />} isActive={currentView === 'profile'} onClick={() => { onSetView('profile'); setIsOpen(false); }} />
-                <NavButton label="Resource Library" icon={<LibraryIcon className="w-4 h-4" />} isActive={currentView === 'library'} onClick={() => { onShowLibrary(); setIsOpen(false); }} />
-                <NavButton label="Account & Billing" icon={<PriceTagIcon className="w-4 h-4" />} isActive={currentView === 'pricing'} onClick={() => { onShowPricing(); setIsOpen(false); }} />
+                <NavButton label="Library" icon={<LibraryIcon className="w-4 h-4" />} isActive={currentView === 'library'} onClick={() => { onShowLibrary(); setIsOpen(false); }} />
+                <NavButton label="Plans" icon={<PriceTagIcon className="w-4 h-4" />} isActive={currentView === 'pricing'} onClick={() => { onShowPricing(); setIsOpen(false); }} />
                 
-                <div className="mt-4 px-3 py-2 bg-bg-main rounded border border-border-default flex items-center justify-between">
+                <div className="mt-3 px-3 py-2 bg-gradient-to-r from-white/5 to-transparent rounded-lg border border-white/5 flex items-center justify-between">
                     <div className="flex flex-col">
-                        <span className="text-[10px] text-text-secondary font-bold uppercase">Plan Status</span>
-                        <span className="text-xs font-bold text-accent">{currentUser?.plan || 'Free Member'}</span>
+                        <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">Plan</span>
+                        <span className="text-xs font-bold text-accent drop-shadow-sm">{currentUser?.plan || 'Free'}</span>
                     </div>
                     {currentUser?.plan !== 'Entreprise' && (
                         <button
                             onClick={onUpgrade}
-                            className="text-[10px] font-bold text-bg-main bg-accent px-2 py-1 rounded hover:bg-accent/90 transition-colors"
+                            className="text-[9px] font-bold text-bg-main bg-accent px-2.5 py-1 rounded shadow-lg shadow-accent/20 hover:bg-white hover:text-accent transition-all"
                         >
-                            {userPlan === 'Free' ? 'Upgrade' : 'Change Plan'}
+                            UPGRADE
                         </button>
                     )}
                 </div>

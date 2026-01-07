@@ -1,47 +1,126 @@
+
 import React from 'react';
-import { GlobeIcon, BoltIcon, DocIcon } from './Icons';
+import { GlobeIcon, BoltIcon, DocIcon, ThinkingIcon, UsersIcon, LockIcon } from './Icons';
 
 const AboutPage: React.FC<{ isLandingSection?: boolean }> = ({ isLandingSection = false }) => {
-    const textPrimary = isLandingSection ? 'text-brand-text-primary' : 'text-text-primary';
-    const textSecondary = isLandingSection ? 'text-brand-text-secondary' : 'text-text-secondary';
-    const iconContainerBg = isLandingSection ? 'bg-brand-primary/10' : 'bg-accent/10';
-    const iconColor = isLandingSection ? 'text-brand-primary' : 'text-accent';
+    // Style configurations based on context
+    const containerClasses = isLandingSection ? 'py-0 max-w-4xl mx-auto' : 'max-w-4xl mx-auto py-12 px-6'; 
+    // Increased heading sizes
+    const headingClass = "text-3xl md:text-4xl font-bold text-white tracking-tight mb-4";
+    // Increased subheading size
+    const subHeadingClass = "text-base text-text-secondary max-w-2xl mx-auto leading-relaxed";
 
     return (
-        <div className={`animate-fade-in ${!isLandingSection ? 'max-w-4xl mx-auto py-8' : ''}`}>
+        <div className={`animate-fade-in ${containerClasses} space-y-12`}>
+            
+            {/* 1. Hero / Mission Section */}
             <div className="text-center">
-                <h1 className={`text-4xl sm:text-5xl font-bold ${textPrimary}`}>
-                    Translate Beyond Words.
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-bold uppercase tracking-widest mb-4">
+                    Our Mission
+                </div>
+                <h1 className={headingClass}>
+                    We don't just translate words.<br />
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-yellow-200">We translate culture.</span>
                 </h1>
-                <p className={`mt-4 text-lg ${textSecondary} max-w-3xl mx-auto`}>
-                    We bridge cultural divides with translations that are not just accurate, but authentic. True communication begins with cultural understanding.
+                <p className={subHeadingClass}>
+                    Standard tools strip away history. AfriTranslate AI restores the human element, bridging the gap between global connectivity and authentic local expression.
                 </p>
             </div>
-            
-            <div className={`mt-16 grid grid-cols-1 md:grid-cols-3 gap-10 text-center ${!isLandingSection ? 'bg-bg-surface p-8 rounded-xl border border-border-default' : ''}`}>
-                <div className="animate-slide-in-up" style={{ animationDelay: '0.2s' }}>
-                    <div className={`inline-flex items-center justify-center w-16 h-16 ${iconContainerBg} rounded-full ${iconColor} mb-4`}><GlobeIcon /></div>
-                    <h3 className={`text-xl font-semibold ${textPrimary}`}>Cultural Nuance Engine</h3>
-                    <p className={`mt-2 ${textSecondary}`}>Applies local idioms, proverbs, and social etiquette for truly authentic interactions.</p>
+
+            {/* 2. The Core Problem vs Solution */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-bg-surface/40 p-6 rounded-xl border border-white/5 backdrop-blur-sm"> 
+                <div>
+                    <h2 className="text-xl font-bold text-white mb-3">The Context Gap</h2>
+                    <p className="text-sm text-text-secondary leading-relaxed mb-5">
+                        Legacy engines treat language as math, ignoring social nuances like age, time, and setting. This leads to misunderstandings and brand damage.
+                    </p>
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-start gap-3">
+                            <div className="mt-1.5 p-0.5 bg-red-500/10 rounded text-red-400"><div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div></div>
+                            <p className="text-sm text-text-secondary"><strong className="text-white">Generic AI:</strong> Ignores idioms and cultural taboos.</p>
+                        </div>
+                        <div className="flex items-start gap-3">
+                            <div className="mt-1.5 p-0.5 bg-accent/10 rounded text-accent"><div className="w-1.5 h-1.5 bg-accent rounded-full"></div></div>
+                            <p className="text-sm text-text-secondary"><strong className="text-white">AfriTranslate:</strong> Analyzes intent and cultural norms.</p>
+                        </div>
+                    </div>
                 </div>
-                <div className="animate-slide-in-up" style={{ animationDelay: '0.4s' }}>
-                    <div className={`inline-flex items-center justify-center w-16 h-16 ${iconContainerBg} rounded-full ${iconColor} mb-4`}><BoltIcon /></div>
-                    <h3 className={`text-xl font-semibold ${textPrimary}`}>Real-Time & Accurate</h3>
-                    <p className={`mt-2 ${textSecondary}`}>Instant, reliable translations for conversations, documents, and creative projects.</p>
-                </div>
-                <div className="animate-slide-in-up" style={{ animationDelay: '0.6s' }}>
-                    <div className={`inline-flex items-center justify-center w-16 h-16 ${iconContainerBg} rounded-full ${iconColor} mb-4`}><DocIcon /></div>
-                    <h3 className={`text-xl font-semibold ${textPrimary}`}>Multi-Format Support</h3>
-                    <p className={`mt-2 ${textSecondary}`}>Translate text, voice, documents, and live meetings with one versatile toolkit.</p>
+                <div className="relative">
+                    <div className="absolute inset-0 bg-accent/5 blur-2xl rounded-full"></div>
+                    <div className="relative bg-bg-main border border-border-default rounded-lg p-5 shadow-xl">
+                        <div className="flex items-center gap-3 mb-4 border-b border-white/5 pb-3">
+                            <ThinkingIcon className="w-5 h-5 text-accent" />
+                            <span className="text-xs font-bold text-white uppercase tracking-wider">Nuance Engine</span>
+                        </div>
+                        <div className="space-y-2">
+                            <div className="h-1.5 bg-white/10 rounded w-3/4"></div>
+                            <div className="h-1.5 bg-white/10 rounded w-full"></div>
+                            <div className="h-1.5 bg-white/10 rounded w-5/6"></div>
+                        </div>
+                        <div className="mt-5 flex gap-2">
+                            <span className="px-2 py-1 bg-white/5 rounded text-[10px] text-text-secondary border border-white/5">Semantic</span>
+                            <span className="px-2 py-1 bg-white/5 rounded text-[10px] text-text-secondary border border-white/5">Cultural</span>
+                            <span className="px-2 py-1 bg-accent/10 text-accent border border-accent/20 rounded text-[10px] font-bold">Tone</span>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
+
+            {/* 3. Three Pillars */}
+            <div>
+                <h2 className="text-xl font-bold text-center text-white mb-8">Built on Three Pillars</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-bg-surface p-6 rounded-xl border border-border-default hover:border-accent/30 transition-colors group">
+                        <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-blue-500/20 transition-colors">
+                            <GlobeIcon className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <h3 className="text-base font-bold text-white mb-2">Linguistic Diversity</h3>
+                        <p className="text-sm text-text-secondary leading-relaxed">
+                            Supporting 2,000+ dialects beyond official languages. Every voice deserves accurate understanding.
+                        </p>
+                    </div>
+                    <div className="bg-bg-surface p-6 rounded-xl border border-border-default hover:border-accent/30 transition-colors group">
+                        <div className="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-accent/20 transition-colors">
+                            <BoltIcon className="w-5 h-5 text-accent" />
+                        </div>
+                        <h3 className="text-base font-bold text-white mb-2">Real-Time Adaptation</h3>
+                        <p className="text-sm text-text-secondary leading-relaxed">
+                            Proprietary low-latency architecture for live translation that keeps pace with natural speech.
+                        </p>
+                    </div>
+                    <div className="bg-bg-surface p-6 rounded-xl border border-border-default hover:border-accent/30 transition-colors group">
+                        <div className="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-green-500/20 transition-colors">
+                            <UsersIcon className="w-5 h-5 text-green-400" />
+                        </div>
+                        <h3 className="text-base font-bold text-white mb-2">Ethical AI</h3>
+                        <p className="text-sm text-text-secondary leading-relaxed">
+                            Prioritizing data sovereignty and ethically sourced datasets to respect the AI value chain.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* 4. Technology / Stats */}
             {!isLandingSection && (
-                 <div className="mt-16 text-center">
-                    <h2 className={`text-3xl font-bold ${textPrimary}`}>The Technology Behind the Translation</h2>
-                    <p className={`mt-4 ${textSecondary} max-w-3xl mx-auto`}>
-                        Powered by Google's state-of-the-art AI, our models are fine-tuned on diverse African languages and cultural contexts. This allows us to capture the true essence of your message, making every translation feel natural and respectful.
-                    </p>
+                <div className="border-t border-border-default pt-10 pb-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+                        <div className="p-2">
+                            <div className="text-3xl font-black text-white mb-1">54</div>
+                            <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Countries</div>
+                        </div>
+                        <div className="p-2">
+                            <div className="text-3xl font-black text-white mb-1">2k+</div>
+                            <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Dialects</div>
+                        </div>
+                        <div className="p-2">
+                            <div className="text-3xl font-black text-white mb-1">99%</div>
+                            <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Accuracy</div>
+                        </div>
+                        <div className="p-2">
+                            <div className="text-3xl font-black text-white mb-1">10M+</div>
+                            <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Words</div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

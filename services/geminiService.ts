@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics } from '../types';
 
@@ -49,13 +50,35 @@ async function fileToGenerativePart(file: File) {
 export async function getNuancedTranslation(text: string, sourceLang: string, targetLang: string, tone: string, attachments: File[] = []): Promise<TranslationResult> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Translate to ${targetLang} with ${tone} tone. Prioritize cultural idioms, regional dialects, and social norms. JSON output required. Source: "${text}"`;
+    
+    // ENHANCED PROMPT FOR TECHNICAL ACCURACY + CULTURAL NUANCE
+    const prompt = `
+      You are an expert Linguistic AI specialized in African languages and technical localization.
+      
+      Task: Translate the source text from ${sourceLang} to ${targetLang}.
+      Target Tone: ${tone}.
+      
+      CRITICAL INSTRUCTIONS:
+      1. **Technical Precision**: If the input contains Medical, Legal, Engineering, or Financial terminology, you MUST preserve the exact technical meaning. Do not use colloquial metaphors that dilute technical accuracy. Use widely accepted loanwords if a native term does not exist for a specific technical concept (e.g., "MRI scan", "Subpoena", "Encryption").
+      2. **Cultural Resonance**: For non-technical phrases, greetings, and social connectors, adapt them deeply to match the local culture, idioms, and social hierarchy of the ${targetLang} speaking region.
+      3. **Formal Tone**: If Tone is 'Formal' or 'Business', ensure strict adherence to honorifics and respectful address.
+      
+      Output Format: JSON with the following fields:
+      - directTranslation: A literal translation.
+      - culturallyAwareTranslation: The final polished version blending technical accuracy with cultural flow.
+      - explanation: A brief note explaining 1) any technical terms preserved/adapted and 2) cultural nuances added.
+      - pronunciation: A phonetic guide for the culturally aware translation.
+
+      Source Text: "${text}"
+    `;
+
     const contents: { parts: any[] } = { parts: [{ text: prompt }] };
     for (const file of attachments) contents.parts.unshift(await fileToGenerativePart(file));
+    
     const response = await ai.models.generateContent({
       model: "gemini-flash-lite-latest",
       contents: { parts: contents.parts },
-      config: { responseMimeType: "application/json", responseSchema: translationSchema, temperature: 0.7 },
+      config: { responseMimeType: "application/json", responseSchema: translationSchema, temperature: 0.4 }, // Lower temperature for technical accuracy
     });
     return JSON.parse(response.text.trim()) as TranslationResult;
   } catch (error) { throw handleApiError(error, "getting translation"); }
@@ -64,14 +87,20 @@ export async function getNuancedTranslation(text: string, sourceLang: string, ta
 export async function localizeEmail(subject: string, body: string, targetLang: string, tone: string, context: string): Promise<EmailLocalizationResult> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Localize this email into ${targetLang} with a ${tone} tone. 
-    The context is: ${context}. 
-    Please provide a localized subject line, a culturally appropriate body (considering greetings, sign-offs, and social norms), and 2-3 specific cultural etiquette tips for email communication in this target culture. 
+    const prompt = `
+    Role: Professional Executive Assistant & Cultural Liaison.
+    Task: Localize this email into ${targetLang} with a ${tone} tone.
+    Context: ${context}.
+    
+    GUIDELINES:
+    1. **Business Protocol**: Ensure the greeting and sign-off perfectly match the social hierarchy defined in the context.
+    2. **Terminology**: If the email discusses business contracts, medical issues, or technical projects, maintain strict terminology accuracy. Do not "dumb down" professional language.
+    3. **Cultural Nuance**: Adjust the level of directness. (e.g., in some African cultures, jumping straight to business is rude; add necessary pleasantries).
     
     Source Subject: "${subject}"
     Source Body: "${body}"
     
-    Return as JSON.`;
+    Return JSON: { subject, body, culturalTips (array of strings) }.`;
     
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -105,8 +134,7 @@ export async function transcribeAudio(audioFile: File, style: TranscriptionStyle
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const audioPart = await fileToGenerativePart(audioFile);
-        const prompt = `Transcribe high accuracy, ${style} style. Clean text output.`;
-        // FIX: Replaced 'gemini-2.5-flash' with a recommended model for multimodal tasks.
+        const prompt = `Transcribe audio. Style: ${style}. If technical terms (medical, legal, tech) appear, spell them correctly.`;
         const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: { parts: [audioPart, { text: prompt }] } });
         return response.text;
     } catch (error) { throw handleApiError(error, "transcribing audio"); }
@@ -115,8 +143,7 @@ export async function transcribeAudio(audioFile: File, style: TranscriptionStyle
 export async function translateScript(scriptText: string, sourceLang: string, targetLang: string, tone: string): Promise<string> {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `Translate script from ${sourceLang} to ${targetLang} (${tone}). Keep formatting. Adapt for cultural resonance. Text: ${scriptText}`;
-        // FIX: Replaced 'gemini-2.5-flash' with a recommended model for text tasks.
+        const prompt = `Translate script from ${sourceLang} to ${targetLang} (${tone}). Keep formatting. Adapt for cultural resonance but preserve technical plot points or terminology if present. Text: ${scriptText}`;
         const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { temperature: 0.5 } });
         return response.text;
     } catch (error) { throw handleApiError(error, "translating script"); }
@@ -258,8 +285,7 @@ export async function translateBook(
 export async function summarizeMeeting(transcript: string, meetingLink?: string, summaryLangName: string = 'English'): Promise<string> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Summarize meeting transcript in ${summaryLangName}. Sections: Discussion, Decisions, Actions. Markdown. Transcript: ${transcript}`;
-    // FIX: Replaced 'gemini-2.5-flash' with a recommended model for text tasks.
+    const prompt = `Summarize meeting transcript in ${summaryLangName}. Sections: Discussion, Decisions, Actions. Identify any technical terms discussed. Markdown. Transcript: ${transcript}`;
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt });
     return response.text;
   } catch (error) { throw handleApiError(error, "summarizing meeting"); }
@@ -288,7 +314,6 @@ export async function pollVideoOperation(operation: any) {
 export async function generateSynopsis(scriptText: string, targetLang: string): Promise<Synopsis> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `Generate logline and synopsis for: ${scriptText} in ${targetLang}. JSON.`;
-    // FIX: Replaced 'gemini-2.5-flash' with a recommended model for text tasks.
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { logline: { type: Type.STRING }, synopsis: { type: Type.STRING } }, required: ["logline", "synopsis"] } } });
     return JSON.parse(response.text) as Synopsis;
 }
@@ -296,7 +321,6 @@ export async function generateSynopsis(scriptText: string, targetLang: string): 
 export async function analyzeCharacters(scriptText: string, targetLang: string): Promise<CharacterProfile[]> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `Analyze up to 3 characters in: ${scriptText} for ${targetLang} audience. JSON array.`;
-    // FIX: Replaced 'gemini-2.5-flash' with a recommended model for text tasks.
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, description: { type: Type.STRING }, motivation: { type: Type.STRING }, emotionalArc: { type: Type.STRING } }, required: ["name", "description", "motivation", "emotionalArc"] } } } });
     return JSON.parse(response.text) as CharacterProfile[];
 }
@@ -304,7 +328,6 @@ export async function analyzeCharacters(scriptText: string, targetLang: string):
 export async function generateCulturalReport(original: string, translated: string, sourceLang: string, targetLang: string): Promise<CulturalReport> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `Compare scripts. Identify cultural adaptations (idioms, jokes, norms). JSON. Original: ${original}. Translated: ${translated}`;
-    // FIX: Replaced 'gemini-2.5-flash' with a recommended model for text tasks.
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { summary: { type: Type.STRING }, adaptations: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { original: { type: Type.STRING }, adapted: { type: Type.STRING }, reason: { type: Type.STRING } }, required: ["original", "adapted", "reason"] } } }, required: ["summary", "adaptations"] } } });
     return JSON.parse(response.text) as CulturalReport;
 }
@@ -312,7 +335,53 @@ export async function generateCulturalReport(original: string, translated: strin
 export async function analyzeAudienceReception(scriptText: string, targetLang: string): Promise<AudienceReception> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `Analyze audience reception for: ${scriptText} in ${targetLang} region. JSON.`;
-    // FIX: Replaced 'gemini-2.5-flash' with a recommended model for text tasks.
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { targetDemographic: { type: Type.STRING }, keyStrengths: { type: Type.ARRAY, items: { type: Type.STRING } }, potentialChallenges: { type: Type.ARRAY, items: { type: Type.STRING } }, genreAppeal: { type: Type.STRING } }, required: ["targetDemographic", "keyStrengths", "potentialChallenges", "genreAppeal"] } } });
     return JSON.parse(response.text) as AudienceReception;
+}
+
+export async function getBatchTranslations(
+  texts: string[],
+  sourceLang: string,
+  targetLang: string,
+  tone: string,
+  context: string
+): Promise<TranslationResult[]> {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const prompt = `Batch translate these texts from ${sourceLang} to ${targetLang} with a ${tone} tone. 
+    Context: ${context}.
+    CRITICAL: If technical, legal, or medical terms are present, preserve their exact professional meaning.
+    
+    Return a JSON array of objects. Each object must have: "original" (the source text), "directTranslation", "culturallyAwareTranslation", "explanation", "pronunciation".
+    
+    Texts:
+    ${JSON.stringify(texts)}
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              original: { type: Type.STRING },
+              directTranslation: { type: Type.STRING },
+              culturallyAwareTranslation: { type: Type.STRING },
+              explanation: { type: Type.STRING },
+              pronunciation: { type: Type.STRING },
+            },
+            required: ["original", "directTranslation", "culturallyAwareTranslation", "explanation"]
+          }
+        },
+        temperature: 0.4
+      },
+    });
+    return JSON.parse(response.text.trim()) as TranslationResult[];
+  } catch (error) {
+    throw handleApiError(error, "batch translating");
+  }
 }

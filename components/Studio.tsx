@@ -1,13 +1,14 @@
+
 import React, { useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import type { TranslationResult } from '../types';
 import * as geminiService from '../services/geminiService';
-import { getOfflineTranslation } from '../services/offlineService';
+import { getOfflineTranslation, getBatchOfflineTranslations } from '../services/offlineService';
 import { LANGUAGES, TONES } from '../constants';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
-import { TranslateIcon, CheckIcon, InfoIcon } from './Icons';
+import { TranslateIcon, CheckIcon, InfoIcon, BatchIcon } from './Icons';
 
 interface StudioProps {
     isOffline: boolean;
@@ -18,7 +19,7 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
     const sanitizedHtml = DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
     return (
         <div 
-            className="prose prose-invert prose-sm max-w-none text-[13px]"
+            className="prose prose-invert prose-sm max-w-none text-[14px]"
             dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
     );
@@ -41,8 +42,11 @@ const Studio: React.FC<StudioProps> = ({ isOffline }) => {
     const [targetLang, setTargetLang] = useState('sw');
     const [tone, setTone] = useState('Friendly');
     const [context, setContext] = useState('');
+    const [isBatchMode, setIsBatchMode] = useState(false);
     const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
-    const [showSettings, setShowSettings] = useState(false);
+
+    // Batch results state
+    const [batchResults, setBatchResults] = useState<TranslationResult[]>([]);
 
     const handleTranslate = async () => {
         if (!sourceText.trim()) {
@@ -51,18 +55,33 @@ const Studio: React.FC<StudioProps> = ({ isOffline }) => {
         }
         setIsLoading(true);
         setError(null);
-        if (window.innerWidth < 1024) setShowSettings(false);
+        setBatchResults([]);
+        setTranslationResult(null);
 
         try {
-            let textToTranslate = sourceText;
-            if(context.trim()){
-                textToTranslate = `CONTEXT: "${context.trim()}"\n\nTEXT: "${sourceText.trim()}"`;
-            }
+            if (isBatchMode) {
+                const inputs = sourceText.split('\n').filter(line => line.trim() !== '');
+                if (inputs.length === 0) throw new Error("No valid lines found.");
+                
+                if (isOffline) {
+                    const results = await getBatchOfflineTranslations(inputs, sourceLang, targetLang);
+                    setBatchResults(results);
+                } else {
+                    const results = await geminiService.getBatchTranslations(inputs, sourceLang, targetLang, tone, context);
+                    setBatchResults(results);
+                }
+            } else {
+                // Normal Mode
+                let textToTranslate = sourceText;
+                if(context.trim()){
+                    textToTranslate = `CONTEXT: "${context.trim()}"\n\nTEXT: "${sourceText.trim()}"`;
+                }
 
-            const result = isOffline
-                ? getOfflineTranslation(textToTranslate, sourceLang, targetLang)
-                : await geminiService.getNuancedTranslation(textToTranslate, sourceLang, targetLang, tone);
-            setTranslationResult(result);
+                const result = isOffline
+                    ? getOfflineTranslation(textToTranslate, sourceLang, targetLang)
+                    : await geminiService.getNuancedTranslation(textToTranslate, sourceLang, targetLang, tone);
+                setTranslationResult(result);
+            }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
         } finally {
@@ -78,197 +97,202 @@ const Studio: React.FC<StudioProps> = ({ isOffline }) => {
         }, 2000);
     };
 
-    const ConfigurationPanel = () => (
-        <div className="flex flex-col gap-4 p-3 h-full overflow-y-auto custom-scrollbar">
-            <section className="space-y-3">
-                <h3 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Input</h3>
-                <LanguageSelector label="From" languages={LANGUAGES} value={sourceLang} onChange={setSourceLang} />
-                <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-medium">Detection</label>
-                    <div className="p-1.5 rounded bg-bg-main border border-border-default text-text-secondary text-[12px]">
-                        Auto-detect...
-                    </div>
-                </div>
-            </section>
-
-            <div className="h-px bg-border-default"></div>
-
-            <section className="space-y-3">
-                <h3 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Output</h3>
-                <LanguageSelector label="To" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
-                <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-medium">Dialect</label>
-                    <select className="w-full p-1.5 bg-bg-main border border-border-default rounded text-[12px] focus:ring-1 focus:ring-accent outline-none">
-                        <option>Standard</option>
-                        <option>Colloquial</option>
-                        <option>Archaic</option>
-                    </select>
-                </div>
-            </section>
-
-            <div className="h-px bg-border-default"></div>
-
-            <section className="space-y-3">
-                <h3 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Context</h3>
-                <ToneSelector label="Persona" tones={TONES} value={tone} onChange={setTone} />
-                <div className="space-y-1">
-                    <label className="text-[10px] text-text-secondary font-medium">Scenario</label>
-                    <textarea 
-                        value={context}
-                        onChange={e => setContext(e.target.value)}
-                        placeholder="Describe the setting..."
-                        className="w-full h-20 p-2 bg-bg-main border border-border-default rounded text-[12px] focus:ring-1 focus:ring-accent outline-none text-text-primary resize-none placeholder:text-text-secondary/30"
-                    />
-                </div>
-            </section>
-
-            <div className="mt-auto pt-4 border-t border-border-default">
-                <div className="p-2 bg-bg-main/40 border border-border-default rounded text-[9px] text-text-secondary/60">
-                    <p>AfriTranslate Engine v2.4</p>
-                    <p>Status: {isOffline ? 'Offline' : 'Online'}</p>
-                </div>
-            </div>
-        </div>
-    );
-
     return (
-        <div className="flex h-full w-full overflow-hidden bg-bg-main relative">
-            <div className="hidden lg:block w-52 flex-shrink-0 border-r border-border-default bg-bg-surface/30 h-full overflow-hidden">
-                <ConfigurationPanel />
+        <div className="flex flex-col h-full w-full bg-transparent overflow-hidden">
+            {/* Top Toolbar - Floating Configuration */}
+            <div className="flex-shrink-0 px-4 py-3">
+                <div className="bg-bg-surface/70 backdrop-blur-xl border border-white/5 rounded-2xl p-2 flex flex-col md:flex-row items-center gap-4 shadow-2xl">
+                    <div className="flex-1 flex items-center gap-3 w-full overflow-x-auto no-scrollbar">
+                        <div className="min-w-[140px]">
+                            <LanguageSelector label="From" languages={LANGUAGES} value={sourceLang} onChange={setSourceLang} />
+                        </div>
+                        <div className="text-text-secondary">→</div>
+                        <div className="min-w-[140px]">
+                            <LanguageSelector label="To" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
+                        </div>
+                        <div className="w-px h-8 bg-white/10 mx-2"></div>
+                        <div className="min-w-[140px]">
+                            <ToneSelector label="Persona" tones={TONES} value={tone} onChange={setTone} />
+                        </div>
+                        
+                        <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
+                        
+                        {/* Context Toggle (Simple Input for now to save space) */}
+                        <div className="hidden md:flex flex-col flex-1 min-w-[150px]">
+                            <label className="text-[9px] font-bold text-text-secondary uppercase tracking-wider mb-1">Context</label>
+                            <input 
+                                type="text" 
+                                value={context}
+                                onChange={(e) => setContext(e.target.value)}
+                                placeholder="e.g. Business meeting..."
+                                className="w-full bg-black/20 border border-white/5 rounded-md px-2 py-1 text-xs text-white focus:ring-1 focus:ring-accent outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full md:w-auto justify-end px-2">
+                         <button 
+                            onClick={() => setIsBatchMode(!isBatchMode)}
+                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-all ${
+                                isBatchMode 
+                                ? 'bg-accent/20 border-accent text-accent' 
+                                : 'bg-white/5 border-transparent text-text-secondary hover:text-white'
+                            }`}
+                            title="Batch Mode: Translate multiple lines at once"
+                        >
+                            <BatchIcon className="w-4 h-4" />
+                            <span className="hidden sm:inline">Batch</span>
+                        </button>
+
+                        <button 
+                            onClick={handleTranslate} 
+                            disabled={isLoading || !sourceText.trim()}
+                            className="h-10 px-6 bg-accent text-bg-main font-black rounded-xl hover:bg-white hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-accent/20 flex items-center gap-2"
+                        >
+                            {isLoading ? (
+                                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <TranslateIcon className="w-4 h-4"/>
+                            )}
+                            <span className="text-xs tracking-wider">TRANSLATE</span>
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div className="flex-1 flex flex-col min-w-0 bg-bg-main h-full overflow-hidden">
-                <div className="h-12 border-b border-border-default flex items-center justify-between px-3 bg-bg-surface/50 flex-shrink-0">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                        <button 
-                            onClick={() => setShowSettings(!showSettings)}
-                            className="lg:hidden p-1.5 text-text-secondary hover:text-white bg-bg-main border border-border-default rounded flex-shrink-0"
-                        >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
-                        </button>
-                        <span className="text-[12px] font-semibold text-text-primary truncate">Localization Studio</span>
-                        <div className="hidden sm:block h-3 w-px bg-border-default flex-shrink-0 mx-1"></div>
-                        <span className="hidden sm:block text-[10px] text-text-secondary whitespace-nowrap flex-shrink-0">{sourceText.length} chars</span>
+            {/* Main Workspace */}
+            <div className="flex-1 flex flex-col md:flex-row gap-4 p-4 min-h-0">
+                {/* Source Input */}
+                <div className="flex-1 bg-bg-surface/40 border border-white/5 rounded-2xl flex flex-col relative focus-within:ring-1 focus-within:ring-accent/50 focus-within:bg-bg-surface/60 transition-all shadow-lg overflow-hidden">
+                    <div className="flex justify-between items-center p-3 border-b border-white/5 bg-white/5">
+                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest pl-1">Source Text</span>
+                        {sourceText && (
+                            <button onClick={() => setSourceText('')} className="text-text-secondary hover:text-white text-[10px] uppercase font-bold">Clear</button>
+                        )}
                     </div>
-                    <button 
-                        onClick={handleTranslate} 
-                        disabled={isLoading || !sourceText.trim()}
-                        className="h-8 px-3 bg-accent text-bg-main font-bold rounded flex items-center gap-1.5 hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex-shrink-0"
-                    >
-                        <TranslateIcon className="w-3.5 h-3.5"/>
-                        <span className="text-[12px] whitespace-nowrap">{isLoading ? 'Wait...' : 'Translate'}</span>
-                    </button>
+                    <textarea 
+                        value={sourceText}
+                        onChange={(e) => setSourceText(e.target.value)}
+                        placeholder={isBatchMode ? "Enter multiple lines of text to translate...\nOne sentence per line." : "Type or paste text here to translate..."}
+                        className="flex-1 w-full p-5 bg-transparent resize-none focus:outline-none text-[14px] leading-relaxed text-text-primary placeholder:text-text-secondary/30 font-sans overflow-y-auto custom-scrollbar"
+                    />
+                    <div className="p-2 text-right text-[10px] text-text-secondary/50 border-t border-white/5">
+                        {sourceText.length} characters
+                    </div>
                 </div>
 
-                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-                    <div className="flex-1 relative border-b border-border-default min-h-0">
-                        <textarea 
-                            value={sourceText}
-                            onChange={(e) => setSourceText(e.target.value)}
-                            placeholder="Type source text..."
-                            className="w-full h-full p-4 bg-transparent resize-none focus:outline-none text-[13px] leading-relaxed text-text-primary placeholder:text-text-secondary/30 font-sans overflow-y-auto custom-scrollbar"
-                        />
+                {/* Target Output */}
+                <div className="flex-1 bg-[#0c0c0c]/80 border border-white/5 rounded-2xl flex flex-col relative shadow-inner overflow-hidden">
+                    <div className="flex justify-between items-center p-3 border-b border-white/5 bg-black/40">
+                        <span className="text-[10px] font-bold text-accent uppercase tracking-widest pl-1">Translation</span>
+                        {translationResult && !isBatchMode && (
+                            <div className="flex gap-2">
+                                <button onClick={() => handleCopy('main', translationResult.culturallyAwareTranslation)} className="text-text-secondary hover:text-white" title="Copy Translation">
+                                    {copiedStates['main'] ? <CheckIcon className="w-4 h-4 text-green-400"/> : <CopyIcon className="w-3 h-3"/>}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-5 custom-scrollbar relative">
+                        {isLoading && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-bg-main/50 backdrop-blur-sm z-10">
+                                <div className="flex flex-col items-center gap-3">
+                                    <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                                    <span className="text-[10px] font-bold text-accent uppercase tracking-widest animate-pulse">Processing Nuance...</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {!translationResult && batchResults.length === 0 && !isLoading && (
+                            <div className="h-full flex flex-col items-center justify-center text-text-secondary opacity-20">
+                                <TranslateIcon className="w-12 h-12 mb-3"/>
+                                <p className="text-sm font-medium">Ready to translate</p>
+                            </div>
+                        )}
+
                         {error && (
-                            <div className="absolute bottom-2 left-2 right-2 p-1.5 bg-red-900/20 border border-red-900/50 rounded text-red-400 text-[11px] animate-fade-in z-20">
+                            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                                 {error}
                             </div>
                         )}
-                    </div>
 
-                    <div className="flex-1 min-h-0 bg-[#0c0c0c] relative overflow-hidden flex flex-col">
-                        {isLoading && (
-                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-bg-main/60 backdrop-blur-[1px]">
-                                <div className="flex gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-accent animate-bounce"></div>
-                                    <div className="w-1 h-1 rounded-full bg-accent animate-bounce [animation-delay:0.2s]"></div>
-                                    <div className="w-1 h-1 rounded-full bg-accent animate-bounce [animation-delay:0.4s]"></div>
+                        {/* Batch Mode Results */}
+                        {isBatchMode && batchResults.length > 0 && (
+                            <div className="space-y-3">
+                                {batchResults.map((item, index) => (
+                                    <details key={index} className="group bg-bg-surface/20 border border-white/5 rounded-lg overflow-hidden open:bg-bg-surface/40 transition-colors">
+                                        <summary className="p-3 cursor-pointer flex items-center justify-between hover:bg-white/5">
+                                            <div className="flex-1 truncate pr-4">
+                                                <span className="text-accent font-bold text-sm block mb-0.5">{item.culturallyAwareTranslation}</span>
+                                                <span className="text-[11px] text-text-secondary truncate block">{item.original}</span>
+                                            </div>
+                                            <div className="text-text-secondary group-open:rotate-90 transition-transform">
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                                            </div>
+                                        </summary>
+                                        <div className="p-3 pt-0 border-t border-white/5 mt-2">
+                                            <div className="grid grid-cols-2 gap-4 text-xs mt-2">
+                                                <div>
+                                                    <span className="text-[9px] uppercase text-text-secondary font-bold">Literal</span>
+                                                    <p className="text-white/70 italic mt-1">{item.directTranslation}</p>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[9px] uppercase text-text-secondary font-bold">Nuance</span>
+                                                    <p className="text-white/70 mt-1">{item.explanation}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </details>
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Single Translation Result */}
+                        {!isBatchMode && translationResult && (
+                            <div className="animate-fade-in space-y-6">
+                                <section>
+                                    <div className="text-[15px] leading-relaxed text-white font-medium">
+                                        <MarkdownRenderer content={translationResult.culturallyAwareTranslation} />
+                                    </div>
+                                    {translationResult.pronunciation && (
+                                        <div className="mt-3 flex items-center gap-2 text-text-secondary text-xs font-mono bg-black/20 p-2 rounded inline-block">
+                                            <span className="text-accent">Pronunciation:</span> {translationResult.pronunciation}
+                                        </div>
+                                    )}
+                                </section>
+
+                                <div className="h-px bg-white/10"></div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Literal Meaning</h4>
+                                            <button onClick={() => handleCopy('direct', translationResult.directTranslation)} className="text-text-secondary hover:text-white">
+                                                {copiedStates['direct'] ? <CheckIcon className="w-3 h-3 text-green-400"/> : <CopyIcon className="w-3 h-3"/>}
+                                            </button>
+                                        </div>
+                                        <div className="text-xs text-white/70 italic">
+                                            <MarkdownRenderer content={translationResult.directTranslation} />
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-accent/5 p-3 rounded-xl border border-accent/10">
+                                        <h4 className="text-[9px] font-bold text-accent uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                                            <InfoIcon className="w-3 h-3"/> Cultural Context
+                                        </h4>
+                                        <div className="text-xs text-white/80 leading-relaxed">
+                                            <MarkdownRenderer content={translationResult.explanation} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
-                        
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-                            {!translationResult && !isLoading && (
-                                <div className="h-full flex flex-col items-center justify-center text-text-secondary opacity-10">
-                                    <TranslateIcon className="w-8 h-8 mb-2"/>
-                                    <p className="text-[12px]">Results appear here</p>
-                                </div>
-                            )}
-
-                            {translationResult && (
-                                <div className="animate-fade-in max-w-3xl mx-auto space-y-4">
-                                    <section>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h4 className="text-[9px] font-bold text-accent uppercase tracking-widest">Cultural Translation</h4>
-                                            <button onClick={() => handleCopy('cultural', translationResult.culturallyAwareTranslation)} className="p-1 text-text-secondary hover:text-accent transition-colors bg-bg-surface/50 rounded">
-                                                {copiedStates['cultural'] ? <CheckIcon className="w-3.5 h-3.5"/> : <CopyIcon />}
-                                            </button>
-                                        </div>
-                                        <div className="bg-bg-surface/30 p-3 rounded-lg border border-border-default/50 text-[13px] leading-relaxed text-white shadow-inner">
-                                            <MarkdownRenderer content={translationResult.culturallyAwareTranslation} />
-                                        </div>
-                                    </section>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-4">
-                                        <section>
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h4 className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Literal</h4>
-                                                <button onClick={() => handleCopy('direct', translationResult.directTranslation)} className="p-1 text-text-secondary hover:text-white transition-colors">
-                                                    {copiedStates['direct'] ? <CheckIcon className="w-3 h-3 text-accent"/> : <CopyIcon className="w-3 h-3"/>}
-                                                </button>
-                                            </div>
-                                            <div className="text-[12px] italic text-text-secondary/70 p-2.5 bg-bg-surface/20 rounded border border-border-default/30">
-                                                <MarkdownRenderer content={translationResult.directTranslation} />
-                                            </div>
-                                        </section>
-
-                                        <section>
-                                            <h4 className="text-[9px] font-bold text-text-secondary uppercase tracking-widest mb-2">Analysis</h4>
-                                            <div className="text-[12px] text-text-secondary/80 leading-relaxed bg-bg-surface/10 p-2.5 rounded border border-border-default/20">
-                                                <MarkdownRenderer content={translationResult.explanation} />
-                                            </div>
-                                        </section>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
                     </div>
                 </div>
             </div>
-
-            {showSettings && (
-                <div className="lg:hidden fixed inset-0 z-50 bg-bg-main/90 backdrop-blur-md animate-fade-in flex flex-col overflow-hidden">
-                    <div className="h-12 border-b border-border-default flex items-center justify-between px-3 bg-bg-surface flex-shrink-0">
-                        <h2 className="text-[12px] font-bold text-white uppercase tracking-widest">Options</h2>
-                        <button onClick={() => setShowSettings(false)} className="p-1.5 text-text-secondary">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        <ConfigurationPanel />
-                    </div>
-                    <div className="p-3 border-t border-border-default bg-bg-surface flex-shrink-0">
-                        <button 
-                            onClick={() => setShowSettings(false)}
-                            className="w-full py-2.5 bg-accent text-bg-main font-bold rounded-lg text-[13px]"
-                        >
-                            Apply
-                        </button>
-                    </div>
-                </div>
-            )}
         </div>
     );
-};
-
-const tonalityMapping: Record<string, string> = {
-    'Formal': 'Etiquette Precision',
-    'Informal': 'Casual Flow',
-    'Business': 'Corporate Standard',
-    'Friendly': 'Interpersonal Ease',
-    'Humorous': 'Cultural Puns',
-    'Poetic': 'Wisdom Preservation',
-    'Urgent': 'Crisis Clarity',
-    'Diplomatic': 'Mediation Balance'
 };
 
 export default Studio;

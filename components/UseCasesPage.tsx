@@ -1,51 +1,133 @@
+
 import React from 'react';
-import { BusinessIcon, MediaIcon, EducationIcon, HealthcareIcon } from './Icons';
+import { BusinessIcon, MediaIcon, EducationIcon, HealthcareIcon, CheckIcon } from './Icons';
+
+const UseCaseSection: React.FC<{ 
+    title: string; 
+    subtitle: string; 
+    description: string; 
+    points: string[]; 
+    icon: React.ReactNode; 
+    isReversed?: boolean;
+    colorClass: string;
+}> = ({ title, subtitle, description, points, icon, isReversed = false, colorClass }) => (
+    <div className={`flex flex-col ${isReversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-12 items-center py-12 border-b border-white/5 last:border-0`}>
+        <div className="flex-1 space-y-6">
+            <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${colorClass} bg-opacity-10 text-current mb-2`}>
+                <div className={colorClass.replace('bg-', 'text-')}>{icon}</div>
+            </div>
+            <div>
+                <h3 className="text-sm font-bold text-accent uppercase tracking-widest mb-2">{subtitle}</h3>
+                <h2 className="text-3xl font-bold text-white">{title}</h2>
+            </div>
+            <p className="text-text-secondary text-lg leading-relaxed">
+                {description}
+            </p>
+            <ul className="space-y-3 mt-4">
+                {points.map((point, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                        <CheckIcon className={`w-5 h-5 mt-0.5 ${colorClass.replace('bg-', 'text-')}`} />
+                        <span className="text-white/80 text-sm">{point}</span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+        <div className="flex-1 w-full">
+            <div className="aspect-video bg-bg-surface border border-border-default rounded-2xl p-8 flex items-center justify-center relative overflow-hidden group">
+                <div className={`absolute inset-0 ${colorClass} bg-opacity-5 blur-3xl group-hover:bg-opacity-10 transition-all duration-500`}></div>
+                <div className="relative z-10 text-center space-y-4 max-w-sm">
+                    <div className="w-16 h-16 bg-bg-main rounded-full flex items-center justify-center mx-auto border border-white/10 shadow-xl">
+                        {React.cloneElement(icon as React.ReactElement, { className: "w-8 h-8 opacity-50" })}
+                    </div>
+                    <div className="space-y-2">
+                        <div className="h-2 bg-white/10 rounded-full w-3/4 mx-auto"></div>
+                        <div className="h-2 bg-white/10 rounded-full w-1/2 mx-auto"></div>
+                    </div>
+                    <div className="pt-4">
+                        <span className="text-xs font-mono text-text-secondary opacity-60">AI Simulation Preview</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
 
 const UseCasesPage: React.FC = () => {
-    const useCases = [
-        {
-            title: "Business & Marketing",
-            icon: BusinessIcon,
-            description: "Craft resonant marketing campaigns and translate business documents with the right cultural tone to build trust and close deals."
-        },
-        {
-            title: "Media & Creatives",
-            icon: MediaIcon,
-            description: "Translate scripts, novels, and subtitles while preserving artistic intent. Our AI acts as a cultural consultant to ensure your work connects authentically."
-        },
-        {
-            title: "Education & Research",
-            icon: EducationIcon,
-            description: "Make educational materials accessible across linguistic barriers. Accurately translate academic papers and research to facilitate global collaboration."
-        },
-        {
-            title: "Healthcare & NGOs",
-            icon: HealthcareIcon,
-            description: "Communicate vital health information with clarity and respect. Translate patient instructions and outreach materials with the required empathy for sensitive interactions."
-        }
-    ];
-
     return (
-        <div className="animate-fade-in max-w-5xl mx-auto py-8">
-            <div className="text-center mb-12">
-                <h1 className="text-4xl sm:text-5xl font-bold text-text-primary">
-                    For Every Conversation
+        <div className="animate-fade-in max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-20">
+                <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6">
+                    Solutions for Every Sector
                 </h1>
-                <p className="mt-4 text-lg text-text-secondary max-w-3xl mx-auto">
-                    AfriTranslate AI empowers professionals across industries to communicate effectively and build stronger global relationships.
+                <p className="text-lg text-text-secondary max-w-3xl mx-auto leading-relaxed">
+                    From Nollywood scriptwriters to pan-African bank executives, AfriTranslate AI adapts to the specific vocabulary and cultural expectations of your industry.
                 </p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {useCases.map((useCase, index) => (
-                    <div key={index} className="bg-bg-surface p-8 rounded-xl border border-border-default flex flex-col items-center text-center hover:border-accent transition-colors hover:-translate-y-1">
-                        <div className="bg-accent/10 p-4 rounded-full mb-4">
-                            <useCase.icon className="w-10 h-10 text-accent" />
-                        </div>
-                        <h3 className="text-2xl font-semibold text-white mb-2">{useCase.title}</h3>
-                        <p className="text-text-secondary">{useCase.description}</p>
-                    </div>
-                ))}
+            <div className="space-y-12">
+                <UseCaseSection 
+                    title="Media & Entertainment"
+                    subtitle="Creative Arts"
+                    description="Storytelling relies on subtext. A literal translation of a joke or a culturally specific proverb can ruin a scene. We help scriptwriters and content creators retain the emotional core of their work across languages."
+                    points={[
+                        "Script localization preserving humor and idioms.",
+                        "Character profile analysis for consistent voice.",
+                        "Subtitle generation that fits reading speeds and cultural context."
+                    ]}
+                    icon={<MediaIcon className="w-6 h-6" />}
+                    colorClass="text-purple-400 bg-purple-500"
+                />
+
+                <UseCaseSection 
+                    title="Enterprise & Finance"
+                    subtitle="Global Business"
+                    description="Trust is the currency of business in Africa. Generic emails can sound cold or disrespectful. Our tools ensure your communications respect hierarchy, formality, and local business etiquette."
+                    points={[
+                        "Formal email adaptation for executives and government officials.",
+                        "Real-time meeting summarization with decision tracking.",
+                        "Marketing copy localization that resonates with local values."
+                    ]}
+                    icon={<BusinessIcon className="w-6 h-6" />}
+                    isReversed
+                    colorClass="text-blue-400 bg-blue-500"
+                />
+
+                <UseCaseSection 
+                    title="Healthcare & NGOs"
+                    subtitle="Social Impact"
+                    description="In health and humanitarian work, clarity saves lives. We help organizations communicate critical information accurately, using terms that are familiar and non-threatening to local communities."
+                    points={[
+                        "Medical terminology simplification for patient understanding.",
+                        "Culturally sensitive public health announcements.",
+                        "Offline capabilities for remote field work."
+                    ]}
+                    icon={<HealthcareIcon className="w-6 h-6" />}
+                    colorClass="text-green-400 bg-green-500"
+                />
+
+                <UseCaseSection 
+                    title="Education & Research"
+                    subtitle="Academic Access"
+                    description="Knowledge should have no borders. We facilitate the translation of educational materials and research papers, making high-level academic concepts accessible in indigenous languages."
+                    points={[
+                        "Translating complex STEM concepts into local languages.",
+                        "Facilitating cross-border academic collaboration.",
+                        "Preserving oral histories and indigenous knowledge systems."
+                    ]}
+                    icon={<EducationIcon className="w-6 h-6" />}
+                    isReversed
+                    colorClass="text-yellow-400 bg-yellow-500"
+                />
+            </div>
+
+            <div className="mt-24 bg-gradient-to-r from-accent/10 to-transparent rounded-3xl p-12 text-center border border-accent/20 relative overflow-hidden">
+                <div className="relative z-10">
+                    <h2 className="text-3xl font-bold text-white mb-4">Ready to localize your impact?</h2>
+                    <p className="text-text-secondary max-w-xl mx-auto mb-8">Join the thousands of professionals using AfriTranslate to bridge the cultural gap.</p>
+                    <button className="px-8 py-3 bg-accent text-bg-main font-bold rounded-xl hover:scale-105 transition-transform shadow-lg">
+                        Get Started Now
+                    </button>
+                </div>
             </div>
         </div>
     );

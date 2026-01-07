@@ -1,7 +1,7 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import type { User } from '../types';
-import { InfoIcon, MenuIcon, WifiOffIcon, LogoutIcon, BoltIcon } from './Icons';
+import { MenuIcon, LogoutIcon, BoltIcon } from './Icons';
 
 interface HeaderProps {
   sourceLangName?: string;
@@ -18,18 +18,18 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ sourceLangName, targetLangName, isChatActive, currentUser, onUpgradeClick, onProfileClick, tone, onToggleSidebar, isOffline, onLogout }) => {
   return (
-    <header className="h-14 flex items-center justify-between px-4 border-b border-border-default bg-bg-surface flex-shrink-0 z-40">
+    <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-bg-surface/50 backdrop-blur-md flex-shrink-0 z-40 sticky top-0">
       <div className="flex items-center gap-4">
-        <button onClick={onToggleSidebar} className="p-1.5 text-text-secondary md:hidden hover:text-text-primary transition-colors bg-bg-main border border-border-default rounded" aria-label="Open menu">
+        <button onClick={onToggleSidebar} className="p-2 text-text-secondary md:hidden hover:text-white transition-colors rounded-lg hover:bg-white/5" aria-label="Open menu">
           <MenuIcon className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-3">
           <div className="flex flex-col">
-            <h1 className="text-[14px] font-bold text-white leading-tight font-brand">AfriTranslate AI</h1>
-            <div className="flex items-center gap-1.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
-                <span className="text-[10px] text-text-secondary font-medium tracking-wide uppercase">
-                    {isOffline ? 'Offline Mode' : 'Cloud Neural System Active'}
+            <h1 className="text-[14px] font-bold text-white leading-tight font-brand tracking-wide">AfriTranslate AI</h1>
+            <div className="flex items-center gap-1.5 mt-0.5">
+                <div className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-yellow-500 animate-pulse' : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`}></div>
+                <span className="text-[9px] text-text-secondary font-medium tracking-widest uppercase">
+                    {isOffline ? 'Offline' : 'System Active'}
                 </span>
             </div>
           </div>
@@ -37,42 +37,42 @@ const Header: React.FC<HeaderProps> = ({ sourceLangName, targetLangName, isChatA
       </div>
 
       <div className="flex items-center gap-4">
+        {/* Breadcrumb-like status for chat */}
         {isChatActive && sourceLangName && targetLangName && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1 bg-bg-main border border-border-default rounded-full text-[11px] font-medium text-text-secondary">
-                <span>{sourceLangName}</span>
-                <svg className="w-3 h-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                <span className="text-white">{targetLangName}</span>
-                <span className="mx-1 h-2 w-px bg-border-default"></span>
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-black/20 border border-white/5 rounded-full text-[11px] font-medium text-text-secondary shadow-inner">
+                <span className="text-white/80">{sourceLangName}</span>
+                <svg className="w-3 h-3 text-text-secondary/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                <span className="text-white/80">{targetLangName}</span>
+                <span className="mx-2 h-3 w-px bg-white/10"></span>
                 <span className="text-accent">{tone}</span>
             </div>
         )}
 
         {currentUser && (
-            <div className="flex items-center gap-3 pl-4 border-l border-border-default h-6">
+            <div className="flex items-center gap-3 pl-4 border-l border-white/5 h-8">
                 {(currentUser.plan !== 'Entreprise') && (
                     <button 
                         onClick={onUpgradeClick}
-                        className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-accent text-bg-main text-[10px] font-bold rounded-full hover:bg-accent/90 transition-colors shadow-sm mr-2 animate-pulse-slow"
+                        className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/20 text-accent text-[10px] font-bold rounded-full hover:bg-accent hover:text-black transition-all shadow-sm mr-2"
                     >
                         <BoltIcon className="w-3 h-3" />
-                        <span>{currentUser.plan === 'Free' ? 'Upgrade' : 'Change Plan'}</span>
+                        <span>{currentUser.plan === 'Free' ? 'GO PRO' : 'UPGRADE'}</span>
                     </button>
                 )}
                 <button 
                     onClick={onProfileClick}
                     className="flex items-center gap-2 group cursor-pointer hover:opacity-80 transition-opacity"
                 >
-                     <div className="w-7 h-7 rounded bg-gradient-to-tr from-accent to-brand-primary flex items-center justify-center font-bold text-bg-main text-[11px] shadow-sm">
+                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent to-yellow-600 flex items-center justify-center font-bold text-black text-[12px] shadow-md border-2 border-transparent group-hover:border-white/10 transition-all">
                         {currentUser.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="hidden sm:block text-left">
-                        <p className="text-[11px] font-bold text-white leading-none">{currentUser.name}</p>
-                        <p className="text-[9px] text-text-secondary leading-none mt-0.5 tracking-wider uppercase">{currentUser.plan || 'Free'}</p>
+                        <p className="text-[12px] font-bold text-white leading-none">{currentUser.name}</p>
                     </div>
                 </button>
                 <button 
                     onClick={onLogout} 
-                    className="p-1.5 text-text-secondary hover:text-red-400 hover:bg-red-400/5 rounded transition-all" 
+                    className="p-2 text-text-secondary hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all" 
                     title="Sign Out"
                 >
                     <LogoutIcon className="w-4 h-4" />
