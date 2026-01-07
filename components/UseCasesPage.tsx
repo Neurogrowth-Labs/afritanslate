@@ -44,12 +44,9 @@ const UseCaseSection: React.FC<{
                 <div className={`absolute inset-0 ${colorClass} bg-opacity-20 mix-blend-overlay`}></div>
                 <div className="absolute inset-0 bg-gradient-to-t from-bg-main via-bg-surface/50 to-transparent"></div>
                 
-                <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
-                    <div className="w-16 h-16 bg-bg-main/80 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/10 shadow-xl">
+                <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-8">
+                    <div className="w-16 h-16 bg-bg-main/80 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/10 shadow-xl group-hover:scale-110 transition-transform duration-500">
                         {React.cloneElement(icon as React.ReactElement, { className: "w-8 h-8 opacity-80" })}
-                    </div>
-                    <div className="bg-bg-main/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/5">
-                        <span className="text-xs font-mono text-white tracking-widest uppercase">AI Simulation Active</span>
                     </div>
                 </div>
             </div>
