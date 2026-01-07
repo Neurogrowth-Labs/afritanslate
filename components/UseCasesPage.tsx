@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { BusinessIcon, MediaIcon, EducationIcon, HealthcareIcon, CheckIcon } from './Icons';
+import DemoSection from './DemoSection';
 
 const UseCaseSection: React.FC<{ 
     title: string; 
@@ -10,7 +11,8 @@ const UseCaseSection: React.FC<{
     icon: React.ReactNode; 
     isReversed?: boolean;
     colorClass: string;
-}> = ({ title, subtitle, description, points, icon, isReversed = false, colorClass }) => (
+    imageUrl: string;
+}> = ({ title, subtitle, description, points, icon, isReversed = false, colorClass, imageUrl }) => (
     <div className={`flex flex-col ${isReversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-10 items-center py-12 border-b border-white/5 last:border-0`}>
         <div className="flex-1 space-y-5">
             <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${colorClass} bg-opacity-10 text-current mb-2`}>
@@ -33,18 +35,21 @@ const UseCaseSection: React.FC<{
             </ul>
         </div>
         <div className="flex-1 w-full">
-            <div className="aspect-video bg-bg-surface border border-border-default rounded-2xl p-8 flex items-center justify-center relative overflow-hidden group shadow-lg">
-                <div className={`absolute inset-0 ${colorClass} bg-opacity-5 blur-3xl group-hover:bg-opacity-10 transition-all duration-500`}></div>
-                <div className="relative z-10 text-center space-y-4 max-w-sm">
-                    <div className="w-16 h-16 bg-bg-main rounded-full flex items-center justify-center mx-auto border border-white/10 shadow-xl">
-                        {React.cloneElement(icon as React.ReactElement, { className: "w-8 h-8 opacity-60" })}
+            <div className="aspect-video bg-bg-surface border border-border-default rounded-2xl overflow-hidden relative group shadow-lg">
+                <img 
+                    src={imageUrl} 
+                    alt={title} 
+                    className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 group-hover:scale-105 transition-all duration-700"
+                />
+                <div className={`absolute inset-0 ${colorClass} bg-opacity-20 mix-blend-overlay`}></div>
+                <div className="absolute inset-0 bg-gradient-to-t from-bg-main via-bg-surface/50 to-transparent"></div>
+                
+                <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-8 space-y-4">
+                    <div className="w-16 h-16 bg-bg-main/80 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/10 shadow-xl">
+                        {React.cloneElement(icon as React.ReactElement, { className: "w-8 h-8 opacity-80" })}
                     </div>
-                    <div className="space-y-2">
-                        <div className="h-2 bg-white/10 rounded-full w-3/4 mx-auto"></div>
-                        <div className="h-2 bg-white/10 rounded-full w-1/2 mx-auto"></div>
-                    </div>
-                    <div className="pt-3">
-                        <span className="text-xs font-mono text-text-secondary opacity-70">AI Simulation</span>
+                    <div className="bg-bg-main/80 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/5">
+                        <span className="text-xs font-mono text-white tracking-widest uppercase">AI Simulation Active</span>
                     </div>
                 </div>
             </div>
@@ -64,7 +69,7 @@ const UseCasesPage: React.FC = () => {
                 </p>
             </div>
             
-            <div className="space-y-6 bg-bg-surface/30 p-8 rounded-3xl border border-white/5 backdrop-blur-sm">
+            <div className="space-y-6 bg-bg-surface/30 p-8 rounded-3xl border border-white/5 backdrop-blur-sm mb-16">
                 <UseCaseSection 
                     title="Media & Entertainment"
                     subtitle="Creative Arts"
@@ -76,6 +81,7 @@ const UseCasesPage: React.FC = () => {
                     ]}
                     icon={<MediaIcon />}
                     colorClass="text-purple-400 bg-purple-500"
+                    imageUrl="https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?auto=format&fit=crop&w=800&q=80"
                 />
 
                 <UseCaseSection 
@@ -90,6 +96,7 @@ const UseCasesPage: React.FC = () => {
                     icon={<BusinessIcon />}
                     isReversed
                     colorClass="text-blue-400 bg-blue-500"
+                    imageUrl="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=800&q=80"
                 />
 
                 <UseCaseSection 
@@ -103,6 +110,7 @@ const UseCasesPage: React.FC = () => {
                     ]}
                     icon={<HealthcareIcon />}
                     colorClass="text-green-400 bg-green-500"
+                    imageUrl="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=80"
                 />
 
                 <UseCaseSection 
@@ -117,7 +125,13 @@ const UseCasesPage: React.FC = () => {
                     icon={<EducationIcon />}
                     isReversed
                     colorClass="text-yellow-400 bg-yellow-500"
+                    imageUrl="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=800&q=80"
                 />
+            </div>
+
+            <div className="pt-8 border-t border-white/5">
+                <h2 className="text-3xl font-bold text-center text-white mb-8">Interactive Simulation</h2>
+                <DemoSection />
             </div>
 
             <div className="mt-16 bg-gradient-to-r from-accent/10 to-transparent rounded-2xl p-10 text-center border border-accent/20 relative overflow-hidden">

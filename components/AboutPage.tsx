@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { GlobeIcon, BoltIcon, DocIcon, ThinkingIcon, UsersIcon, LockIcon } from './Icons';
+import DemoSection from './DemoSection';
 
 const AboutPage: React.FC<{ isLandingSection?: boolean }> = ({ isLandingSection = false }) => {
     // Style configurations based on context
@@ -14,7 +15,10 @@ const AboutPage: React.FC<{ isLandingSection?: boolean }> = ({ isLandingSection 
         <div className={`animate-fade-in ${containerClasses} space-y-16`}>
             
             {/* 1. Hero / Mission Section */}
-            <div className="text-center">
+            <div className="text-center relative">
+                {!isLandingSection && (
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-64 -z-10 opacity-20 pointer-events-none rounded-full blur-3xl bg-gradient-to-r from-accent/20 to-purple-500/20"></div>
+                )}
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-sm font-bold uppercase tracking-widest mb-6">
                     Our Mission
                 </div>
@@ -25,6 +29,21 @@ const AboutPage: React.FC<{ isLandingSection?: boolean }> = ({ isLandingSection 
                 <p className={subHeadingClass}>
                     Standard tools strip away history. AfriTranslate AI restores the human element, bridging the gap between global connectivity and authentic local expression.
                 </p>
+                
+                {!isLandingSection && (
+                    <div className="mt-12 relative w-full h-64 md:h-80 rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
+                        <img 
+                            src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=80" 
+                            alt="Diverse group collaborating" 
+                            className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-bg-main via-bg-main/20 to-transparent"></div>
+                        <div className="absolute bottom-6 left-6 md:left-10 text-left">
+                            <p className="text-white font-bold text-lg">Connecting 54 Nations</p>
+                            <p className="text-accent text-sm">One conversation at a time.</p>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* 2. The Core Problem vs Solution */}
@@ -45,22 +64,30 @@ const AboutPage: React.FC<{ isLandingSection?: boolean }> = ({ isLandingSection 
                         </div>
                     </div>
                 </div>
-                <div className="relative">
-                    <div className="absolute inset-0 bg-accent/5 blur-3xl rounded-full"></div>
-                    <div className="relative bg-bg-main border border-border-default rounded-xl p-6 shadow-2xl">
-                        <div className="flex items-center gap-3 mb-5 border-b border-white/5 pb-4">
-                            <ThinkingIcon className="w-6 h-6 text-accent" />
-                            <span className="text-sm font-bold text-white uppercase tracking-wider">Nuance Engine</span>
-                        </div>
-                        <div className="space-y-3">
-                            <div className="h-2 bg-white/10 rounded w-3/4"></div>
-                            <div className="h-2 bg-white/10 rounded w-full"></div>
-                            <div className="h-2 bg-white/10 rounded w-5/6"></div>
-                        </div>
-                        <div className="mt-6 flex gap-3">
-                            <span className="px-3 py-1.5 bg-white/5 rounded text-xs text-text-secondary border border-white/5">Semantic</span>
-                            <span className="px-3 py-1.5 bg-white/5 rounded text-xs text-text-secondary border border-white/5">Cultural</span>
-                            <span className="px-3 py-1.5 bg-accent/10 text-accent border border-accent/20 rounded text-xs font-bold">Tone</span>
+                <div className="relative h-full min-h-[300px] rounded-xl overflow-hidden border border-white/10 group">
+                    <img 
+                        src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=800&q=80" 
+                        alt="AI Neural Network" 
+                        className="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-110 transition-transform duration-700"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-bg-main"></div>
+                    
+                    <div className="absolute inset-0 flex items-end p-6">
+                        <div className="relative bg-bg-main/90 backdrop-blur-md border border-border-default rounded-xl p-6 shadow-2xl w-full">
+                            <div className="flex items-center gap-3 mb-5 border-b border-white/5 pb-4">
+                                <ThinkingIcon className="w-6 h-6 text-accent" />
+                                <span className="text-sm font-bold text-white uppercase tracking-wider">Nuance Engine</span>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="h-2 bg-white/10 rounded w-3/4"></div>
+                                <div className="h-2 bg-white/10 rounded w-full"></div>
+                                <div className="h-2 bg-white/10 rounded w-5/6"></div>
+                            </div>
+                            <div className="mt-6 flex gap-3">
+                                <span className="px-3 py-1.5 bg-white/5 rounded text-xs text-text-secondary border border-white/5">Semantic</span>
+                                <span className="px-3 py-1.5 bg-white/5 rounded text-xs text-text-secondary border border-white/5">Cultural</span>
+                                <span className="px-3 py-1.5 bg-accent/10 text-accent border border-accent/20 rounded text-xs font-bold">Tone</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -102,26 +129,34 @@ const AboutPage: React.FC<{ isLandingSection?: boolean }> = ({ isLandingSection 
 
             {/* 4. Technology / Stats */}
             {!isLandingSection && (
-                <div className="border-t border-border-default pt-12 pb-8">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-                        <div className="p-4">
-                            <div className="text-4xl font-black text-white mb-2">54</div>
-                            <div className="text-sm font-bold text-text-secondary uppercase tracking-widest">Countries</div>
-                        </div>
-                        <div className="p-4">
-                            <div className="text-4xl font-black text-white mb-2">2k+</div>
-                            <div className="text-sm font-bold text-text-secondary uppercase tracking-widest">Dialects</div>
-                        </div>
-                        <div className="p-4">
-                            <div className="text-4xl font-black text-white mb-2">99%</div>
-                            <div className="text-sm font-bold text-text-secondary uppercase tracking-widest">Accuracy</div>
-                        </div>
-                        <div className="p-4">
-                            <div className="text-4xl font-black text-white mb-2">10M+</div>
-                            <div className="text-sm font-bold text-text-secondary uppercase tracking-widest">Words</div>
+                <>
+                    <div className="border-t border-border-default pt-12 pb-8">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                            <div className="p-4">
+                                <div className="text-4xl font-black text-white mb-2">54</div>
+                                <div className="text-sm font-bold text-text-secondary uppercase tracking-widest">Countries</div>
+                            </div>
+                            <div className="p-4">
+                                <div className="text-4xl font-black text-white mb-2">2k+</div>
+                                <div className="text-sm font-bold text-text-secondary uppercase tracking-widest">Dialects</div>
+                            </div>
+                            <div className="p-4">
+                                <div className="text-4xl font-black text-white mb-2">99%</div>
+                                <div className="text-sm font-bold text-text-secondary uppercase tracking-widest">Accuracy</div>
+                            </div>
+                            <div className="p-4">
+                                <div className="text-4xl font-black text-white mb-2">10M+</div>
+                                <div className="text-sm font-bold text-text-secondary uppercase tracking-widest">Words</div>
+                            </div>
                         </div>
                     </div>
-                </div>
+                    
+                    {/* Simulation Section */}
+                    <div className="pt-8 border-t border-white/5">
+                        <h2 className="text-3xl font-bold text-center text-white mb-8">Try the Engine</h2>
+                        <DemoSection />
+                    </div>
+                </>
             )}
         </div>
     );
