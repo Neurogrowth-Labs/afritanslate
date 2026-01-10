@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '../types';
-import { MenuIcon, LogoutIcon, BoltIcon } from './Icons';
+import { MenuIcon, LogoutIcon, BoltIcon, GlobeIcon } from './Icons';
 
 interface HeaderProps {
   sourceLangName?: string;

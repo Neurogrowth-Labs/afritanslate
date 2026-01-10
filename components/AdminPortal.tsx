@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import type { LibraryItem, User, LibraryItemType, UserPlan } from '../types';
+import type { LibraryItem, User, LibraryItemType, UserPlan, UserRole } from '../types';
 import { LANGUAGES, TONES } from '../constants';
-import { SearchIcon, LogoutIcon, TrashIcon, DashboardIcon, LibraryIcon, UsersIcon, EditIcon, CloseIcon } from './Icons';
+import { SearchIcon, LogoutIcon, TrashIcon, DashboardIcon, LibraryIcon, UsersIcon, EditIcon, CloseIcon, CheckIcon } from './Icons';
 import ToneSelector from './ToneSelector';
 
 type AdminView = 'dashboard' | 'library' | 'users';
@@ -18,6 +18,7 @@ interface AdminPortalProps {
     onDeleteItem: (itemId: number) => void;
     onLogout: () => void;
     currentUser: User;
+    onUpdateUserRole: (userId: string, newRole: UserRole) => Promise<void>;
 }
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode }> = ({ title, value, icon }) => (
@@ -42,6 +43,25 @@ const Dashboard: React.FC<{ users: User[], library: LibraryItem[] }> = ({ users,
     
     const recentUsers = useMemo(() => [...users].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 5), [users]);
     const recentItems = useMemo(() => [...library].sort((a,b) => b.id - a.id).slice(0, 5), [library]);
+
+    // Mock Activity Log Generator
+    const activityLog = useMemo(() => {
+        const actions = [
+            'Logged into Studio', 
+            'Updated profile settings', 
+            'Generated translation', 
+            'Upgraded plan', 
+            'Exported transcript'
+        ];
+        // Create pseudo-random activities based on user list
+        return users.slice(0, 8).map((user, i) => ({
+            id: `act-${i}`,
+            user: user.name,
+            email: user.email,
+            action: actions[i % actions.length],
+            time: `${Math.floor(Math.random() * 59) + 1}m ago`
+        }));
+    }, [users]);
 
     return (
         <div className="space-y-8 animate-fade-in">
@@ -69,7 +89,7 @@ const Dashboard: React.FC<{ users: User[], library: LibraryItem[] }> = ({ users,
                 <div>
                     <h2 className="text-2xl font-bold text-white mb-4">Recent Activity</h2>
                     <div className="bg-bg-surface p-6 rounded-xl border border-border-default space-y-3">
-                         <h3 className="text-lg font-semibold text-text-primary">Newest Library Items</h3>
+                         <h3 className="text-lg font-semibold text-text-primary mb-4">Newest Library Items</h3>
                          {recentItems.map(item => (
                              <div key={item.id} className="text-sm border-b border-border-default/50 pb-2 last:border-b-0 last:pb-0">
                                  <p className="font-semibold text-white truncate">"{item.text}"</p>
@@ -79,15 +99,24 @@ const Dashboard: React.FC<{ users: User[], library: LibraryItem[] }> = ({ users,
                     </div>
                 </div>
                  <div>
-                    <h2 className="text-2xl font-bold text-white mb-4">&nbsp;</h2>
-                    <div className="bg-bg-surface p-6 rounded-xl border border-border-default space-y-3">
-                        <h3 className="text-lg font-semibold text-text-primary">Newest Users</h3>
-                        {recentUsers.map(user => (
-                            <div key={user.id} className="text-sm border-b border-border-default/50 pb-2 last:border-b-0 last:pb-0">
-                                <p className="font-semibold text-white">{user.name}</p>
-                                <p className="text-xs text-text-secondary">{user.email} - <span className="font-medium text-accent/80">{user.plan}</span></p>
+                    <h2 className="text-2xl font-bold text-white mb-4">User Monitoring</h2>
+                    <div className="bg-bg-surface p-6 rounded-xl border border-border-default space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+                        <h3 className="text-lg font-semibold text-text-primary mb-4">Recent User Actions</h3>
+                        {activityLog.length > 0 ? activityLog.map(act => (
+                            <div key={act.id} className="flex items-start gap-3 border-b border-border-default/50 pb-3 last:border-b-0 last:pb-0">
+                                <div className="w-8 h-8 rounded-full bg-accent/10 flex flex-shrink-0 items-center justify-center text-accent text-xs font-bold uppercase">
+                                    {act.user.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="text-sm text-white">
+                                        <span className="font-bold">{act.user}</span> {act.action}
+                                    </p>
+                                    <p className="text-[10px] text-text-secondary">{act.time} • {act.email}</p>
+                                </div>
                             </div>
-                        ))}
+                        )) : (
+                            <p className="text-sm text-text-secondary">No recent activity recorded.</p>
+                        )}
                     </div>
                 </div>
             </div>
@@ -95,7 +124,7 @@ const Dashboard: React.FC<{ users: User[], library: LibraryItem[] }> = ({ users,
     );
 };
 
-const LibraryManager: React.FC<Omit<AdminPortalProps, 'users' | 'onLogout' | 'currentUser'>> = ({ currentLibrary, onAddItem, onUpdateItem, onDeleteItem }) => {
+const LibraryManager: React.FC<Omit<AdminPortalProps, 'users' | 'onLogout' | 'currentUser' | 'onUpdateUserRole'>> = ({ currentLibrary, onAddItem, onUpdateItem, onDeleteItem }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [editingItem, setEditingItem] = useState<LibraryItem | null>(null);
@@ -185,9 +214,12 @@ const LibraryManager: React.FC<Omit<AdminPortalProps, 'users' | 'onLogout' | 'cu
     );
 };
 
-const UserManager: React.FC<{ users: User[] }> = ({ users }) => {
+const UserManager: React.FC<{ users: User[], onUpdateUserRole: (id: string, role: UserRole) => Promise<void> }> = ({ users, onUpdateUserRole }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [newRole, setNewRole] = useState<UserRole>('user');
+    const [isSavingRole, setIsSavingRole] = useState(false);
     
     const filteredUsers = useMemo(() => {
         return users.filter(user =>
@@ -200,6 +232,19 @@ const UserManager: React.FC<{ users: User[] }> = ({ users }) => {
     const paginatedUsers = useMemo(() => {
         return filteredUsers.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
     }, [filteredUsers, currentPage]);
+
+    const handleEditClick = (user: User) => {
+        setEditingUser(user);
+        setNewRole(user.role);
+    };
+
+    const handleRoleSave = async () => {
+        if (!editingUser) return;
+        setIsSavingRole(true);
+        await onUpdateUserRole(editingUser.id, newRole);
+        setIsSavingRole(false);
+        setEditingUser(null);
+    };
 
     return (
          <div className="animate-fade-in">
@@ -223,6 +268,7 @@ const UserManager: React.FC<{ users: User[] }> = ({ users }) => {
                                 <th scope="col" className="px-6 py-3">Email</th>
                                 <th scope="col" className="px-6 py-3">Plan</th>
                                 <th scope="col" className="px-6 py-3">Role</th>
+                                <th scope="col" className="px-6 py-3 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -231,7 +277,16 @@ const UserManager: React.FC<{ users: User[] }> = ({ users }) => {
                                     <td className="px-6 py-4 font-medium text-white">{user.name}</td>
                                     <td className="px-6 py-4 text-text-secondary">{user.email}</td>
                                     <td className="px-6 py-4"><span className="bg-accent/20 text-accent text-xs font-semibold px-2 py-1 rounded-full">{user.plan}</span></td>
-                                    <td className="px-6 py-4 text-text-secondary capitalize">{user.role}</td>
+                                    <td className="px-6 py-4 text-text-secondary capitalize">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.role === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-gray-500/20 text-gray-400'}`}>
+                                            {user.role}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <button onClick={() => handleEditClick(user)} className="p-2 text-text-secondary hover:text-white bg-bg-main border border-border-default rounded hover:bg-border-default transition-colors text-xs flex items-center gap-1 ml-auto">
+                                            <EditIcon className="w-3.5 h-3.5" /> Edit Role
+                                        </button>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -244,6 +299,45 @@ const UserManager: React.FC<{ users: User[] }> = ({ users }) => {
                     <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1} className="px-4 py-2 bg-bg-surface rounded-md disabled:opacity-50">Previous</button>
                     <span className="text-sm text-text-secondary">Page {currentPage} of {totalPages}</span>
                     <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages} className="px-4 py-2 bg-bg-surface rounded-md disabled:opacity-50">Next</button>
+                </div>
+            )}
+
+            {/* Role Edit Modal */}
+            {editingUser && (
+                <div className="fixed inset-0 bg-bg-main/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" onClick={() => setEditingUser(null)}>
+                    <div className="bg-bg-surface rounded-xl shadow-2xl w-full max-w-sm border border-border-default m-4" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-border-default flex justify-between items-center">
+                            <h3 className="text-xl font-bold text-white">Edit User Role</h3>
+                            <button onClick={() => setEditingUser(null)}><CloseIcon className="w-6 h-6 text-text-secondary hover:text-white"/></button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-text-secondary">Change role for <strong className="text-white">{editingUser.name}</strong></p>
+                            <div>
+                                <label className="block text-xs font-bold text-text-secondary uppercase mb-2">Role</label>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={() => setNewRole('user')} 
+                                        className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-all ${newRole === 'user' ? 'bg-accent text-bg-main border-accent' : 'bg-bg-main border-border-default text-text-secondary hover:text-white'}`}
+                                    >
+                                        User
+                                    </button>
+                                    <button 
+                                        onClick={() => setNewRole('admin')} 
+                                        className={`flex-1 py-2 rounded-lg border text-sm font-semibold transition-all ${newRole === 'admin' ? 'bg-purple-500 text-white border-purple-500' : 'bg-bg-main border-border-default text-text-secondary hover:text-white'}`}
+                                    >
+                                        Admin
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-6 bg-bg-main/50 rounded-b-xl flex justify-end gap-3">
+                            <button onClick={() => setEditingUser(null)} className="px-4 py-2 bg-border-default rounded-md font-semibold text-sm hover:bg-white/10 transition-colors">Cancel</button>
+                            <button onClick={handleRoleSave} disabled={isSavingRole} className="px-4 py-2 bg-accent text-bg-main rounded-md font-bold text-sm hover:bg-accent/90 transition-colors flex items-center gap-2">
+                                {isSavingRole ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div> : <CheckIcon className="w-3.5 h-3.5"/>}
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
@@ -322,7 +416,7 @@ const LibraryForm: React.FC<{ item: LibraryItem | Omit<LibraryItem, 'id'>, onSav
 
 // --- MAIN PORTAL COMPONENT --- //
 
-const AdminPortal: React.FC<AdminPortalProps> = ({ currentLibrary, users, onAddItem, onUpdateItem, onDeleteItem, onLogout, currentUser }) => {
+const AdminPortal: React.FC<AdminPortalProps> = ({ currentLibrary, users, onAddItem, onUpdateItem, onDeleteItem, onLogout, currentUser, onUpdateUserRole }) => {
     const [view, setView] = useState<AdminView>('dashboard');
 
     const renderView = () => {
@@ -330,7 +424,7 @@ const AdminPortal: React.FC<AdminPortalProps> = ({ currentLibrary, users, onAddI
             case 'library':
                 return <LibraryManager currentLibrary={currentLibrary} onAddItem={onAddItem} onUpdateItem={onUpdateItem} onDeleteItem={onDeleteItem} />;
             case 'users':
-                return <UserManager users={users} />;
+                return <UserManager users={users} onUpdateUserRole={onUpdateUserRole} />;
             case 'dashboard':
             default:
                 return <Dashboard users={users} library={currentLibrary} />;

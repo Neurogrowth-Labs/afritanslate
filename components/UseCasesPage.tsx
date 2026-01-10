@@ -16,7 +16,7 @@ const UseCaseSection: React.FC<{
     <div className={`flex flex-col ${isReversed ? 'md:flex-row-reverse' : 'md:flex-row'} gap-10 items-center py-12 border-b border-white/5 last:border-0`}>
         <div className="flex-1 space-y-5">
             <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${colorClass} bg-opacity-10 text-current mb-2`}>
-                <div className={colorClass.replace('bg-', 'text-')}>{React.cloneElement(icon as React.ReactElement, { className: "w-6 h-6" })}</div>
+                <div className={colorClass.replace('bg-', 'text-')}>{React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-6 h-6" })}</div>
             </div>
             <div>
                 <h3 className="text-sm font-bold text-accent uppercase tracking-widest mb-2">{subtitle}</h3>
@@ -46,7 +46,7 @@ const UseCaseSection: React.FC<{
                 
                 <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-8">
                     <div className="w-16 h-16 bg-bg-main/80 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto border border-white/10 shadow-xl group-hover:scale-110 transition-transform duration-500">
-                        {React.cloneElement(icon as React.ReactElement, { className: "w-8 h-8 opacity-80" })}
+                        {React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-8 h-8 opacity-80" })}
                     </div>
                 </div>
             </div>

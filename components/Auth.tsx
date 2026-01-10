@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User } from '../types';
 import { UserIcon, EmailIcon, PasswordIcon, GoogleIcon } from './Icons';
@@ -192,7 +193,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, er
                 <p className="text-center text-[11px] text-text-secondary mt-5">
                     {isLogin ? "New to AfriTranslate?" : "Have an account?"}
                     <button onClick={toggleView} className="font-bold text-accent hover:underline ml-1">
-                        {isLogin ? 'Join now' : 'Sign in'}
+                        {isLogin ? "Join now" : "Sign in"}
                     </button>
                 </p>
             </div>
