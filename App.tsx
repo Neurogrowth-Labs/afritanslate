@@ -34,7 +34,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon } from './components/Icons';
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon } from './components/Icons';
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
@@ -323,16 +323,100 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                                 </button>
                             </div>
                         </section>
-                        <div id="demo-section" className="py-12 border-y border-border-default bg-bg-surface/30">
+
+                        <section className="py-10 border-y border-white/5 bg-black/20">
+                            <div className="container mx-auto px-4 text-center">
+                                <p className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-6">Trusted by Industry Leaders</p>
+                                <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-50 grayscale hover:grayscale-0 transition-all duration-500 max-w-6xl mx-auto">
+                                    <span className="text-xl font-bold text-white">Netflix</span>
+                                    <span className="text-xl font-bold text-white">MTN</span>
+                                    <span className="text-xl font-bold text-white">Google</span>
+                                    <span className="text-xl font-bold text-white">Standard Bank</span>
+                                    <span className="text-xl font-bold text-white">UCT</span>
+                                    <span className="text-xl font-bold text-white">MultiChoice</span>
+                                    <span className="text-xl font-bold text-white">Microsoft</span>
+                                    <span className="text-xl font-bold text-white">Spotify</span>
+                                    <span className="text-xl font-bold text-white">BBC Africa</span>
+                                    <span className="text-xl font-bold text-white">Showmax</span>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="py-20 bg-bg-main">
+                            <div className="container mx-auto px-4 max-w-6xl">
+                                <div className="text-center mb-16">
+                                    <h2 className="text-3xl font-bold text-white mb-4">Strategic Advantages</h2>
+                                    <p className="text-text-secondary max-w-2xl mx-auto">Why Fortune 500 companies and NGOs choose AfriTranslate for their African expansion strategies.</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div className="bg-bg-surface p-8 rounded-2xl border border-white/5 hover:border-accent/30 transition-all group">
+                                        <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-500/20">
+                                            <GlobeIcon className="w-6 h-6 text-blue-400" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Hyper-Localization</h3>
+                                        <p className="text-text-secondary text-sm leading-relaxed">Move beyond generic translation. Our engine adapts content to regional dialects, ensuring resonance from Kano to Lagos.</p>
+                                    </div>
+                                    <div className="bg-bg-surface p-8 rounded-2xl border border-white/5 hover:border-accent/30 transition-all group">
+                                        <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-purple-500/20">
+                                            <LockIcon className="w-6 h-6 text-purple-400" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Brand Safety</h3>
+                                        <p className="text-text-secondary text-sm leading-relaxed">Avoid costly cultural misunderstandings. Our system flags potential taboos and suggests culturally appropriate alternatives.</p>
+                                    </div>
+                                    <div className="bg-bg-surface p-8 rounded-2xl border border-white/5 hover:border-accent/30 transition-all group">
+                                        <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-accent/20">
+                                            <BoltIcon className="w-6 h-6 text-accent" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Seamless Integration</h3>
+                                        <p className="text-text-secondary text-sm leading-relaxed">Connect directly into your CMS, CRM, or support platform via our robust API. Designed for developers.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div id="demo-section" className="py-20 border-y border-border-default bg-bg-surface/30">
                             <DemoSection isLandingSection={true} />
                         </div>
+
+                        <section className="py-20 bg-bg-main relative overflow-hidden">
+                             <div className="container mx-auto px-4 relative z-10">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-white/5">
+                                    <div className="p-4">
+                                        <div className="text-4xl md:text-5xl font-black text-white mb-2">54</div>
+                                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Countries</div>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="text-4xl md:text-5xl font-black text-white mb-2">2k+</div>
+                                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Dialects</div>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="text-4xl md:text-5xl font-black text-white mb-2">99%</div>
+                                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Accuracy</div>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="text-4xl md:text-5xl font-black text-white mb-2">10M+</div>
+                                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Words Processed</div>
+                                    </div>
+                                </div>
+                             </div>
+                        </section>
+
+                        <section className="py-24 bg-gradient-to-b from-bg-main to-bg-surface border-t border-white/5">
+                            <div className="container mx-auto px-4 text-center max-w-3xl">
+                                <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to expand your reach?</h2>
+                                <p className="text-lg text-text-secondary mb-10">Join 10,000+ creators, businesses, and NGOs using AfriTranslate to connect authentically with the African continent.</p>
+                                <button onClick={() => onStart('chat')} className="px-10 py-4 bg-accent text-bg-main text-sm font-black rounded-xl hover:scale-105 transition-all shadow-xl shadow-accent/20">
+                                    GET STARTED FOR FREE
+                                </button>
+                            </div>
+                        </section>
                     </>
                 );
         }
     };
 
     return (
-        <div className="bg-bg-main min-h-screen text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
+        <div className="bg-bg-main h-screen text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
             <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-14 flex-shrink-0">
                 <div className="container mx-auto px-4 h-full flex items-center justify-between">
                     <button onClick={() => setCurrentView('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
