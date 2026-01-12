@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -36,12 +37,12 @@ const RegenerateIcon = () => ( // Inspired by Adinkra "Sankofa" (return and get 
     </svg>
 );
 const ThumbsUpIcon = ({ filled }: { filled: boolean }) => ( // Gye Nyame (Supremacy of God) inspired
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className={`w-5 h-5 ${filled ? 'fill-current text-accent' : 'fill-none'}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-5 h-5 ${filled ? 'fill-current text-accent' : 'fill-none'}`}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M6.633 10.5c.806 0 1.533-.422 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904M6.633 10.5v-1.86m0 1.86c-.43.032-.848.113-1.228.265A4.501 4.501 0 004.21 12H4.5c.828 0 1.5.672 1.5 1.5v3.75c0 .828-.672 1.5-1.5 1.5H2.25a.75.75 0 01-.75-.75v-6a.75.75 0 01.75-.75h2.25c.43 0 .848.113 1.228.265z" />
     </svg>
 );
 const ThumbsDownIcon = ({ filled }: { filled: boolean }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor" className={`w-5 h-5 ${filled ? 'fill-current text-text-secondary' : 'fill-none'}`}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-5 h-5 ${filled ? 'fill-current text-text-secondary' : 'fill-none'}`}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M7.477 13.917c-.806 0-1.533.422-2.031 1.08a9.04 9.04 0 00-2.86 2.4c-.723.384-1.35.956-1.653 1.715a4.498 4.498 0 00-.322 1.672V21a.75.75 0 00.75.75c.75 0 1.5-.224 2.176-.642a4.5 4.5 0 001.28-.678 4.5 4.5 0 001.28.678c.676.418 1.426.642 2.176.642a.75.75 0 00.75-.75v-1.313c0-.693-.257-1.355-.723-1.848-.266-.558.107-1.282.725-1.282h3.126c1.026 0 1.945-.694 2.054-1.715.045-.422.068.85.068-1.285a11.95 11.95 0 00-2.649-7.521c-.388-.482-.987.729-1.605-.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904M7.477 13.917v1.86m0-1.86c.43-.032.848-.113 1.228-.265A4.501 4.501 0 0110.79 12H11.25c.828 0 1.5-.672 1.5-1.5v-3.75c0-.828-.672-1.5-1.5-1.5H8.25a.75.75 0 00-.75.75v6c0 .414.336.75.75.75h2.25c.43 0 .848.113 1.228.265z" />
     </svg>
 );
@@ -59,24 +60,33 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
 };
 
 const GroundingSources: React.FC<{ sources: GroundingSource[] }> = ({ sources }) => (
-    <div className="mt-3 pt-3 border-t border-border-default/50">
-        <h4 className="text-xs font-semibold text-text-secondary mb-2 flex items-center gap-1.5">
-            <GlobeIcon className="w-4 h-4" /> Sources
-        </h4>
-        <div className="flex flex-wrap gap-2">
+    <details className="group/sources mt-3 pt-3 border-t border-border-default/50">
+        <summary className="text-xs font-semibold text-text-secondary flex items-center gap-1.5 cursor-pointer hover:text-white list-none mb-2 transition-colors">
+            <GlobeIcon className="w-4 h-4" /> 
+            <span>Sources ({sources.length})</span>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 transition-transform group-open/sources:rotate-90 ml-auto">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+            </svg>
+        </summary>
+        <div className="flex flex-col gap-2 mt-2 pl-1 animate-fade-in">
             {sources.map((source, index) => (
                 <a 
                     href={source.uri} 
                     key={index}
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="bg-bg-main px-2 py-1 text-xs text-accent border border-border-default rounded-full hover:bg-border-default hover:text-white transition-colors truncate max-w-xs"
+                    className="flex flex-col bg-bg-main/50 px-3 py-2 border border-border-default rounded-lg hover:border-accent/50 hover:bg-bg-main transition-all group/link"
                 >
-                    {new URL(source.uri).hostname}
+                    <span className="text-xs font-medium text-text-primary group-hover/link:text-accent truncate transition-colors">
+                        {source.title || "Web Source"}
+                    </span>
+                    <span className="text-[10px] text-text-secondary truncate font-mono opacity-70">
+                        {source.uri}
+                    </span>
                 </a>
             ))}
         </div>
-    </div>
+    </details>
 );
 
 const UserMessage: React.FC<{ message: ChatMessage; isEditing: boolean; onSetEditing: (id: number | null) => void; onSaveEdit: (id: number, newText: string) => void }> = ({ message, isEditing, onSetEditing, onSaveEdit }) => {
@@ -205,7 +215,11 @@ const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => 
                         <MarkdownRenderer content={message.originalText} />
                     )}
                     {message.imageURL && <img src={message.imageURL} alt="Generated content" className="mt-3 rounded-lg" />}
-                    {message.groundingSources && message.groundingSources.length > 0 && <GroundingSources sources={message.groundingSources} />}
+                    
+                    {/* Display Grounding Sources if available */}
+                    {message.groundingSources && message.groundingSources.length > 0 && (
+                        <GroundingSources sources={message.groundingSources} />
+                    )}
 
                     {/* --- Mobile Actions --- */}
                     <div className="mt-4 pt-4 border-t border-border-default/50 flex items-center justify-start gap-2 flex-wrap md:hidden">
@@ -226,9 +240,7 @@ const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => 
                         <button onClick={() => handleCopy(textToPlay)} className="p-2.5 text-text-secondary hover:text-white bg-bg-surface rounded-md" title="Copy">
                             <CopyIcon />
                         </button>
-                        <button onClick={() => onRegenerate(message.id)} disabled={isOffline} className="p-2.5 text-text-secondary hover:text-white bg-bg-surface rounded-md disabled:opacity-50 disabled:cursor-not-allowed" title={isOffline ? "Unavailable offline" : "Regenerate"}>
-                            <RegenerateIcon />
-                        </button>
+                        <button onClick={() => onRegenerate(message.id)} disabled={isOffline} className="p-2.5 text-text-secondary hover:text-white bg-bg-surface rounded-md disabled:opacity-50 disabled:cursor-not-allowed" title={isOffline ? "Unavailable offline" : "Regenerate"}><RegenerateIcon /></button>
                          <button onClick={() => onPlayTTS(textToPlay)} disabled={isOffline} className="p-2.5 text-text-secondary hover:text-white bg-bg-surface rounded-md disabled:opacity-50 disabled:cursor-not-allowed" title={isOffline ? "Unavailable offline" : "Listen"}>
                             <VolumeUpIcon className="w-5 h-5" />
                         </button>

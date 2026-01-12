@@ -1,14 +1,19 @@
 
-
-import React, { useState, useEffect } from 'react';
-import { summarizeMeeting } from '../services/geminiService';
+import React, { useState, useEffect, useRef } from 'react';
+import { summarizeMeeting, translateMeetingChunk } from '../services/geminiService';
+import { parseZoomLink, authenticateZoom, connectBotToMeeting } from '../services/zoomService';
 import { MOCK_MEETING_TRANSCRIPT, LANGUAGES, TONES } from '../constants';
 import { GoogleMeetIcon, TeamsIcon, ZoomIcon } from './Icons';
-import type { MeetingMode } from '../types';
+import type { MeetingMode, User } from '../types';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
+import { supabase } from '../supabaseClient';
 
-const MeetingSummarizer: React.FC = () => {
+interface MeetingSummarizerProps {
+    currentUser: User;
+}
+
+const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) => {
     const [mode, setMode] = useState<MeetingMode>('live');
     const [transcript, setTranscript] = useState('');
     const [meetingLink, setMeetingLink] = useState('');
@@ -26,27 +31,50 @@ const MeetingSummarizer: React.FC = () => {
     const [transcriptionTone, setTranscriptionTone] = useState('Business');
     const [summaryLang, setSummaryLang] = useState('en');
     const [isConnecting, setIsConnecting] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState<string>('');
 
-    const isMeetingLinkValid = meetingLink.includes('meet.google.com') || meetingLink.includes('zoom.us') || meetingLink.includes('teams.microsoft.com');
+    const transcriptEndRef = useRef<HTMLDivElement>(null);
 
+    const isZoomLink = meetingLink.includes('zoom.us');
+    const isMeetingLinkValid = isZoomLink || meetingLink.includes('meet.google.com') || meetingLink.includes('teams.microsoft.com');
+
+    // Auto-scroll to bottom of transcript
+    useEffect(() => {
+        transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [liveTranscript]);
+
+    // Live Transcription & Translation Loop
     useEffect(() => {
         let interval: ReturnType<typeof setInterval>;
-        if (isTranscribing) {
-            const transcriptLines = MOCK_MEETING_TRANSCRIPT.trim().split('\n');
-            let currentLine = 0;
-            setLiveTranscript('');
+        let currentLine = 0;
+        const transcriptLines = MOCK_MEETING_TRANSCRIPT.trim().split('\n');
 
-            interval = setInterval(() => {
-                if (currentLine < transcriptLines.length) {
-                    setLiveTranscript(prev => prev + transcriptLines[currentLine] + '\n');
-                    currentLine++;
+        const processNextLine = async () => {
+            if (currentLine < transcriptLines.length) {
+                const line = transcriptLines[currentLine];
+                if (line.trim()) {
+                    // Translate the line on the fly if needed
+                    let processedLine = line;
+                    if (transcriptionLang !== 'en') {
+                        const targetLangName = LANGUAGES.find(l => l.code === transcriptionLang)?.name || 'English';
+                        processedLine = await translateMeetingChunk(line, targetLangName, transcriptionTone);
+                    }
+                    setLiveTranscript(prev => prev + processedLine + '\n');
                 } else {
-                    clearInterval(interval);
+                    setLiveTranscript(prev => prev + '\n');
                 }
-            }, 1500);
+                currentLine++;
+            } else {
+                clearInterval(interval);
+            }
+        };
+
+        if (isTranscribing) {
+            // Speed up simulation slightly for demo purposes
+            interval = setInterval(processNextLine, 1500); 
         }
         return () => clearInterval(interval);
-    }, [isTranscribing]);
+    }, [isTranscribing, transcriptionLang, transcriptionTone]);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -77,6 +105,26 @@ const MeetingSummarizer: React.FC = () => {
             const result = await summarizeMeeting(transcriptToUse, meetingLink, summaryLangName);
             setSummary(result);
             setEditedSummary(result);
+
+            // Store meeting activity in Supabase
+            if (currentUser) {
+                const { error: dbError } = await supabase.from('meeting_summaries').insert({
+                    user_id: currentUser.id,
+                    meeting_link: meetingLink,
+                    file_name: fileName || (mode === 'live' ? 'Live Session' : 'Uploaded File'),
+                    transcript: transcriptToUse,
+                    summary: result,
+                    language: summaryLang,
+                    mode: mode,
+                    created_at: new Date().toISOString()
+                });
+
+                if (dbError) {
+                    console.error("Failed to save meeting summary:", dbError);
+                    // Non-blocking error, user still sees summary
+                }
+            }
+
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
         } finally {
@@ -84,17 +132,50 @@ const MeetingSummarizer: React.FC = () => {
         }
     };
 
-    const handleStartLiveTranscription = () => {
+    const handleStartLiveTranscription = async () => {
         setIsConnecting(true);
-        setTimeout(() => {
+        setError(null);
+        setConnectionStatus('Initializing connection...');
+
+        try {
+            // Special handling for Zoom links using the Zoom Service
+            if (isZoomLink) {
+                const zoomDetails = parseZoomLink(meetingLink);
+                if (!zoomDetails) {
+                    throw new Error("Invalid Zoom link format.");
+                }
+
+                setConnectionStatus('Authenticating with Zoom App...');
+                const isAuthenticated = await authenticateZoom();
+                
+                if (!isAuthenticated) {
+                    throw new Error("Zoom authentication failed. Check credentials.");
+                }
+
+                setConnectionStatus(`Joining meeting ${zoomDetails.meetingId}...`);
+                const connectionMsg = await connectBotToMeeting(zoomDetails.meetingId);
+                console.log(connectionMsg); // "AfriTranslate Bot connected..."
+            } else {
+                // Fallback for simulation of other platforms
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            }
+
+            setConnectionStatus('Connected. Starting transcription stream...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
             setIsConnecting(false);
+            setLiveTranscript(''); // Clear previous
             setIsTranscribing(true);
-        }, 2000);
+
+        } catch (err) {
+            setIsConnecting(false);
+            setError(err instanceof Error ? err.message : "Connection failed.");
+        }
     };
 
     const handleStopLiveTranscription = () => {
         setIsTranscribing(false);
-        const finalTranscript = MOCK_MEETING_TRANSCRIPT;
+        const finalTranscript = liveTranscript || MOCK_MEETING_TRANSCRIPT;
         setTranscript(finalTranscript);
         setFileName('Live Meeting Transcript');
         handleGenerate(finalTranscript);
@@ -239,6 +320,7 @@ const MeetingSummarizer: React.FC = () => {
         setIsEditing(false);
         setIsTranscribing(false);
         setLiveTranscript('');
+        setConnectionStatus('');
     };
 
     if (isTranscribing || isConnecting) {
@@ -247,23 +329,29 @@ const MeetingSummarizer: React.FC = () => {
                  {isConnecting ? (
                      <>
                         <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <h2 className="text-2xl font-bold text-text-primary">Connecting to Meeting...</h2>
-                        <p className="text-text-secondary">{meetingLink}</p>
+                        <h2 className="text-2xl font-bold text-text-primary">Connecting...</h2>
+                        <p className="text-text-secondary mt-2">{connectionStatus}</p>
                      </>
                  ) : (
                     <>
-                        <h2 className="text-2xl font-bold text-text-primary mb-4 flex items-center gap-3">
-                            <span className="relative flex h-3 w-3">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                            </span>
-                            Transcription in Progress...
-                        </h2>
-                        <div className="w-full max-w-3xl h-64 bg-bg-surface border border-border-default rounded-lg p-4 text-left overflow-y-auto font-mono text-sm whitespace-pre-wrap">
-                            {liveTranscript}
+                        <div className="flex items-center gap-3 mb-4">
+                            {isZoomLink && <div className="bg-blue-600 p-1.5 rounded-full"><ZoomIcon className="w-5 h-5 text-white" /></div>}
+                            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-3">
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                </span>
+                                Transcription Active
+                            </h2>
                         </div>
-                        <p className="text-xs text-text-secondary mt-2">This is a simulation of a live transcription. The full transcript will be available after the meeting ends.</p>
-                        <button onClick={handleStopLiveTranscription} className="mt-6 px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">
+                        <div className="mb-2 text-xs text-accent uppercase tracking-widest font-bold">
+                            Live Translation: {LANGUAGES.find(l=>l.code===transcriptionLang)?.name} ({transcriptionTone})
+                        </div>
+                        <div className="w-full max-w-3xl h-96 bg-bg-surface border border-border-default rounded-lg p-4 text-left overflow-y-auto font-mono text-sm whitespace-pre-wrap shadow-inner relative">
+                            {liveTranscript}
+                            <div ref={transcriptEndRef} />
+                        </div>
+                        <button onClick={handleStopLiveTranscription} className="mt-6 px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-lg">
                             Stop Transcription & Generate Summary
                         </button>
                     </>
@@ -296,21 +384,21 @@ const MeetingSummarizer: React.FC = () => {
                                     type="url"
                                     value={meetingLink}
                                     onChange={(e) => setMeetingLink(e.target.value)}
-                                    placeholder="Paste your meeting link here..."
+                                    placeholder="Paste your Zoom, Teams, or Meet link here..."
                                     className="w-full p-3 bg-bg-main border border-border-default rounded-lg shadow-sm focus:ring-2 focus:ring-accent focus:border-accent transition text-text-primary placeholder-text-secondary"
                                 />
                                 <div className="flex items-center gap-4 mt-2 text-text-secondary">
                                     <span className="text-xs">Supported:</span>
                                     <div className="flex items-center gap-3">
-                                        <GoogleMeetIcon className="w-5 h-5" />
-                                        <TeamsIcon className="w-5 h-5" />
-                                        <ZoomIcon className="w-5 h-5" />
+                                        <div className={`transition-opacity ${meetingLink.includes('zoom.us') ? 'opacity-100' : 'opacity-50'}`}><ZoomIcon className="w-5 h-5" /></div>
+                                        <div className={`transition-opacity ${meetingLink.includes('teams.microsoft') ? 'opacity-100' : 'opacity-50'}`}><TeamsIcon className="w-5 h-5" /></div>
+                                        <div className={`transition-opacity ${meetingLink.includes('meet.google') ? 'opacity-100' : 'opacity-50'}`}><GoogleMeetIcon className="w-5 h-5" /></div>
                                     </div>
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                               <LanguageSelector label="Transcription Language" languages={LANGUAGES} value={transcriptionLang} onChange={setTranscriptionLang} />
-                               <ToneSelector label="Transcription Tone" tones={TONES} value={transcriptionTone} onChange={setTranscriptionTone} />
+                               <LanguageSelector label="Live Output Language" languages={LANGUAGES} value={transcriptionLang} onChange={setTranscriptionLang} />
+                               <ToneSelector label="Live Output Tone" tones={TONES} value={transcriptionTone} onChange={setTranscriptionTone} />
                                <LanguageSelector label="Summary Language" languages={LANGUAGES} value={summaryLang} onChange={setSummaryLang} />
                             </div>
                              <button onClick={handleStartLiveTranscription} disabled={!isMeetingLinkValid} className="w-full py-3 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 disabled:bg-border-default disabled:cursor-not-allowed transition-colors">

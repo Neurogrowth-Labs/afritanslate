@@ -84,6 +84,32 @@ export async function getNuancedTranslation(text: string, sourceLang: string, ta
   } catch (error) { throw handleApiError(error, "getting translation"); }
 }
 
+// New function for low-latency live meeting translation
+export async function translateMeetingChunk(text: string, targetLang: string, tone: string): Promise<string> {
+    if (!text.trim()) return "";
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `
+        Translate this meeting transcript chunk into ${targetLang}.
+        Tone: ${tone} (use appropriate idioms/expressions).
+        Keep names and speaker labels intact if present.
+        Return ONLY the translated text. No JSON.
+        
+        Text: "${text}"
+        `;
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-flash-lite-latest",
+            contents: prompt,
+            config: { temperature: 0.3 }
+        });
+        return response.text.trim();
+    } catch (error) {
+        console.error("Chunk translation failed", error);
+        return text; // Fallback to original text on failure
+    }
+}
+
 export async function localizeEmail(subject: string, body: string, targetLang: string, tone: string, context: string): Promise<EmailLocalizationResult> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
