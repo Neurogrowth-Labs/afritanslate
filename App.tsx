@@ -569,7 +569,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
             <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-14 flex-shrink-0">
                 <div className="container mx-auto px-4 h-full flex items-center justify-between">
                     <button onClick={() => setCurrentView('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <LogoIcon />
+                        <LogoIcon className="w-6 h-6 text-accent" />
                         <span className="text-sm sm:text-base font-brand font-bold text-white tracking-tighter">AfriTranslate AI</span>
                     </button>
                     <nav className="hidden lg:flex items-center gap-6">

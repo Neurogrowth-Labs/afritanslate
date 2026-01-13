@@ -102,7 +102,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             .order('scheduled_at', { ascending: true });
         
         if (error) {
-            console.error("Error fetching meetings:", error);
+            console.error("Error fetching meetings:", error.message || JSON.stringify(error));
             // Don't show error to user for fetch fail, just empty list
         } else {
             setScheduledMeetings(data as ScheduledMeeting[]);
@@ -151,7 +151,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             if (error) throw error;
             fetchScheduledMeetings();
         } catch (err: any) {
-            console.error("Failed to delete meeting:", err);
+            console.error("Failed to delete meeting:", err.message || err);
         }
     };
 
@@ -199,7 +199,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                 });
 
                 if (dbError) {
-                    console.error("Failed to save meeting summary:", dbError);
+                    console.error("Failed to save meeting summary:", dbError.message || JSON.stringify(dbError));
                     // Non-blocking error, user still sees summary
                 }
             }
