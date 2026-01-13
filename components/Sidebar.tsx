@@ -6,7 +6,7 @@ import {
     SearchIcon, LibraryIcon, PriceTagIcon, ScriptIcon, BookIcon, 
     MeetingIcon, LiveIcon, ImageIcon, LockIcon, OfflineIcon, 
     CheckIcon, DownloadIcon, EmailIcon, MicrophoneIcon, TranslateIcon,
-    CloseIcon, UserIcon, ThinkingIcon
+    CloseIcon, UserIcon, ThinkingIcon, LogoIcon
 } from './Icons';
 
 
@@ -122,8 +122,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center shadow-lg shadow-accent/20">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#121212" strokeWidth="2.5" className="w-5 h-5"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 18 15.3 15.3 0 0 1-8 0 15.3 15.3 0 0 1 4-18z"></path></svg>
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center shadow-lg shadow-accent/20 text-[#121212]">
+                            <LogoIcon className="w-5 h-5" />
                         </div>
                         <span className="font-brand font-bold text-lg text-white tracking-tight">Studio AI</span>
                     </div>

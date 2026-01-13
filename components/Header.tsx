@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import type { User } from '../types';
-import { MenuIcon, LogoutIcon, BoltIcon, GlobeIcon } from './Icons';
+import { MenuIcon, LogoutIcon, BoltIcon, GlobeIcon, LogoIcon } from './Icons';
 
 interface HeaderProps {
   sourceLangName?: string;
@@ -24,6 +24,9 @@ const Header: React.FC<HeaderProps> = ({ sourceLangName, targetLangName, isChatA
           <MenuIcon className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-3">
+          <div className="text-accent">
+            <LogoIcon className="w-6 h-6" />
+          </div>
           <div className="flex flex-col">
             <h1 className="text-[14px] font-bold text-white leading-tight font-brand tracking-wide">AfriTranslate AI</h1>
             <div className="flex items-center gap-1.5 mt-0.5">

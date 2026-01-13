@@ -1,17 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import type { User } from '../types';
-import { UserIcon, EmailIcon, PasswordIcon, GoogleIcon } from './Icons';
-
-const LogoIcon = () => (
-    <div className="w-10 h-10 rounded-full bg-bg-main flex-shrink-0 flex items-center justify-center mb-2 border-2 border-border-default">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-accent">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="2" y1="12" x2="22" y2="12"></line>
-            <path d="M12 2a15.3 15.3 0 0 1 4 18 15.3 15.3 0 0 1-8 0 15.3 15.3 0 0 1 4-18z"></path>
-        </svg>
-    </div>
-);
+import { UserIcon, EmailIcon, PasswordIcon, GoogleIcon, LogoIcon } from './Icons';
 
 const Spinner = () => <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 
@@ -104,8 +94,8 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, er
         return (
             <div className="w-1/2 flex-shrink-0 p-5 sm:p-6 flex flex-col justify-center h-full">
                 <div className="text-center w-full">
-                    <div className="flex justify-center">
-                        <LogoIcon />
+                    <div className="flex justify-center mb-2 text-accent">
+                        <LogoIcon className="w-12 h-12" />
                     </div>
                     <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">{showAdminUI ? 'Admin Portal' : 'AfriTranslate AI'}</h1>
                      { showAdminUI ? (
