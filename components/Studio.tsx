@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import type { TranslationResult } from '../types';
@@ -12,6 +12,7 @@ import { TranslateIcon, CheckIcon, InfoIcon, BatchIcon } from './Icons';
 
 interface StudioProps {
     isOffline: boolean;
+    initialText?: string;
 }
 
 const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
@@ -32,8 +33,8 @@ const CopyIcon: React.FC<{ className?: string }> = ({ className }) => (
     </svg>
 );
 
-const Studio: React.FC<StudioProps> = ({ isOffline }) => {
-    const [sourceText, setSourceText] = useState('');
+const Studio: React.FC<StudioProps> = ({ isOffline, initialText = '' }) => {
+    const [sourceText, setSourceText] = useState(initialText);
     const [translationResult, setTranslationResult] = useState<TranslationResult | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,12 @@ const Studio: React.FC<StudioProps> = ({ isOffline }) => {
 
     // Batch results state
     const [batchResults, setBatchResults] = useState<TranslationResult[]>([]);
+
+    useEffect(() => {
+        if (initialText) {
+            setSourceText(initialText);
+        }
+    }, [initialText]);
 
     const handleTranslate = async () => {
         if (!sourceText.trim()) {

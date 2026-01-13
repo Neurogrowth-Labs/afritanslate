@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
+import * as geminiService from './services/geminiService';
 
 // --- MAIN APPLICATION IMPORTS --- //
-import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
+import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole, TranslationResult } from './types';
 
 // Import all components needed for the app
 import { Auth } from './components/Auth';
@@ -22,6 +23,7 @@ import BookTranslator from './components/BookTranslator';
 import MeetingSummarizer from './components/MeetingSummarizer';
 import UpgradeModal from './components/UpgradeModal';
 import Studio from './components/Studio';
+import Chat from './components/Chat';
 import AdminPortal from './components/AdminPortal';
 import LiveConversation from './components/LiveConversation';
 import AudioTranscriber from './components/AudioTranscriber';
@@ -64,8 +66,17 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
     const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<string | null>(null);
+    
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deletingConversationId, setDeletingConversationId] = useState<number | null>(null);
+
+    // State for Library->Studio integration
+    const [studioInitialText, setStudioInitialText] = useState('');
+
+    // Chat State
+    const [sourceLang, setSourceLang] = useState('en');
+    const [targetLang, setTargetLang] = useState('sw');
+    const [chatTone, setChatTone] = useState('Friendly');
 
     const [offlinePacks, setOfflinePacks] = useState<string[]>(() => {
         const savedPacks = localStorage.getItem('offlinePacks');
@@ -106,14 +117,15 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         setLibraryItems(data || []);
     };
     
+    const fetchConversations = async () => {
+        if (!currentUser) return;
+        const { data } = await supabase.from('conversations').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+        setConversations(data || []);
+    };
+
     useEffect(() => {
         if (!currentUser) return;
         fetchLibraryItems();
-
-        const fetchConversations = async () => {
-            const { data } = await supabase.from('conversations').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
-            setConversations(data || []);
-        };
         fetchConversations();
 
         if (currentUser.role === 'admin') {
@@ -133,7 +145,10 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
 
     const handleSetView = (view: View) => {
         setCurrentView(view);
-        if (view !== 'chat' && view !== 'profile') setCurrentMode('chat');
+        if (view === 'chat' && currentMode !== 'chat' && currentMode !== 'studio') {
+             // Default to Studio if switching back to chat view from other views
+             setCurrentMode('studio');
+        }
         setIsSidebarOpen(false);
     };
 
@@ -152,6 +167,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     const handleSelectConversation = async (id: number) => {
         setIsLoading(true);
         handleSetView('chat');
+        setCurrentMode('chat'); // Assuming history items are chat conversations
         const { data: convoData } = await supabase.from('conversations').select('*').eq('id', id).single();
         if (convoData) {
             const { data: messagesData } = await supabase.from('chat_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
@@ -160,57 +176,161 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         setIsLoading(false);
     };
 
-    const handlePaymentSuccess = async (planName: string) => {
-        if (!currentUser) return;
+    const handleDeleteConversation = async (id: number) => {
+        setDeletingConversationId(id);
+        setIsDeleteModalOpen(true);
+    };
 
-        // Optimistically update local state to reflect plan change immediately
-        const updatedUser = { ...currentUser, plan: planName as any };
-        setCurrentUser(updatedUser);
-        setSelectedPlanForPayment(planName);
-
-        // Update database and verify
-        try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({ plan: planName })
-                .eq('id', currentUser.id);
-            
-            if (error) throw error;
-
-            // Re-fetch profile to ensure sync and get any triggered fields
-            const { data: refreshedData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', currentUser.id)
-                .single();
-            
-            if (refreshedData) {
-                setCurrentUser(refreshedData as User);
+    const confirmDeleteConversation = async () => {
+        if (deletingConversationId) {
+            await supabase.from('conversations').delete().eq('id', deletingConversationId);
+            if (activeConversation?.id === deletingConversationId) {
+                setActiveConversation(null);
+                handleNewChat();
             }
-        } catch (error) {
-            console.error("Error updating plan:", error);
+            fetchConversations();
+        }
+        setIsDeleteModalOpen(false);
+        setDeletingConversationId(null);
+    };
+
+    const handleSendMessage = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
+        if (!currentUser) return;
+        setIsLoading(true);
+
+        let convoId = activeConversation?.id;
+
+        // Create conversation if it doesn't exist
+        if (!convoId) {
+            const { data: newConvo, error } = await supabase.from('conversations').insert({
+                user_id: currentUser.id,
+                title: text.slice(0, 30) + (text.length > 30 ? '...' : ''),
+                sourceLang,
+                targetLang,
+                tone: chatTone
+            }).select().single();
+            
+            if (newConvo) {
+                convoId = newConvo.id;
+                setActiveConversation({ ...newConvo, messages: [] });
+                fetchConversations();
+            }
         }
 
-        setCurrentView('paymentSuccess');
+        if (!convoId) {
+            setIsLoading(false);
+            return;
+        }
+
+        // Add User Message Optimistically
+        const optimisticUserMsg: ChatMessage = {
+            id: Date.now(),
+            conversation_id: convoId,
+            role: 'user',
+            originalText: text,
+            attachments: attachments.map(f => ({ name: f.name, type: f.type })),
+            originalAudioFileName: audioSourceFileName || undefined,
+            created_at: new Date().toISOString()
+        };
+
+        setActiveConversation(prev => prev ? ({...prev, messages: [...prev.messages, optimisticUserMsg]}) : null);
+
+        // Save User Message to DB
+        await supabase.from('chat_messages').insert({
+            conversation_id: convoId,
+            role: 'user',
+            originalText: text,
+            originalAudioFileName: audioSourceFileName
+        });
+
+        // Get AI Response
+        try {
+            const result = await geminiService.getNuancedTranslation(text, sourceLang, targetLang, chatTone, attachments);
+            
+            const aiMsg: ChatMessage = {
+                id: Date.now() + 1,
+                conversation_id: convoId,
+                role: 'ai',
+                originalText: result.directTranslation, // Storing direct as text, nuanced as translation obj
+                translation: result,
+                created_at: new Date().toISOString()
+            };
+
+            // Save AI Message to DB
+            await supabase.from('chat_messages').insert({
+                conversation_id: convoId,
+                role: 'ai',
+                originalText: result.directTranslation,
+                translation: result
+            });
+
+            setActiveConversation(prev => prev ? ({...prev, messages: [...prev.messages, aiMsg]}) : null);
+
+        } catch (error) {
+            console.error("Chat error:", error);
+            // Add error message to chat
+             const errorMsg: ChatMessage = {
+                id: Date.now() + 1,
+                conversation_id: convoId,
+                role: 'ai',
+                originalText: "I apologize, but I encountered an error processing your request. Please try again.",
+                created_at: new Date().toISOString()
+            };
+             setActiveConversation(prev => prev ? ({...prev, messages: [...prev.messages, errorMsg]}) : null);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSelectLibraryItem = (item: LibraryItem) => {
+        handleSetView('chat');
+        setCurrentMode('studio');
+        setStudioInitialText(item.text);
+    };
+
+    // --- ADMIN ACTIONS ---
+    const handleAddItem = async (item: Omit<LibraryItem, 'id'>) => {
+        await supabase.from('library_items').insert(item);
+        fetchLibraryItems();
+    };
+
+    const handleUpdateItem = async (item: LibraryItem) => {
+        await supabase.from('library_items').update(item).eq('id', item.id);
+        fetchLibraryItems();
+    };
+
+    const handleDeleteItem = async (itemId: number) => {
+        await supabase.from('library_items').delete().eq('id', itemId);
+        fetchLibraryItems();
     };
 
     const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
         try {
             const { error } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
             if (error) throw error;
-            
-            // Refresh users list locally
             setAllUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, role: newRole } : u));
         } catch (error) {
             console.error("Error updating user role:", error);
-            // Optionally set an error state here to display in the admin portal
         }
+    };
+
+    const handlePaymentSuccess = async (planName: string) => {
+        if (!currentUser) return;
+        const updatedUser = { ...currentUser, plan: planName as any };
+        setCurrentUser(updatedUser);
+        setSelectedPlanForPayment(planName);
+        try {
+            await supabase.from('profiles').update({ plan: planName }).eq('id', currentUser.id);
+            const { data: refreshedData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+            if (refreshedData) setCurrentUser(refreshedData as User);
+        } catch (error) { console.error("Error updating plan:", error); }
+        setCurrentView('paymentSuccess');
     };
 
     const renderContent = () => {
         if (currentView === 'onboarding' && currentUser) return <OnboardingAgent user={currentUser} onComplete={(u) => { setCurrentUser(u); setCurrentView('chat'); }} />;
         if (currentView === 'profile' && currentUser) return <ProfileDashboard user={currentUser} onUpdateUser={setCurrentUser} />;
-        if (currentView === 'library') return <Library libraryItems={libraryItems} onSelectExample={() => {}} />;
+        if (currentView === 'library') return <Library libraryItems={libraryItems} onSelectExample={handleSelectLibraryItem} />;
         if (currentView === 'pricing') return <Pricing onChoosePlan={(plan) => {setSelectedPlanForPayment(plan); setCurrentView('payment');}} onContactSales={() => setCurrentView('contact')} currentUserPlan={currentUser?.plan || 'Free'} />;
         if (currentView === 'payment') return <Payment selectedItemName={selectedPlanForPayment} onBack={() => setCurrentView('pricing')} onPaymentSuccess={(plan) => { setSelectedPlanForPayment(plan); setCurrentView('paymentSuccess'); }} />;
         if (currentView === 'paymentSuccess') return <PaymentSuccess planName={selectedPlanForPayment} onGoToDashboard={handleNewChat} />;
@@ -230,19 +350,41 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             case 'meetings': return <MeetingSummarizer currentUser={currentUser} />;
             case 'email': return <EmailTranslator />;
             case 'transcriber': return <AudioTranscriber />;
-            case 'chat':
+            case 'chat': return <Chat 
+                isOffline={isOffline}
+                messages={activeConversation?.messages || []}
+                onSendMessage={handleSendMessage}
+                onRateMessage={() => {}}
+                sourceLang={sourceLang}
+                targetLang={targetLang}
+                tone={chatTone}
+                onSourceLangChange={setSourceLang}
+                onTargetLangChange={setTargetLang}
+                onToneChange={setChatTone}
+                isLoading={isLoading}
+            />;
+            case 'studio':
             default:
-                return <Studio isOffline={isOffline} />;
+                return <Studio isOffline={isOffline} initialText={studioInitialText} />;
         }
     };
     
     if (!currentUser) return null;
 
     if (currentUser.role === 'admin') {
-        return <AdminPortal currentLibrary={libraryItems} users={allUsers} onAddItem={() => fetchLibraryItems()} onUpdateItem={() => fetchLibraryItems()} onDeleteItem={() => fetchLibraryItems()} onLogout={handleLogout} currentUser={currentUser} onUpdateUserRole={handleUpdateUserRole} />;
+        return <AdminPortal 
+            currentLibrary={libraryItems} 
+            users={allUsers} 
+            onAddItem={handleAddItem} 
+            onUpdateItem={handleUpdateItem} 
+            onDeleteItem={handleDeleteItem} 
+            onLogout={handleLogout} 
+            currentUser={currentUser} 
+            onUpdateUserRole={handleUpdateUserRole} 
+        />;
     }
     
-    const viewsWithoutPadding: (View | TranslationMode)[] = ['live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding'];
+    const viewsWithoutPadding: (View | TranslationMode)[] = ['live', 'chat', 'studio', 'script', 'book', 'meetings', 'transcriber', 'onboarding'];
     const shouldHavePadding = !viewsWithoutPadding.includes(currentView) && !viewsWithoutPadding.includes(currentMode);
 
     return (
@@ -254,7 +396,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
               currentMode={currentMode}
               onNewChat={handleNewChat}
               onSelectConversation={handleSelectConversation}
-              onDeleteConversation={() => {}}
+              onDeleteConversation={handleDeleteConversation}
               onShowLibrary={() => handleSetView('library')}
               onShowPricing={() => handleSetView('pricing')}
               onChooseAddon={(name) => { setHighlightedPlan(name); setIsUpgradeModalOpen(true); }}
@@ -291,6 +433,13 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
               </main>
           </div>
           <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} highlightedPlan={highlightedPlan} onChoosePlan={(plan) => { setSelectedPlanForPayment(plan); setIsUpgradeModalOpen(false); setCurrentView('payment'); }} onContactSales={() => { setIsUpgradeModalOpen(false); setCurrentView('contact');}} />
+          <ConfirmationModal 
+            isOpen={isDeleteModalOpen} 
+            onClose={() => setIsDeleteModalOpen(false)} 
+            onConfirm={confirmDeleteConversation} 
+            title="Delete Conversation" 
+            message="Are you sure you want to delete this conversation? This action cannot be undone."
+          />
       </div>
     );
 };

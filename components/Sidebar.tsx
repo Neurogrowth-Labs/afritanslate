@@ -6,7 +6,7 @@ import {
     SearchIcon, LibraryIcon, PriceTagIcon, ScriptIcon, BookIcon, 
     MeetingIcon, LiveIcon, ImageIcon, LockIcon, OfflineIcon, 
     CheckIcon, DownloadIcon, EmailIcon, MicrophoneIcon, TranslateIcon,
-    CloseIcon, UserIcon 
+    CloseIcon, UserIcon, ThinkingIcon
 } from './Icons';
 
 
@@ -161,7 +161,8 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Tools</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Translation Studio" icon={<TranslateIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'chat'} onClick={() => { onSetView('chat'); onSetMode('chat'); setIsOpen(false); }} />
+                        <NavButton label="Translation Studio" icon={<TranslateIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'studio'} onClick={() => { onSetView('chat'); onSetMode('studio'); setIsOpen(false); }} />
+                        <NavButton label="AI Assistant" icon={<ThinkingIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'chat'} onClick={() => { onSetView('chat'); onSetMode('chat'); setIsOpen(false); }} />
                         <NavButton label="Live Conversation" icon={<LiveIcon className="w-4 h-4" />} isActive={currentView === 'live'} onClick={() => handleFeatureClick(() => onSetView('live'), FEATURE_LEVELS.live)} isLocked={!hasAccess(FEATURE_LEVELS.live)} disabled={isOffline} />
                         <NavButton label="Audio Transcriber" icon={<MicrophoneIcon className="w-4 h-4" />} isActive={currentMode === 'transcriber'} onClick={() => handleFeatureClick(() => onSetMode('transcriber'), FEATURE_LEVELS.transcriber)} isLocked={!hasAccess(FEATURE_LEVELS.transcriber)} disabled={isOffline} />
                     </div>

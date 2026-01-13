@@ -44,6 +44,13 @@ const VideoGenerator: React.FC = () => {
     }, [isLoading]);
 
     const checkApiKey = async () => {
+        // Fallback: If running in standard env, process.env.API_KEY is likely set
+        if (process.env.API_KEY) {
+            setHasApiKey(true);
+            return;
+        }
+        
+        // Google AI Studio Context
         if (window.aistudio) {
             const hasKey = await window.aistudio.hasSelectedApiKey();
             setHasApiKey(hasKey);

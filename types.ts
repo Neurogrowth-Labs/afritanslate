@@ -1,7 +1,7 @@
 
 import type React from 'react';
 
-export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber';
+export type TranslationMode = 'chat' | 'studio' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber';
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
@@ -31,6 +31,7 @@ export interface TranslationResult {
   culturallyAwareTranslation: string;
   explanation: string;
   pronunciation?: string;
+  original?: string;
 }
 
 export interface EmailLocalizationResult {
