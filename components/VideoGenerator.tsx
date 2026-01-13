@@ -61,6 +61,7 @@ const VideoGenerator: React.FC = () => {
         if (window.aistudio) {
             await window.aistudio.openSelectKey();
             setHasApiKey(true); // Proceed as if successful per race condition notes
+            setError(null); // Clear any previous auth errors
         }
     };
 
@@ -100,12 +101,27 @@ const VideoGenerator: React.FC = () => {
                 throw new Error("No video was generated in the final response.");
             }
         } catch (err: any) {
-            if (err.message?.includes("Requested entity was not found")) {
-                setHasApiKey(false);
-                setError("API Key verification failed. Please re-select your key.");
-            } else {
-                setError(err instanceof Error ? err.message : "An unexpected error occurred.");
+            console.error("Video generation error:", err);
+            let errorMessage = "An unexpected error occurred. Please try again.";
+
+            if (err instanceof Error || typeof err === 'object') {
+                const msg = (err.message || JSON.stringify(err)).toLowerCase();
+                
+                if (msg.includes("requested entity was not found") || msg.includes("404")) {
+                    setHasApiKey(false);
+                    errorMessage = "Access denied. Please ensure you have selected a valid API key with billing enabled.";
+                } else if (msg.includes("403") || msg.includes("permission denied")) {
+                    errorMessage = "Permission denied. Check your API key quotas and billing status.";
+                } else if (msg.includes("429") || msg.includes("resource exhausted")) {
+                    errorMessage = "Service busy or quota exceeded. Please try again in a few moments.";
+                } else if (msg.includes("500") || msg.includes("internal")) {
+                    errorMessage = "AI Service temporarily unavailable. Please try again later.";
+                } else if (err.message) {
+                    errorMessage = err.message;
+                }
             }
+            
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }
@@ -152,6 +168,11 @@ const VideoGenerator: React.FC = () => {
                     >
                         Select API Key
                     </button>
+                    {error && (
+                        <p className="mt-4 text-red-400 text-[10px] font-bold bg-red-500/10 p-2 rounded border border-red-500/20">
+                            {error}
+                        </p>
+                    )}
                 </div>
             </div>
         );

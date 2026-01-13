@@ -1,9 +1,11 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { LANGUAGES, TONES, LIVE_VOICES } from '../constants';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
-import { MicrophoneIcon, StopIcon } from './Icons';
+import { MicrophoneIcon, StopIcon, ZoomIcon } from './Icons';
+import { parseZoomLink, authenticateZoom, connectBotToMeeting } from '../services/zoomService';
 
 interface MediaBlob {
     data: string;
@@ -90,8 +92,8 @@ const StatusIndicator: React.FC<{ status: 'idle' | 'connecting' | 'listening' | 
 
     switch (status) {
         case 'connecting': text = 'Syncing...'; dotColor = 'bg-blue-500'; textColor = 'text-blue-400'; break;
-        case 'listening': text = 'Ready'; dotColor = 'bg-green-500'; textColor = 'text-green-400'; break;
-        case 'speaking': text = 'AI Active'; dotColor = 'bg-yellow-500'; textColor = 'text-yellow-400'; break;
+        case 'listening': text = 'Listening'; dotColor = 'bg-green-500'; textColor = 'text-green-400'; break;
+        case 'speaking': text = 'AI Speaking'; dotColor = 'bg-yellow-500'; textColor = 'text-yellow-400'; break;
         case 'buffering': text = 'Buffering'; dotColor = 'bg-orange-500'; textColor = 'text-orange-400'; break;
         case 'idle':
         default: text = 'Idle'; dotColor = 'bg-gray-500'; textColor = 'text-gray-400';
@@ -113,6 +115,8 @@ const LiveConversation: React.FC = () => {
     const [isLive, setIsLive] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [status, setStatus] = useState<'idle' | 'connecting' | 'listening' | 'speaking' | 'buffering'>('idle');
+    const [inputSource, setInputSource] = useState<'mic' | 'zoom'>('mic');
+    const [zoomLink, setZoomLink] = useState('');
 
     const [conversationHistory, setConversationHistory] = useState<{ role: 'user' | 'ai', text: string, mode: string }[]>([]);
     const [currentTurn, setCurrentTurn] = useState({ user: '', ai: '' });
@@ -210,7 +214,32 @@ const LiveConversation: React.FC = () => {
         }
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            let stream: MediaStream;
+
+            if (inputSource === 'zoom') {
+                // 1. Zoom Validation
+                const zoomDetails = parseZoomLink(zoomLink);
+                if (!zoomDetails) {
+                    throw new Error("Invalid Zoom link format.");
+                }
+                
+                // 2. Zoom Auth Simulation
+                const authSuccess = await authenticateZoom();
+                if (!authSuccess) throw new Error("Zoom authentication failed.");
+                await connectBotToMeeting(zoomDetails.meetingId);
+
+                // 3. Audio Capture (System Audio via DisplayMedia)
+                // Note: User must select the Zoom tab/window and enable "Share Audio"
+                stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                if (stream.getAudioTracks().length === 0) {
+                    stream.getTracks().forEach(t => t.stop());
+                    throw new Error("No audio track found. Please ensure 'Share audio' is checked when selecting the Zoom window.");
+                }
+            } else {
+                // Standard Microphone
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+
             const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
             const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
             inputAudioContextRef.current = inputCtx;
@@ -251,10 +280,11 @@ const LiveConversation: React.FC = () => {
                         await inputCtx.audioWorklet.addModule(workletUrlRef.current);
                         const workletNode = new AudioWorkletNode(inputCtx, 'audio-processor', { processorOptions: { bufferSize: 512 } });
                         audioWorkletNodeRef.current = workletNode;
-                        // FIX: Removed buffering logic to allow for barge-in and comply with API guidelines.
+                        
                         workletNode.port.onmessage = (event) => {
                             const pcmBlob = createBlob(event.data);
-                            setStatus('listening');
+                            // Don't switch to 'listening' if speaking to avoid flicker, just send data
+                            if (outputAudioContextRef.current?.state !== 'running') setStatus('listening');
                             sessionPromiseRef.current?.then(s => s.sendRealtimeInput({ media: pcmBlob }));
                         };
                         const analyser = inputCtx.createAnalyser();
@@ -278,7 +308,7 @@ const LiveConversation: React.FC = () => {
                         if (msg.serverContent?.turnComplete) {
                             setConversationHistory(prev => [
                                 ...prev,
-                                { role: 'user', text: userTranscriptRef.current, mode: 'user' },
+                                { role: 'user', text: userTranscriptRef.current, mode: inputSource === 'zoom' ? 'zoom' : 'user' },
                                 { role: 'ai', text: aiTranscriptRef.current, mode: nuanceLevel }
                             ]);
                             userTranscriptRef.current = ''; aiTranscriptRef.current = '';
@@ -308,7 +338,7 @@ const LiveConversation: React.FC = () => {
                     onclose: () => handleStopConversation(),
                 },
             });
-        } catch (err) { setError("Could not engage audio input."); setStatus('idle'); }
+        } catch (err: any) { setError(err.message || "Could not engage audio input."); setStatus('idle'); }
     };
     
     if (!isLive) {
@@ -332,6 +362,36 @@ const LiveConversation: React.FC = () => {
                     
                     <div className="grid grid-cols-1 gap-4">
                         <ToneSelector label="Target Tone" tones={TONES} value={tone} onChange={setTone} />
+                        
+                        {/* Input Source Toggle */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-text-secondary uppercase">Input Source</label>
+                            <div className="flex bg-bg-main border border-border-default rounded-lg p-1 gap-1">
+                                <button onClick={() => setInputSource('mic')} className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded text-[10px] font-bold transition-all uppercase ${inputSource === 'mic' ? 'bg-accent text-bg-main shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}>
+                                    <MicrophoneIcon className="w-3 h-3" /> Mic
+                                </button>
+                                <button onClick={() => setInputSource('zoom')} className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded text-[10px] font-bold transition-all uppercase ${inputSource === 'zoom' ? 'bg-blue-600 text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}>
+                                    <ZoomIcon className="w-3 h-3" /> Zoom
+                                </button>
+                            </div>
+                        </div>
+
+                        {inputSource === 'zoom' && (
+                            <div className="animate-fade-in space-y-2">
+                                <label className="text-[10px] font-bold text-text-secondary uppercase">Zoom Join Link</label>
+                                <input 
+                                    type="text" 
+                                    value={zoomLink} 
+                                    onChange={(e) => setZoomLink(e.target.value)} 
+                                    placeholder="https://zoom.us/j/..." 
+                                    className="w-full p-2 bg-bg-main border border-border-default rounded-lg text-[11px] text-white focus:ring-1 focus:ring-blue-600 outline-none"
+                                />
+                                <p className="text-[9px] text-text-secondary italic">
+                                    Note: You will need to share the specific Zoom window or tab with audio enabled when prompted.
+                                </p>
+                            </div>
+                        )}
+
                         <div className="space-y-2">
                             <label className="text-[10px] font-bold text-text-secondary uppercase">Philosophy</label>
                             <div className="flex bg-bg-main border border-border-default rounded-lg p-1 gap-1">
@@ -344,8 +404,12 @@ const LiveConversation: React.FC = () => {
                         </div>
                     </div>
 
-                    <button onClick={handleStartConversation} disabled={status === 'connecting'} className="w-full py-3.5 bg-accent text-bg-main text-sm font-black rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2">
-                        {status === 'connecting' ? 'SYNCING...' : 'ENGAGE VOICE RELAY'}
+                    <button 
+                        onClick={handleStartConversation} 
+                        disabled={status === 'connecting' || (inputSource === 'zoom' && !zoomLink)} 
+                        className={`w-full py-3.5 text-sm font-black rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2 ${inputSource === 'zoom' ? 'bg-blue-600 text-white' : 'bg-accent text-bg-main'}`}
+                    >
+                        {status === 'connecting' ? 'SYNCING...' : (inputSource === 'zoom' ? 'JOIN MEETING & TRANSLATE' : 'ENGAGE VOICE RELAY')}
                     </button>
                     {error && <p className="text-red-400 text-center text-[10px] font-bold bg-red-500/5 p-2 rounded border border-red-500/10 uppercase">{error}</p>}
                 </div>
@@ -358,6 +422,11 @@ const LiveConversation: React.FC = () => {
             <header className="flex-shrink-0 p-3 border-b border-border-default flex items-center justify-between bg-bg-surface/50 backdrop-blur-md">
                 <StatusIndicator status={status} />
                 <div className="flex items-center gap-3">
+                    {inputSource === 'zoom' && (
+                        <div className="flex items-center gap-1 bg-blue-900/30 border border-blue-500/30 px-2 py-1 rounded text-[9px] font-bold text-blue-400 uppercase tracking-wider">
+                            <ZoomIcon className="w-3 h-3" /> Zoom Connected
+                        </div>
+                    )}
                     <div className="bg-bg-main px-2 py-1 rounded border border-border-default text-[8px] font-black text-accent uppercase tracking-widest">{nuanceLevel} mode</div>
                     <button onClick={handleStopConversation} className="px-3 py-1.5 bg-red-600/90 text-white text-[10px] font-black rounded-lg hover:bg-red-600 transition-all flex items-center gap-1.5 uppercase tracking-wider">
                         <StopIcon className="w-2.5 h-2.5" /> Stop
@@ -374,7 +443,9 @@ const LiveConversation: React.FC = () => {
                             : 'bg-bg-surface text-text-primary rounded-tl-none border-border-default'
                         }`}>
                             <div className="flex items-center justify-between gap-4 mb-1">
-                                <span className={`text-[8px] font-black uppercase tracking-widest ${turn.role === 'user' ? 'text-accent/60' : 'text-text-secondary'}`}>{turn.role === 'user' ? 'You' : 'AI'}</span>
+                                <span className={`text-[8px] font-black uppercase tracking-widest ${turn.role === 'user' ? 'text-accent/60' : 'text-text-secondary'}`}>
+                                    {turn.role === 'user' ? (turn.mode === 'zoom' ? 'Meeting Audio' : 'You') : 'AI'}
+                                </span>
                                 {turn.role === 'ai' && <span className="text-[7px] font-black px-1.5 py-0.5 rounded bg-bg-main text-text-secondary uppercase">{turn.mode}</span>}
                             </div>
                             <p className="leading-relaxed">{turn.text}</p>
@@ -393,9 +464,11 @@ const LiveConversation: React.FC = () => {
              <footer className="flex-shrink-0 p-4 border-t border-border-default bg-bg-surface/30 flex flex-col items-center gap-3">
                 <canvas ref={canvasRef} width="180" height="15" className="opacity-30"></canvas>
                 <div className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 border-2 ${status === 'listening' ? 'bg-green-500/10 border-green-500 scale-110 shadow-[0_0_15px_rgba(34,197,94,0.2)]' : 'bg-bg-main border-border-default opacity-50'} ${status === 'speaking' ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : ''}`}>
-                    <MicrophoneIcon className={`w-5 h-5 ${status === 'listening' ? 'text-green-400' : 'text-text-secondary'}`} />
+                    {inputSource === 'zoom' ? <ZoomIcon className={`w-5 h-5 ${status === 'listening' ? 'text-green-400' : 'text-text-secondary'}`} /> : <MicrophoneIcon className={`w-5 h-5 ${status === 'listening' ? 'text-green-400' : 'text-text-secondary'}`} />}
                 </div>
-                <p className="text-[8px] text-text-secondary font-black uppercase tracking-[0.3em] opacity-50">Neural Relay Active</p>
+                <p className="text-[8px] text-text-secondary font-black uppercase tracking-[0.3em] opacity-50">
+                    {inputSource === 'zoom' ? 'Zoom Bridge Active' : 'Neural Relay Active'}
+                </p>
              </footer>
         </div>
     );
