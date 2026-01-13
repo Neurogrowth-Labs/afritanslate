@@ -62,6 +62,8 @@ const VideoGenerator: React.FC = () => {
             await window.aistudio.openSelectKey();
             setHasApiKey(true); // Proceed as if successful per race condition notes
             setError(null); // Clear any previous auth errors
+        } else {
+            setError("API Key configuration required. Please ensure process.env.API_KEY is set in your environment.");
         }
     };
 
@@ -110,6 +112,9 @@ const VideoGenerator: React.FC = () => {
                 if (msg.includes("requested entity was not found") || msg.includes("404")) {
                     setHasApiKey(false);
                     errorMessage = "Access denied. Please ensure you have selected a valid API key with billing enabled.";
+                } else if (msg.includes("api key not valid") || msg.includes("api_key_invalid") || msg.includes("unauthenticated")) {
+                    setHasApiKey(false);
+                    errorMessage = "The API key provided is invalid or missing. Please check your configuration.";
                 } else if (msg.includes("403") || msg.includes("permission denied")) {
                     errorMessage = "Permission denied. Check your API key quotas and billing status.";
                 } else if (msg.includes("429") || msg.includes("resource exhausted")) {
@@ -149,10 +154,9 @@ const VideoGenerator: React.FC = () => {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-4 animate-fade-in">
                 <div className="max-w-md bg-bg-surface p-6 rounded-xl border border-border-default shadow-xl">
-                    <h2 className="text-lg font-bold text-white mb-2">Activation Required</h2>
+                    <h2 className="text-lg font-bold text-white mb-2">Authentication Required</h2>
                     <p className="text-text-secondary mb-4 text-xs">
-                        Video generation requires a selected API key from a paid GCP project. 
-                        Please ensure your account has billing enabled.
+                        Video generation requires a valid API key from a paid GCP project with billing enabled.
                     </p>
                     <a 
                         href="https://ai.google.dev/gemini-api/docs/billing" 
@@ -166,7 +170,7 @@ const VideoGenerator: React.FC = () => {
                         onClick={handleOpenSelectKey}
                         className="w-full py-2 bg-accent text-brand-bg font-bold text-xs rounded-lg hover:scale-[1.02] transition-transform"
                     >
-                        Select API Key
+                        {window.aistudio ? "Select API Key" : "Retry Configuration"}
                     </button>
                     {error && (
                         <p className="mt-4 text-red-400 text-[10px] font-bold bg-red-500/10 p-2 rounded border border-red-500/20">

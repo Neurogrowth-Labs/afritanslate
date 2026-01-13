@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { transcribeAudio } from '../services/geminiService';
 import { CheckIcon, MicrophoneIcon, WordIcon, PdfIcon } from './Icons';
@@ -20,6 +21,13 @@ const AudioTranscriber: React.FC = () => {
 
     const handleFileChange = (file: File | null) => {
         if (file) {
+            // Basic validation for audio types
+            if (!file.type.startsWith('audio/') && !file.type.includes('video/mp4') && !file.type.includes('video/webm')) {
+                setError("Invalid file type. Please upload a valid audio file (e.g., MP3, WAV, M4A).");
+                setAudioFile(null);
+                return;
+            }
+
             setAudioFile(file);
             setTranscript('');
             setError(null);
@@ -128,6 +136,7 @@ const AudioTranscriber: React.FC = () => {
                     </label>
                     <p className="text-xs text-text-secondary mt-4">Supports .mp3, .wav, .webm, .m4a, and more.</p>
                 </div>
+                {error && <p className="text-red-400 text-center mt-4 text-sm bg-red-500/10 p-2 rounded-md animate-fade-in">{error}</p>}
             </div>
         );
     }
@@ -179,7 +188,7 @@ const AudioTranscriber: React.FC = () => {
                     </div>
                 )}
 
-                {error && <p className="text-red-400 text-center mt-4 text-sm bg-red-500/10 p-2 rounded-md">{error}</p>}
+                {error && <p className="text-red-400 text-center mt-4 text-sm bg-red-500/10 p-2 rounded-md animate-fade-in">{error}</p>}
             </div>
             
             <div className="flex-1 overflow-y-auto">

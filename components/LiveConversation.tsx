@@ -220,12 +220,15 @@ const LiveConversation: React.FC = () => {
                 // 1. Zoom Validation
                 const zoomDetails = parseZoomLink(zoomLink);
                 if (!zoomDetails) {
-                    throw new Error("Invalid Zoom link format.");
+                    throw new Error("Invalid Zoom link format. Please provide a valid meeting URL.");
                 }
                 
                 // 2. Zoom Auth Simulation
                 const authSuccess = await authenticateZoom();
-                if (!authSuccess) throw new Error("Zoom authentication failed.");
+                if (!authSuccess) {
+                    throw new Error("Zoom Connection Failed: Invalid or missing API credentials. Please check your Zoom App configuration.");
+                }
+                
                 await connectBotToMeeting(zoomDetails.meetingId);
 
                 // 3. Audio Capture (System Audio via DisplayMedia)
