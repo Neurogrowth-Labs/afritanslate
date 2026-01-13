@@ -3,8 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { summarizeMeeting, translateMeetingChunk } from '../services/geminiService';
 import { parseZoomLink, authenticateZoom, connectBotToMeeting } from '../services/zoomService';
 import { MOCK_MEETING_TRANSCRIPT, LANGUAGES, TONES } from '../constants';
-import { GoogleMeetIcon, TeamsIcon, ZoomIcon } from './Icons';
-import type { MeetingMode, User } from '../types';
+import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon } from './Icons';
+import type { MeetingMode, User, ScheduledMeeting } from '../types';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
 import { supabase } from '../supabaseClient';
@@ -32,6 +32,15 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
     const [summaryLang, setSummaryLang] = useState('en');
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<string>('');
+
+    // Scheduling States
+    const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
+    const [newMeetingTitle, setNewMeetingTitle] = useState('');
+    const [newMeetingDate, setNewMeetingDate] = useState('');
+    const [newMeetingTime, setNewMeetingTime] = useState('');
+    const [newMeetingLink, setNewMeetingLink] = useState('');
+    const [isScheduling, setIsScheduling] = useState(false);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
 
     const transcriptEndRef = useRef<HTMLDivElement>(null);
 
@@ -75,6 +84,76 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         }
         return () => clearInterval(interval);
     }, [isTranscribing, transcriptionLang, transcriptionTone]);
+
+    // Fetch scheduled meetings when entering schedule mode
+    useEffect(() => {
+        if (mode === 'schedule') {
+            fetchScheduledMeetings();
+        }
+    }, [mode]);
+
+    const fetchScheduledMeetings = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+            .from('scheduled_meetings')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .gte('scheduled_at', new Date().toISOString()) // Only future or current meetings
+            .order('scheduled_at', { ascending: true });
+        
+        if (error) {
+            console.error("Error fetching meetings:", error);
+            // Don't show error to user for fetch fail, just empty list
+        } else {
+            setScheduledMeetings(data as ScheduledMeeting[]);
+        }
+        setIsLoading(false);
+    };
+
+    const handleScheduleMeeting = async () => {
+        if (!newMeetingTitle || !newMeetingDate || !newMeetingTime) {
+            setError("Please fill in the meeting title, date, and time.");
+            return;
+        }
+
+        setIsScheduling(true);
+        setError(null);
+
+        const scheduledAt = new Date(`${newMeetingDate}T${newMeetingTime}`);
+
+        try {
+            const { error } = await supabase.from('scheduled_meetings').insert({
+                user_id: currentUser.id,
+                title: newMeetingTitle,
+                meeting_link: newMeetingLink,
+                scheduled_at: scheduledAt.toISOString(),
+            });
+
+            if (error) throw error;
+
+            // Reset form and refresh list
+            setNewMeetingTitle('');
+            setNewMeetingDate('');
+            setNewMeetingTime('');
+            setNewMeetingLink('');
+            fetchScheduledMeetings();
+
+        } catch (err: any) {
+            setError(err.message || "Failed to schedule meeting.");
+        } finally {
+            setIsScheduling(false);
+        }
+    };
+
+    const handleDeleteMeeting = async (id: number) => {
+        try {
+            const { error } = await supabase.from('scheduled_meetings').delete().eq('id', id);
+            if (error) throw error;
+            fetchScheduledMeetings();
+        } catch (err: any) {
+            console.error("Failed to delete meeting:", err);
+        }
+    };
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -321,6 +400,18 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         setIsTranscribing(false);
         setLiveTranscript('');
         setConnectionStatus('');
+        setNewMeetingTitle('');
+        setNewMeetingDate('');
+        setNewMeetingTime('');
+        setNewMeetingLink('');
+    };
+
+    // --- Calendar Helper Functions ---
+    const getDaysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const getFirstDayOfMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+
+    const changeMonth = (offset: number) => {
+        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1));
     };
 
     if (isTranscribing || isConnecting) {
@@ -360,6 +451,171 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         )
     }
 
+    if (mode === 'schedule') {
+        const daysInMonth = getDaysInMonth(currentMonth);
+        const firstDay = getFirstDayOfMonth(currentMonth);
+        const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+        const blanks = Array.from({ length: firstDay }, (_, i) => i);
+
+        // Map meetings to dates for calendar highlighting
+        const meetingsByDate = scheduledMeetings.reduce((acc, meeting) => {
+            const dateStr = new Date(meeting.scheduled_at).toDateString();
+            acc[dateStr] = (acc[dateStr] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return (
+            <div className="flex flex-col h-full animate-fade-in p-4">
+                <div className="text-center mb-6">
+                    <h1 className="text-4xl font-bold text-text-primary">Meeting Scheduler</h1>
+                    <p className="text-lg text-text-secondary mt-2 max-w-2xl mx-auto">
+                        Plan and manage upcoming transcription sessions.
+                    </p>
+                </div>
+
+                <div className="w-full max-w-5xl mx-auto">
+                    <div className="flex justify-center border-b border-border-default mb-6">
+                        <button onClick={() => setMode('live')} className={`px-4 py-2 text-sm font-semibold ${mode === 'live' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Live Meeting</button>
+                        <button onClick={() => setMode('upload')} className={`px-4 py-2 text-sm font-semibold ${mode === 'upload' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Upload Transcript</button>
+                        <button onClick={() => setMode('schedule')} className={`px-4 py-2 text-sm font-semibold ${mode === 'schedule' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Schedule</button>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {/* Left Column: Calendar & Upcoming */}
+                        <div className="space-y-6">
+                            <div className="bg-bg-surface p-6 rounded-lg border border-border-default">
+                                <div className="flex justify-between items-center mb-4">
+                                    <button onClick={() => changeMonth(-1)} className="text-text-secondary hover:text-white">&lt;</button>
+                                    <h3 className="text-lg font-bold text-white">
+                                        {currentMonth.toLocaleDateString('default', { month: 'long', year: 'numeric' })}
+                                    </h3>
+                                    <button onClick={() => changeMonth(1)} className="text-text-secondary hover:text-white">&gt;</button>
+                                </div>
+                                <div className="grid grid-cols-7 gap-2 text-center text-sm">
+                                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                                        <div key={day} className="text-text-secondary font-bold py-1">{day}</div>
+                                    ))}
+                                    {blanks.map(i => <div key={`blank-${i}`} className="py-2"></div>)}
+                                    {days.map(day => {
+                                        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                                        const dateStr = date.toDateString();
+                                        const hasMeeting = meetingsByDate[dateStr];
+                                        const isToday = new Date().toDateString() === dateStr;
+                                        
+                                        return (
+                                            <div 
+                                                key={day} 
+                                                className={`
+                                                    py-2 rounded-lg relative cursor-default
+                                                    ${isToday ? 'bg-white/10 text-white font-bold' : 'text-text-primary'}
+                                                    ${hasMeeting ? 'border border-accent/50' : ''}
+                                                `}
+                                            >
+                                                {day}
+                                                {hasMeeting && <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-accent rounded-full"></div>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div className="bg-bg-surface p-6 rounded-lg border border-border-default h-64 overflow-y-auto custom-scrollbar">
+                                <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-widest">Upcoming Meetings</h3>
+                                {scheduledMeetings.length === 0 ? (
+                                    <p className="text-text-secondary text-xs italic">No upcoming meetings scheduled.</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {scheduledMeetings.map(meeting => (
+                                            <div key={meeting.id} className="flex justify-between items-start p-3 bg-bg-main border border-border-default rounded-lg group">
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">{meeting.title}</p>
+                                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-text-secondary">
+                                                        <CalendarIcon className="w-3 h-3" />
+                                                        <span>{new Date(meeting.scheduled_at).toLocaleDateString()}</span>
+                                                        <ClockIcon className="w-3 h-3 ml-1" />
+                                                        <span>{new Date(meeting.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                    {meeting.meeting_link && (
+                                                        <a href={meeting.meeting_link} target="_blank" rel="noreferrer" className="text-[10px] text-accent hover:underline mt-1 block truncate max-w-[150px]">
+                                                            {meeting.meeting_link}
+                                                        </a>
+                                                    )}
+                                                </div>
+                                                <button 
+                                                    onClick={() => handleDeleteMeeting(meeting.id)}
+                                                    className="text-text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Right Column: Schedule Form */}
+                        <div className="bg-bg-surface p-6 rounded-lg border border-border-default h-fit">
+                            <h3 className="text-lg font-bold text-white mb-4">Schedule New Meeting</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Meeting Title</label>
+                                    <input 
+                                        type="text" 
+                                        value={newMeetingTitle}
+                                        onChange={(e) => setNewMeetingTitle(e.target.value)}
+                                        placeholder="e.g., Q3 Strategy Review"
+                                        className="w-full p-2 bg-bg-main border border-border-default rounded text-sm text-white focus:ring-1 focus:ring-accent outline-none"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Date</label>
+                                        <input 
+                                            type="date" 
+                                            value={newMeetingDate}
+                                            onChange={(e) => setNewMeetingDate(e.target.value)}
+                                            className="w-full p-2 bg-bg-main border border-border-default rounded text-sm text-white focus:ring-1 focus:ring-accent outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Time</label>
+                                        <input 
+                                            type="time" 
+                                            value={newMeetingTime}
+                                            onChange={(e) => setNewMeetingTime(e.target.value)}
+                                            className="w-full p-2 bg-bg-main border border-border-default rounded text-sm text-white focus:ring-1 focus:ring-accent outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-text-secondary uppercase mb-1">Link (Optional)</label>
+                                    <input 
+                                        type="text" 
+                                        value={newMeetingLink}
+                                        onChange={(e) => setNewMeetingLink(e.target.value)}
+                                        placeholder="Zoom, Teams, or Meet URL"
+                                        className="w-full p-2 bg-bg-main border border-border-default rounded text-sm text-white focus:ring-1 focus:ring-accent outline-none"
+                                    />
+                                </div>
+                                
+                                {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+
+                                <button 
+                                    onClick={handleScheduleMeeting} 
+                                    disabled={isScheduling}
+                                    className="w-full py-2.5 bg-accent text-bg-main font-bold rounded hover:bg-accent/90 disabled:opacity-50 transition-colors mt-2"
+                                >
+                                    {isScheduling ? 'Scheduling...' : 'Add to Schedule'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (!transcript) {
         return (
             <div className="flex flex-col items-center h-full animate-fade-in p-4">
@@ -374,6 +630,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                      <div className="flex justify-center border-b border-border-default mb-6">
                         <button onClick={() => setMode('live')} className={`px-4 py-2 text-sm font-semibold ${mode === 'live' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Live Meeting</button>
                         <button onClick={() => setMode('upload')} className={`px-4 py-2 text-sm font-semibold ${mode === 'upload' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Upload Transcript</button>
+                        <button onClick={() => setMode('schedule')} className={`px-4 py-2 text-sm font-semibold ${mode === 'schedule' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Schedule</button>
                     </div>
 
                     {mode === 'live' ? (

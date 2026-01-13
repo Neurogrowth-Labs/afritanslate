@@ -1,14 +1,14 @@
 
 import type React from 'react';
 
-export type TranslationMode = 'chat' | 'studio' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber';
+export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber' | 'studio';
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
 // FIX: Added 'home' to the View type to represent the landing page's main view.
 export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding';
 
-export type MeetingMode = 'live' | 'upload';
+export type MeetingMode = 'live' | 'upload' | 'schedule';
 
 export interface GeolocationCoordinates {
   latitude: number;
@@ -120,6 +120,15 @@ export interface User {
   goals?: string;
   onboarding_completed?: boolean;
   team_members?: string[];
+}
+
+export interface ScheduledMeeting {
+    id: number;
+    user_id: string;
+    title: string;
+    meeting_link?: string;
+    scheduled_at: string; // ISO timestamp
+    created_at: string;
 }
 
 // --- Script Translator AI Toolkit Types --- //
