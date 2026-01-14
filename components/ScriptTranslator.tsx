@@ -34,6 +34,7 @@ const ScriptTranslator: React.FC = () => {
     const [targetLang, setTargetLang] = useState<string>('sw');
     const [tone, setTone] = useState<string>('Formal');
     const [fileName, setFileName] = useState('');
+    const [isDragging, setIsDragging] = useState(false);
 
     // State for AI analysis results
     const [synopsis, setSynopsis] = useState<Synopsis | null>(null);
@@ -50,18 +51,22 @@ const ScriptTranslator: React.FC = () => {
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            setFileName(file.name);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target?.result as string;
-                setSourceText(text);
-                resetTranslationAndAnalysis();
-            };
-            reader.readAsText(file);
+            loadFile(file);
         }
     };
+
+    const loadFile = (file: File) => {
+        setFileName(file.name);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target?.result as string;
+            setSourceText(text);
+            resetTranslationAndAnalysis();
+        };
+        reader.readAsText(file);
+    };
     
-    const resetTranslationAndAnalysis = () => {
+    const resetTranslationAndAnalysis = useCallback(() => {
         setTranslatedText('');
         setError(null);
         setSynopsis(null);
@@ -72,7 +77,7 @@ const ScriptTranslator: React.FC = () => {
         setCastingSides(null);
         setDubbingGuide(null);
         setStoryboardPrompts(null);
-    };
+    }, []);
 
     const handleTranslate = async () => {
         if (!sourceText) return;
@@ -90,10 +95,8 @@ const ScriptTranslator: React.FC = () => {
 
     const handleRunAnalysis = async (tool: AiAnalysisTool) => {
         if (!translatedText && tool !== 'scene_breakdown' && tool !== 'casting_sheet' && tool !== 'storyboard') {
-             // Some tools can run on source text, but generally we want to work with translated content or force translation first.
-             // For simplicity, let's require source text for Pre-production tools and Translated text for Localization tools.
              if(!sourceText) return;
-        } else if (!translatedText) {
+        } else if (!translatedText && ['dubbing_script', 'cultural', 'audience'].includes(tool)) {
              setError("Please translate the script first for localization tools, or ensure source text is loaded.");
              return;
         }
@@ -101,7 +104,7 @@ const ScriptTranslator: React.FC = () => {
         setIsAnalyzing(tool);
         setError(null);
 
-        // Clear previous results for the specific tool to provide clear user feedback
+        // Clear previous results for the specific tool
         switch (tool) {
             case 'synopsis': setSynopsis(null); break;
             case 'characters': setCharacterProfiles(null); break;
@@ -114,8 +117,6 @@ const ScriptTranslator: React.FC = () => {
         }
 
         try {
-            // Use Source Text for Pre-Production analysis to avoid translation errors affecting logic,
-            // Use Translated Text for Post-Production/Localization tasks.
             const textToAnalyze = ['dubbing_script', 'cultural', 'audience'].includes(tool) ? translatedText : sourceText;
 
             switch (tool) {
@@ -180,31 +181,34 @@ const ScriptTranslator: React.FC = () => {
         resetTranslationAndAnalysis();
     };
 
+    // Drag and Drop Handlers
+    const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isDragging) setIsDragging(true);
+    }, [isDragging]);
+
+    const onDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.currentTarget.contains(event.relatedTarget as Node)) return;
+        setIsDragging(false);
+    }, []);
+
     const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
         event.preventDefault();
         event.stopPropagation();
+        setIsDragging(false);
         const file = event.dataTransfer.files?.[0];
          if (file) {
-            setFileName(file.name);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target?.result as string;
-                setSourceText(text);
-                resetTranslationAndAnalysis();
-            };
-            reader.readAsText(file);
+            loadFile(file);
         }
-    }, []);
-
-    const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-        event.preventDefault();
-        event.stopPropagation();
-    };
+    }, [loadFile]);
 
 
     if (!sourceText) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-8">
+            <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-8" onDrop={onDrop} onDragOver={onDragOver} onDragLeave={onDragLeave}>
                 <div className="w-24 h-24 bg-accent/10 rounded-3xl flex items-center justify-center mb-8 border border-accent/20 shadow-[0_0_40px_-10px_rgba(244,163,0,0.3)]">
                     <ScriptIcon className="w-12 h-12 text-accent" />
                 </div>
@@ -214,23 +218,29 @@ const ScriptTranslator: React.FC = () => {
                     Generate <span className="text-accent">casting sides</span>, <span className="text-accent">dubbing scripts</span>, and <span className="text-accent">cultural reports</span> instantly.
                 </p>
                 <div 
-                    onDrop={onDrop} 
-                    onDragOver={onDragOver}
-                    className="w-full max-w-3xl h-64 border-2 border-dashed border-border-default rounded-3xl flex flex-col items-center justify-center bg-bg-surface/30 hover:border-accent hover:bg-bg-surface/50 transition-all cursor-pointer group mx-auto"
+                    className={`w-full max-w-3xl h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center transition-all cursor-pointer group mx-auto ${isDragging ? 'border-accent bg-accent/10 scale-105' : 'border-border-default bg-bg-surface/30 hover:border-accent hover:bg-bg-surface/50'}`}
                 >
-                    <p className="text-text-primary font-medium group-hover:text-white transition-colors text-lg">Drag & drop your script file</p>
-                    <span className="text-xs text-text-secondary/50 my-4 uppercase tracking-widest font-bold">OR</span>
-                     <label className="bg-white/10 border border-white/10 text-white font-bold px-8 py-3 rounded-xl cursor-pointer hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm">
-                        Browse Files
-                        <input type="file" className="hidden" onChange={handleFileChange} accept=".txt,.fountain,.fdx,.pdf" />
-                    </label>
-                    <p className="text-[10px] text-text-secondary mt-6 font-mono opacity-60">Supports .txt, .fountain, .fdx, .pdf</p>
+                    {isDragging ? (
+                        <div className="pointer-events-none flex flex-col items-center animate-pulse">
+                            <CheckIcon className="w-12 h-12 text-accent mb-2" />
+                            <p className="text-accent font-bold text-xl">Drop script file here</p>
+                        </div>
+                    ) : (
+                        <>
+                            <p className="text-text-primary font-medium group-hover:text-white transition-colors text-lg">Drag & drop your script file</p>
+                            <span className="text-xs text-text-secondary/50 my-4 uppercase tracking-widest font-bold">OR</span>
+                            <label className="bg-white/10 border border-white/10 text-white font-bold px-8 py-3 rounded-xl cursor-pointer hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm">
+                                Browse Files
+                                <input type="file" className="hidden" onChange={handleFileChange} accept=".txt,.fountain,.fdx,.pdf" />
+                            </label>
+                            <p className="text-[10px] text-text-secondary mt-6 font-mono opacity-60">Supports .txt, .fountain, .fdx, .pdf</p>
+                        </>
+                    )}
                 </div>
             </div>
         );
     }
     
-    // Categorized Tools
     const PRODUCTION_TOOLS = [
         { id: 'scene_breakdown', name: 'Scene Breakdown', icon: <ClapperboardIcon className="w-5 h-5" />, category: 'Production' },
         { id: 'casting_sheet', name: 'Casting Sheet', icon: <UsersIcon className="w-5 h-5" />, category: 'Production' },
@@ -241,7 +251,23 @@ const ScriptTranslator: React.FC = () => {
     ];
 
     return (
-        <div className="flex flex-col h-full animate-fade-in bg-bg-main overflow-hidden">
+        <div 
+            className="flex flex-col h-full animate-fade-in bg-bg-main overflow-hidden relative"
+            onDrop={onDrop} 
+            onDragOver={onDragOver}
+            onDragLeave={onDragLeave}
+        >
+            {/* Drag Overlay */}
+            {isDragging && (
+                <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-8 animate-fade-in">
+                    <div className="border-4 border-accent border-dashed rounded-3xl w-full h-full flex flex-col items-center justify-center">
+                        <ScriptIcon className="w-20 h-20 text-accent mb-6 animate-bounce" />
+                        <h2 className="text-4xl font-bold text-white">Drop to Replace Script</h2>
+                        <p className="text-text-secondary mt-2">Release to load new file</p>
+                    </div>
+                </div>
+            )}
+
             {/* Main Container for "Space on Edges" */}
             <div className="flex-1 w-full max-w-[1920px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0">
                 

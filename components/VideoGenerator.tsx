@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { startVideoGeneration, pollVideoOperation } from '../services/geminiService';
 import { DownloadIcon, CloseIcon, ImageIcon } from './Icons';
 
@@ -24,6 +24,7 @@ const VideoGenerator: React.FC = () => {
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [hasApiKey, setHasApiKey] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -70,10 +71,19 @@ const VideoGenerator: React.FC = () => {
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            processFile(file);
+        }
+    };
+
+    const processFile = (file: File) => {
+        if (file.type.startsWith('image/')) {
             setImageFile(file);
             const reader = new FileReader();
             reader.onload = () => setPreviewUrl(reader.result as string);
             reader.readAsDataURL(file);
+            setError(null);
+        } else {
+            setError("Please upload a valid image file.");
         }
     };
 
@@ -150,6 +160,29 @@ const VideoGenerator: React.FC = () => {
         }
     };
 
+    // Drag and Drop Handlers
+    const onDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!isDragging) setIsDragging(true);
+    }, [isDragging]);
+
+    const onDragLeave = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragging(false);
+    }, []);
+
+    const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDragging(false);
+        const file = event.dataTransfer.files?.[0];
+        if (file) {
+            processFile(file);
+        }
+    }, []);
+
     if (!hasApiKey) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-4 animate-fade-in">
@@ -218,13 +251,16 @@ const VideoGenerator: React.FC = () => {
                                     </button>
                                 </div>
                             ) : (
-                                <button 
+                                <div 
+                                    onDrop={onDrop}
+                                    onDragOver={onDragOver}
+                                    onDragLeave={onDragLeave}
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="w-full h-24 border-2 border-dashed border-border-default rounded-lg flex flex-col items-center justify-center gap-1 hover:border-accent hover:bg-bg-main/50 transition-all text-text-secondary"
+                                    className={`w-full h-24 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${isDragging ? 'border-accent bg-accent/10' : 'border-border-default hover:border-accent hover:bg-bg-main/50 text-text-secondary'}`}
                                 >
-                                    <ImageIcon className="w-5 h-5 opacity-30" />
-                                    <span className="text-[10px] font-semibold">Upload Image</span>
-                                </button>
+                                    <ImageIcon className={`w-5 h-5 ${isDragging ? 'text-accent' : 'opacity-30'}`} />
+                                    <span className={`text-[10px] font-semibold ${isDragging ? 'text-accent' : ''}`}>{isDragging ? 'Drop Image' : 'Upload Image'}</span>
+                                </div>
                             )}
                             <input 
                                 type="file" 
