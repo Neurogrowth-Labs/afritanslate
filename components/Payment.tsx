@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AFRITRANSLATE_MODELS, ADD_ONS } from '../constants';
 import { PayPalIcon, BankIcon, VisaIcon, MastercardIcon, AmexIcon } from './Icons';
 
@@ -9,15 +9,85 @@ interface PaymentProps {
     onPaymentSuccess: (planName: string) => void;
 }
 
+declare global {
+    interface Window {
+        paypal: any;
+    }
+}
+
 const Spinner = () => <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 
 const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'eft'>('paypal'); // Default to PayPal as it's the active method
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'eft'>('paypal');
+    const sdkLoadedRef = useRef(false);
 
     const planDetails = AFRITRANSLATE_MODELS.find(p => p.name === selectedItemName);
     const addonDetails = ADD_ONS.find(a => a.name === selectedItemName);
     const itemDetails = planDetails || addonDetails;
+
+    // Load PayPal SDK for Basic, Premium, and Training Plans
+    useEffect(() => {
+        if ((selectedItemName === 'Basic' || selectedItemName === 'Premium' || selectedItemName === 'Training') && paymentMethod === 'paypal') {
+            const scriptId = 'paypal-sdk-script';
+            
+            // Determine IDs based on plan
+            let planId = '';
+            let containerId = '';
+
+            if (selectedItemName === 'Basic') {
+                planId = 'P-2L193053EK545023VNFTW4NA';
+                containerId = 'paypal-button-container-P-2L193053EK545023VNFTW4NA';
+            } else if (selectedItemName === 'Premium') {
+                planId = 'P-75605795E6508522CNFTXEUA';
+                containerId = 'paypal-button-container-P-75605795E6508522CNFTXEUA';
+            } else if (selectedItemName === 'Training') {
+                planId = 'P-3BC33159AK6748729NFTXIHI';
+                containerId = 'paypal-button-container-P-3BC33159AK6748729NFTXIHI';
+            }
+
+            const loadButtons = () => {
+                if (window.paypal && document.getElementById(containerId)) {
+                    // Prevent duplicate buttons
+                    const container = document.getElementById(containerId);
+                    if (container) container.innerHTML = '';
+
+                    window.paypal.Buttons({
+                        style: {
+                            shape: 'pill',
+                            color: 'gold',
+                            layout: 'vertical',
+                            label: 'subscribe'
+                        },
+                        createSubscription: function(data: any, actions: any) {
+                            return actions.subscription.create({
+                                /* Creates the subscription */
+                                plan_id: planId
+                            });
+                        },
+                        onApprove: function(data: any, actions: any) {
+                            // Call the app's success handler directly upon approval
+                            onPaymentSuccess(selectedItemName);
+                        }
+                    }).render(`#${containerId}`);
+                }
+            };
+
+            if (!document.getElementById(scriptId)) {
+                const script = document.createElement('script');
+                script.id = scriptId;
+                script.src = "https://www.paypal.com/sdk/js?client-id=AQdYSIIUo5RKbrqVfTWZlY5oxbJ4Kor0mymqj4QJiAA9PGMoFGKaJPE12YjDG7Wr65uc3f7SgRiARwWT&vault=true&intent=subscription";
+                script.dataset.sdkIntegrationSource = "button-factory";
+                script.onload = () => {
+                    sdkLoadedRef.current = true;
+                    loadButtons();
+                };
+                document.body.appendChild(script);
+            } else if (window.paypal) {
+                loadButtons();
+            }
+        }
+    }, [selectedItemName, paymentMethod, onPaymentSuccess]);
     
     if (!itemDetails) {
         return (
@@ -33,34 +103,24 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
 
     const handleCardPayment = () => {
         setIsLoading(true);
-        // Secure card processing requires a backend server. 
-        // Disabled for this demo to prevent unauthorized access via simulation.
+        // Real card processing requires a secure backend.
         setTimeout(() => {
             setIsLoading(false);
-            alert("Card payments are currently disabled for maintenance. Please use PayPal for secure, real-time activation.");
+            alert("Card payments are currently disabled. Please use PayPal for secure transactions.");
         }, 1000);
     };
 
     const handlePayPalRedirect = () => {
         setIsLoading(true);
         
-        // Open PayPal in new tab
-        if (selectedItemName === 'Basic') {
-            window.open('https://www.paypal.com/ncp/payment/G636NNWVFJWLL', '_blank');
-        } else if (selectedItemName === 'Premium') {
-            window.open('https://www.paypal.com/ncp/payment/SPPVW8Q2PLRBN', '_blank');
-        } else {
-            // Generic fallback
-            window.open('https://www.paypal.com/signin', '_blank');
-        }
+        // Generic fallback for plans without specific SDK integration buttons
+        window.open('https://www.paypal.com/signin', '_blank');
 
-        // IMPORTANT: We do NOT auto-grant success here anymore.
-        // The user must complete payment and be redirected back to the app with ?payment_success=true
-        // The App.tsx component listens for this redirect parameter.
-        
+        // IMPORTANT: Removed auto-success. 
+        // User must complete payment and be redirected back with ?payment_success=true
         setTimeout(() => {
             setIsLoading(false);
-        }, 5000); // Just reset button state after a delay
+        }, 3000);
     }
 
     const price = 'price' in itemDetails ? itemDetails.price : undefined;
@@ -137,17 +197,40 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
                     {paymentMethod === 'paypal' && (
                         <div className="text-center p-4 animate-fade-in">
                             <p className="text-text-secondary mb-6 text-sm">
-                                You will be redirected to PayPal to complete your transaction securely. 
-                                <br/><br/>
-                                <span className="text-accent font-bold">Important:</span> After payment, please wait to be automatically redirected back to this app to activate your plan.
+                                You will be redirected to PayPal to complete your transaction securely.
                             </p>
-                             <button 
-                                onClick={handlePayPalRedirect} 
-                                disabled={isLoading}
-                                className="w-full max-w-xs mx-auto py-3 bg-[#0070BA] text-white font-semibold rounded-lg hover:bg-[#005ea6] transition-colors disabled:bg-border-default disabled:cursor-wait flex items-center justify-center gap-2"
-                            >
-                                {isLoading ? <Spinner /> : <>Pay with <PayPalIcon className="w-4 h-4 fill-white" /></>}
-                            </button>
+                            
+                            {/* Basic Plan SDK Button */}
+                            {selectedItemName === 'Basic' ? (
+                                <div className="w-full max-w-xs mx-auto">
+                                    <div id="paypal-button-container-P-2L193053EK545023VNFTW4NA"></div>
+                                </div>
+                            ) : selectedItemName === 'Premium' ? (
+                                /* Premium Plan SDK Button */
+                                <div className="w-full max-w-xs mx-auto">
+                                    <div id="paypal-button-container-P-75605795E6508522CNFTXEUA"></div>
+                                </div>
+                            ) : selectedItemName === 'Training' ? (
+                                /* Training Plan SDK Button */
+                                <div className="w-full max-w-xs mx-auto">
+                                    <div id="paypal-button-container-P-3BC33159AK6748729NFTXIHI"></div>
+                                </div>
+                            ) : (
+                                /* Fallback for other items */
+                                <button 
+                                    onClick={handlePayPalRedirect} 
+                                    disabled={isLoading}
+                                    className="w-full max-w-xs mx-auto py-3 bg-[#0070BA] text-white font-semibold rounded-lg hover:bg-[#005ea6] transition-colors disabled:bg-border-default disabled:cursor-wait flex items-center justify-center gap-2"
+                                >
+                                    {isLoading ? <Spinner /> : <>Pay with <PayPalIcon className="w-4 h-4 fill-white" /></>}
+                                </button>
+                            )}
+                            
+                            {selectedItemName !== 'Basic' && selectedItemName !== 'Premium' && selectedItemName !== 'Training' && (
+                                <p className="text-xs text-text-secondary mt-4">
+                                    <span className="text-accent">Note:</span> Please wait to be redirected back after payment to activate your plan.
+                                </p>
+                            )}
                         </div>
                     )}
                     

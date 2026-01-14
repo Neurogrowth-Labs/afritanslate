@@ -36,7 +36,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon } from './components/Icons';
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, ThinkingIcon, BusinessIcon } from './components/Icons';
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
@@ -134,7 +134,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         setCurrentView('paymentSuccess');
     };
 
-    // Check for payment redirect on load
+    // Check for payment redirect URL params (safety for redirect-based flows)
     useEffect(() => {
         if (currentUser) {
             const queryParams = new URLSearchParams(window.location.search);
@@ -142,7 +142,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             const plan = queryParams.get('plan');
 
             if (success === 'true' && plan) {
-                // Handle success
+                // Handle success from redirect
                 handlePaymentSuccess(plan);
                 // Clean URL
                 window.history.replaceState({}, '', window.location.pathname);
@@ -522,106 +522,163 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
             default:
                 return (
                     <>
-                        <section className="py-20 md:py-32 text-center relative overflow-hidden">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,163,0,0.04),transparent)]"></div>
+                        <section className="py-24 lg:py-32 relative overflow-hidden bg-bg-main text-center">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(244,163,0,0.08),transparent_50%)]"></div>
+                            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/5 to-transparent"></div>
+                            
                             <div className="container mx-auto px-4 relative z-10">
-                                <h1 className="text-3xl sm:text-5xl md:text-6xl font-brand font-bold text-white tracking-tighter mb-4 animate-slide-in-up">
-                                    Beyond Words. <br />
-                                    <span className="text-accent">Pure Culture.</span>
+                                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-white text-[10px] font-bold uppercase tracking-widest mb-8 animate-fade-in backdrop-blur-md">
+                                    <span className="w-2 h-2 rounded-full bg-accent animate-pulse-slow"></span>
+                                    The Enterprise Standard for African Localization
+                                </div>
+                                
+                                <h1 className="text-4xl sm:text-6xl lg:text-7xl font-brand font-bold text-white tracking-tight mb-6 animate-slide-in-up">
+                                    Unlock the World's Next <br />
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent via-yellow-200 to-accent animate-shimmer">Global Growth Engine.</span>
                                 </h1>
-                                <p className="mt-4 max-w-lg mx-auto text-xs sm:text-sm text-text-secondary leading-relaxed mb-8 animate-slide-in-up">
-                                    World's most advanced cultural localization engine. We bridge heritage, idioms, and social nuances in real-time.
+                                
+                                <p className="mt-6 max-w-2xl mx-auto text-base sm:text-lg text-text-secondary leading-relaxed mb-10 animate-slide-in-up [animation-delay:200ms]">
+                                    AfriTranslate Studio is the first AI infrastructure designed to bridge the gap between global business and African cultural reality. Scale operations, marketing, and support across 54 countries with culturally intelligent automation.
                                 </p>
-                                <button onClick={() => onStart('chat')} className="px-8 py-3 bg-accent text-bg-main text-[12px] font-black rounded-lg hover:scale-105 transition-all shadow-xl">
-                                    START LOCALIZING
-                                </button>
-                            </div>
-                        </section>
-
-                        <section className="py-10 border-y border-white/5 bg-black/20">
-                            <div className="container mx-auto px-4 text-center">
-                                <p className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-6">Trusted by Industry Leaders</p>
-                                <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-50 grayscale hover:grayscale-0 transition-all duration-500 max-w-6xl mx-auto">
-                                    <span className="text-xl font-bold text-white">Netflix</span>
-                                    <span className="text-xl font-bold text-white">MTN</span>
-                                    <span className="text-xl font-bold text-white">Google</span>
-                                    <span className="text-xl font-bold text-white">Standard Bank</span>
-                                    <span className="text-xl font-bold text-white">UCT</span>
-                                    <span className="text-xl font-bold text-white">MultiChoice</span>
-                                    <span className="text-xl font-bold text-white">Microsoft</span>
-                                    <span className="text-xl font-bold text-white">Spotify</span>
-                                    <span className="text-xl font-bold text-white">BBC Africa</span>
-                                    <span className="text-xl font-bold text-white">Showmax</span>
+                                
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-in-up [animation-delay:400ms]">
+                                    <button onClick={() => onStart('chat')} className="w-full sm:w-auto px-8 py-4 bg-accent text-bg-main text-sm font-black rounded-xl hover:scale-105 transition-all shadow-[0_0_30px_-5px_rgba(244,163,0,0.4)]">
+                                        LAUNCH STUDIO
+                                    </button>
+                                    <button onClick={() => document.getElementById('capabilities')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto px-8 py-4 bg-white/5 border border-white/10 text-white text-sm font-bold rounded-xl hover:bg-white/10 transition-all">
+                                        VIEW CAPABILITIES
+                                    </button>
                                 </div>
                             </div>
                         </section>
 
-                        <section className="py-20 bg-bg-main">
+                        <section className="py-8 border-y border-white/5 bg-black/40 overflow-hidden">
+                            <div className="container mx-auto px-4">
+                                <p className="text-center text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] mb-6">Trusted by Industry Leaders & Institutions</p>
+                                <div className="flex justify-center items-center gap-12 md:gap-20 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
+                                    {['Netflix', 'MTN', 'Google', 'Standard Bank', 'UCT', 'MultiChoice', 'Microsoft'].map(logo => (
+                                        <span key={logo} className="text-lg md:text-xl font-bold text-white whitespace-nowrap">{logo}</span>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="py-24 bg-bg-surface/30">
+                            <div className="container mx-auto px-4 max-w-6xl">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                                    <div className="space-y-8">
+                                        <div>
+                                            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">The Context Gap</h2>
+                                            <div className="h-1 w-20 bg-accent rounded-full"></div>
+                                        </div>
+                                        <p className="text-lg text-text-secondary leading-relaxed">
+                                            Generic AI models treat language as a math problem, stripping away the cultural nuance that drives connection. This leads to costly misunderstandings and brand alienation in high-context African markets.
+                                        </p>
+                                        <div className="space-y-4">
+                                            <div className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 flex gap-4">
+                                                <div className="mt-1 w-2 h-2 rounded-full bg-red-500 flex-shrink-0"></div>
+                                                <div>
+                                                    <h4 className="text-white font-bold text-sm mb-1">Generic Translation Risk</h4>
+                                                    <p className="text-xs text-text-secondary">Literal translations of idioms or slogans often become offensive or nonsensical.</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-4 rounded-xl bg-accent/5 border border-accent/10 flex gap-4">
+                                                <div className="mt-1 w-2 h-2 rounded-full bg-accent flex-shrink-0"></div>
+                                                <div>
+                                                    <h4 className="text-white font-bold text-sm mb-1">The AfriTranslate Advantage</h4>
+                                                    <p className="text-xs text-text-secondary">Our Neural Nuance Engine™ adapts tone, hierarchy, and dialect for authentic resonance.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-accent/20 to-purple-600/20 rounded-full blur-[100px] opacity-30"></div>
+                                        <div className="relative bg-bg-main border border-white/10 rounded-2xl p-8 shadow-2xl animate-float">
+                                            <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-4">
+                                                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                                            </div>
+                                            <div className="space-y-4 font-mono text-xs">
+                                                <div>
+                                                    <p className="text-text-secondary mb-1">// Input: English (Marketing Slogan)</p>
+                                                    <p className="text-white bg-white/5 p-2 rounded">"Come alive with our spicy wings."</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-text-secondary mb-1">// Generic AI Output (Zulu)</p>
+                                                    <p className="text-red-400 bg-red-500/10 p-2 rounded">"Vuka ngezimpiko zethu ezibabayo." <br/><span className="text-[10px] opacity-70">(Literal: Wake up from death with our painful wings)</span></p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-text-secondary mb-1">// AfriTranslate Engine (Zulu - Urban)</p>
+                                                    <p className="text-accent bg-accent/10 p-2 rounded border-l-2 border-accent">"Izwa umlilo wempilo ngamawings ethu!" <br/><span className="text-[10px] opacity-70">(Nuanced: Feel the fire of life with our wings!)</span></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section id="capabilities" className="py-24 bg-bg-main">
                             <div className="container mx-auto px-4 max-w-6xl">
                                 <div className="text-center mb-16">
-                                    <h2 className="text-3xl font-bold text-white mb-4">Strategic Advantages</h2>
-                                    <p className="text-text-secondary max-w-2xl mx-auto">Why Fortune 500 companies and NGOs choose AfriTranslate for their African expansion strategies.</p>
+                                    <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Platform Capabilities</h2>
+                                    <p className="text-text-secondary">A comprehensive suite of tools for the modern enterprise.</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    <div className="bg-bg-surface p-8 rounded-2xl border border-white/5 hover:border-accent/30 transition-all group">
-                                        <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-blue-500/20">
-                                            <GlobeIcon className="w-6 h-6 text-blue-400" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {[
+                                        { title: "Live Voice Relay", desc: "Real-time audio translation for cross-border meetings with < 2s latency.", icon: <LiveIcon className="w-6 h-6"/>, color: "text-red-400" },
+                                        { title: "Script Localization", desc: "Preserve narrative arcs and character voices for media & entertainment.", icon: <ThinkingIcon className="w-6 h-6"/>, color: "text-purple-400" },
+                                        { title: "Meeting Intelligence", desc: "Automated transcription and summarization for pan-African teams.", icon: <BusinessIcon className="w-6 h-6"/>, color: "text-blue-400" },
+                                        { title: "Email Adaptation", desc: "Adjust formality and etiquette for government or executive correspondence.", icon: <BoltIcon className="w-6 h-6"/>, color: "text-yellow-400" },
+                                        { title: "Technical Lexicons", desc: "Specialized models for Medical, Legal, and Engineering terminology.", icon: <LockIcon className="w-6 h-6"/>, color: "text-green-400" },
+                                        { title: "Visual Arts Engine", desc: "Generate culturally accurate imagery and motion graphics.", icon: <GlobeIcon className="w-6 h-6"/>, color: "text-pink-400" },
+                                    ].map((card, i) => (
+                                        <div key={i} className="group p-6 bg-bg-surface border border-white/5 rounded-2xl hover:border-accent/30 transition-all hover:-translate-y-1">
+                                            <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-4 ${card.color} group-hover:bg-white/10 transition-colors`}>
+                                                {card.icon}
+                                            </div>
+                                            <h3 className="text-lg font-bold text-white mb-2">{card.title}</h3>
+                                            <p className="text-sm text-text-secondary leading-relaxed">{card.desc}</p>
                                         </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Hyper-Localization</h3>
-                                        <p className="text-text-secondary text-sm leading-relaxed">Move beyond generic translation. Our engine adapts content to regional dialects, ensuring resonance from Kano to Lagos.</p>
-                                    </div>
-                                    <div className="bg-bg-surface p-8 rounded-2xl border border-white/5 hover:border-accent/30 transition-all group">
-                                        <div className="w-12 h-12 bg-purple-500/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-purple-500/20">
-                                            <LockIcon className="w-6 h-6 text-purple-400" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Brand Safety</h3>
-                                        <p className="text-text-secondary text-sm leading-relaxed">Avoid costly cultural misunderstandings. Our system flags potential taboos and suggests culturally appropriate alternatives.</p>
-                                    </div>
-                                    <div className="bg-bg-surface p-8 rounded-2xl border border-white/5 hover:border-accent/30 transition-all group">
-                                        <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6 group-hover:bg-accent/20">
-                                            <BoltIcon className="w-6 h-6 text-accent" />
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Seamless Integration</h3>
-                                        <p className="text-text-secondary text-sm leading-relaxed">Connect directly into your CMS, CRM, or support platform via our robust API. Designed for developers.</p>
-                                    </div>
+                                    ))}
                                 </div>
                             </div>
                         </section>
 
-                        <div id="demo-section" className="py-20 border-y border-border-default bg-bg-surface/30">
+                        <section className="py-20 bg-bg-surface/20 border-y border-white/5">
+                            <div className="container mx-auto px-4">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-white/5">
+                                    {[
+                                        { label: "Dialects Supported", val: "2,000+" },
+                                        { label: "Cultural Accuracy", val: "99.4%" },
+                                        { label: "Latency (Voice)", val: "< 1.5s" },
+                                        { label: "Compliant Security", val: "SOC2" }
+                                    ].map((stat, i) => (
+                                        <div key={i} className="p-4">
+                                            <div className="text-3xl md:text-5xl font-black text-white mb-2">{stat.val}</div>
+                                            <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{stat.label}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+
+                        <div id="demo-section" className="py-20 border-b border-border-default bg-bg-surface/30">
                             <DemoSection isLandingSection={true} />
                         </div>
 
-                        <section className="py-20 bg-bg-main relative overflow-hidden">
-                             <div className="container mx-auto px-4 relative z-10">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-white/5">
-                                    <div className="p-4">
-                                        <div className="text-4xl md:text-5xl font-black text-white mb-2">54</div>
-                                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Countries</div>
-                                    </div>
-                                    <div className="p-4">
-                                        <div className="text-4xl md:text-5xl font-black text-white mb-2">2k+</div>
-                                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Dialects</div>
-                                    </div>
-                                    <div className="p-4">
-                                        <div className="text-4xl md:text-5xl font-black text-white mb-2">99%</div>
-                                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Accuracy</div>
-                                    </div>
-                                    <div className="p-4">
-                                        <div className="text-4xl md:text-5xl font-black text-white mb-2">10M+</div>
-                                        <div className="text-xs font-bold text-text-secondary uppercase tracking-widest">Words Processed</div>
-                                    </div>
-                                </div>
-                             </div>
-                        </section>
-
-                        <section className="py-24 bg-gradient-to-b from-bg-main to-bg-surface border-t border-white/5">
-                            <div className="container mx-auto px-4 text-center max-w-3xl">
-                                <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Ready to expand your reach?</h2>
-                                <p className="text-lg text-text-secondary mb-10">Join 10,000+ creators, businesses, and NGOs using AfriTranslate to connect authentically with the African continent.</p>
-                                <button onClick={() => onStart('chat')} className="px-10 py-4 bg-accent text-bg-main text-sm font-black rounded-xl hover:scale-105 transition-all shadow-xl shadow-accent/20">
+                        <section className="py-32 bg-gradient-to-b from-bg-main to-bg-surface border-t border-white/5 text-center relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,163,0,0.15),transparent_70%)]"></div>
+                            <div className="container mx-auto px-4 relative z-10 max-w-4xl">
+                                <h2 className="text-4xl md:text-5xl font-bold text-white mb-8 tracking-tight">Ready to localize your impact?</h2>
+                                <p className="text-lg text-text-secondary mb-12 max-w-2xl mx-auto">
+                                    Join the creators, enterprises, and NGOs using AfriTranslate to speak the language of their audience, not just their words.
+                                </p>
+                                <button onClick={() => onStart('chat')} className="px-12 py-5 bg-accent text-bg-main text-base font-black rounded-2xl hover:scale-105 transition-all shadow-xl shadow-accent/20">
                                     GET STARTED FOR FREE
                                 </button>
+                                <p className="mt-6 text-xs text-text-secondary uppercase tracking-widest">No credit card required • 7-Day Free Trial</p>
                             </div>
                         </section>
                     </>
@@ -631,18 +688,20 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
 
     return (
         <div className="bg-bg-main h-screen text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
-            <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-14 flex-shrink-0">
+            <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-16 flex-shrink-0">
                 <div className="container mx-auto px-4 h-full flex items-center justify-between">
                     <button onClick={() => setCurrentView('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         <LogoIcon className="w-6 h-6 text-accent" />
-                        <span className="text-sm sm:text-base font-brand font-bold text-white tracking-tighter">AfriTranslate AI</span>
+                        <span className="text-sm sm:text-base font-brand font-bold text-white tracking-tighter">AfriTranslate Studio</span>
                     </button>
-                    <nav className="hidden lg:flex items-center gap-6">
-                        <button onClick={() => setCurrentView('about')} className={`text-[11px] font-semibold transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>About</button>
-                        <button onClick={() => setCurrentView('useCases')} className={`text-[11px] font-semibold transition-colors ${currentView === 'useCases' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Use Cases</button>
-                        <button onClick={() => setCurrentView('testimonials')} className={`text-[11px] font-semibold transition-colors ${currentView === 'testimonials' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Users</button>
+                    <nav className="hidden lg:flex items-center gap-8">
+                        <button onClick={() => setCurrentView('about')} className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Mission</button>
+                        <button onClick={() => setCurrentView('useCases')} className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${currentView === 'useCases' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Solutions</button>
+                        <button onClick={() => setCurrentView('testimonials')} className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${currentView === 'testimonials' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Impact</button>
                     </nav>
-                    <button onClick={() => onStart('chat')} className="px-4 py-1.5 bg-accent text-bg-main font-bold text-[11px] rounded hover:scale-105 transition-all">Launch Studio</button>
+                    <button onClick={() => onStart('chat')} className="px-5 py-2 bg-white text-bg-main font-bold text-[11px] rounded-lg hover:bg-accent hover:text-black transition-colors uppercase tracking-wide">
+                        Launch App
+                    </button>
                 </div>
             </header>
             <main className="flex-1">

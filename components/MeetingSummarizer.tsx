@@ -475,9 +475,9 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
 
                 <div className="w-full max-w-5xl mx-auto">
                     <div className="flex justify-center border-b border-border-default mb-6">
-                        <button onClick={() => setMode('live')} className={`px-4 py-2 text-sm font-semibold ${mode === 'live' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Live Meeting</button>
-                        <button onClick={() => setMode('upload')} className={`px-4 py-2 text-sm font-semibold ${mode === 'upload' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Upload Transcript</button>
-                        <button onClick={() => setMode('schedule')} className={`px-4 py-2 text-sm font-semibold ${mode === 'schedule' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Schedule</button>
+                        <button onClick={() => setMode('live')} className="px-4 py-2 text-sm font-semibold text-text-secondary">Live Meeting</button>
+                        <button onClick={() => setMode('upload')} className="px-4 py-2 text-sm font-semibold text-text-secondary">Upload Transcript</button>
+                        <button onClick={() => setMode('schedule')} className="px-4 py-2 text-sm font-semibold border-b-2 border-accent text-white">Schedule</button>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -630,7 +630,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                      <div className="flex justify-center border-b border-border-default mb-6">
                         <button onClick={() => setMode('live')} className={`px-4 py-2 text-sm font-semibold ${mode === 'live' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Live Meeting</button>
                         <button onClick={() => setMode('upload')} className={`px-4 py-2 text-sm font-semibold ${mode === 'upload' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Upload Transcript</button>
-                        <button onClick={() => setMode('schedule')} className={`px-4 py-2 text-sm font-semibold ${mode === 'schedule' ? 'border-b-2 border-accent text-white' : 'text-text-secondary'}`}>Schedule</button>
+                        <button onClick={() => setMode('schedule')} className="px-4 py-2 text-sm font-semibold text-text-secondary">Schedule</button>
                     </div>
 
                     {mode === 'live' ? (
