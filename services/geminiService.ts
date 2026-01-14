@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics } from '../types';
+import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics, SceneBreakdown, CastingSide, DubbingLine, StoryboardPanel } from '../types';
 
 function handleApiError(error: unknown, context: string): Error {
     console.error(`Error during ${context}:`, error);
@@ -363,6 +363,128 @@ export async function analyzeAudienceReception(scriptText: string, targetLang: s
     const prompt = `Analyze audience reception for: ${scriptText} in ${targetLang} region. JSON.`;
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { targetDemographic: { type: Type.STRING }, keyStrengths: { type: Type.ARRAY, items: { type: Type.STRING } }, potentialChallenges: { type: Type.ARRAY, items: { type: Type.STRING } }, genreAppeal: { type: Type.STRING } }, required: ["targetDemographic", "keyStrengths", "potentialChallenges", "genreAppeal"] } } });
     return JSON.parse(response.text) as AudienceReception;
+}
+
+// --- NEW PRODUCTION TOOLKIT FUNCTIONS ---
+
+export async function analyzeSceneBreakdown(scriptText: string): Promise<SceneBreakdown[]> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `Analyze the script text and extract scene breakdown details. Identify Scene Numbers, Sluglines, Locations (INT/EXT), Time of Day, List of Characters in scene, and Estimated Duration (assuming 1 page = 1 minute). Return JSON array. Script: ${scriptText.slice(0, 30000)}`; // Truncate if too large
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            sceneNumber: { type: Type.INTEGER },
+                            slugline: { type: Type.STRING },
+                            location: { type: Type.STRING },
+                            time: { type: Type.STRING },
+                            characters: { type: Type.ARRAY, items: { type: Type.STRING } },
+                            estimatedDuration: { type: Type.STRING }
+                        },
+                        required: ["sceneNumber", "slugline", "location", "time", "characters", "estimatedDuration"]
+                    }
+                }
+            }
+        });
+        return JSON.parse(response.text) as SceneBreakdown[];
+    } catch (error) { throw handleApiError(error, "generating scene breakdown"); }
+}
+
+export async function generateCastingSide(scriptText: string): Promise<CastingSide[]> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `Analyze the script and generate detailed casting sides/profiles for main characters. Include African cultural nuance in requirements where applicable. JSON array. Script: ${scriptText.slice(0, 30000)}`;
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            role: { type: Type.STRING },
+                            ageRange: { type: Type.STRING },
+                            gender: { type: Type.STRING },
+                            ethnicity: { type: Type.STRING },
+                            bio: { type: Type.STRING },
+                            requirements: { type: Type.ARRAY, items: { type: Type.STRING } }
+                        },
+                        required: ["role", "ageRange", "gender", "ethnicity", "bio", "requirements"]
+                    }
+                }
+            }
+        });
+        return JSON.parse(response.text) as CastingSide[];
+    } catch (error) { throw handleApiError(error, "generating casting sides"); }
+}
+
+export async function generateDubbingGuide(scriptText: string, targetLang: string): Promise<DubbingLine[]> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `Translate key dialogue lines to ${targetLang} formatted for dubbing. Include timecode approximations (00:00:00) and lip-sync notes (e.g. 'open vowel', 'rapid pace'). JSON array. Script: ${scriptText.slice(0, 10000)}`;
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            original: { type: Type.STRING },
+                            translated: { type: Type.STRING },
+                            timecode: { type: Type.STRING },
+                            lipSyncNote: { type: Type.STRING }
+                        },
+                        required: ["original", "translated", "timecode", "lipSyncNote"]
+                    }
+                }
+            }
+        });
+        return JSON.parse(response.text) as DubbingLine[];
+    } catch (error) { throw handleApiError(error, "generating dubbing guide"); }
+}
+
+export async function generateStoryboardPrompts(scriptText: string): Promise<StoryboardPanel[]> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const prompt = `Analyze key scenes and generate detailed visual prompts suitable for an AI image generator (like Midjourney). Include camera angles and lighting. JSON array. Script: ${scriptText.slice(0, 15000)}`;
+        
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            sceneNumber: { type: Type.INTEGER },
+                            description: { type: Type.STRING },
+                            cameraAngle: { type: Type.STRING },
+                            visualPrompt: { type: Type.STRING }
+                        },
+                        required: ["sceneNumber", "description", "cameraAngle", "visualPrompt"]
+                    }
+                }
+            }
+        });
+        return JSON.parse(response.text) as StoryboardPanel[];
+    } catch (error) { throw handleApiError(error, "generating storyboard prompts"); }
 }
 
 export async function getBatchTranslations(

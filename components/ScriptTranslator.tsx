@@ -1,11 +1,21 @@
 
 import React, { useState, useCallback } from 'react';
-import { translateScript, generateSynopsis, analyzeCharacters, generateCulturalReport, analyzeAudienceReception } from '../services/geminiService';
+import { 
+    translateScript, generateSynopsis, analyzeCharacters, generateCulturalReport, analyzeAudienceReception,
+    analyzeSceneBreakdown, generateCastingSide, generateDubbingGuide, generateStoryboardPrompts
+} from '../services/geminiService';
 import { LANGUAGES, TONES } from '../constants';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
-import type { Synopsis, CharacterProfile, CulturalReport, AudienceReception, AiAnalysisTool } from '../types';
-import { SynopsisIcon, CharactersIcon, CultureIcon, AudienceIcon, CheckIcon, ScriptIcon, ThinkingIcon, DownloadIcon, CloseIcon } from './Icons';
+import type { 
+    Synopsis, CharacterProfile, CulturalReport, AudienceReception, AiAnalysisTool,
+    SceneBreakdown, CastingSide, DubbingLine, StoryboardPanel
+} from '../types';
+import { 
+    SynopsisIcon, CharactersIcon, CultureIcon, AudienceIcon, CheckIcon, ScriptIcon, 
+    ThinkingIcon, DownloadIcon, CloseIcon, ClapperboardIcon, MegaphoneIcon, 
+    FilmStripIcon, UsersIcon 
+} from './Icons';
 
 const CopyIcon = ({ className }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className={className || "w-4 h-4"}>
@@ -30,6 +40,11 @@ const ScriptTranslator: React.FC = () => {
     const [characterProfiles, setCharacterProfiles] = useState<CharacterProfile[] | null>(null);
     const [culturalReport, setCulturalReport] = useState<CulturalReport | null>(null);
     const [audienceReception, setAudienceReception] = useState<AudienceReception | null>(null);
+    const [sceneBreakdown, setSceneBreakdown] = useState<SceneBreakdown[] | null>(null);
+    const [castingSides, setCastingSides] = useState<CastingSide[] | null>(null);
+    const [dubbingGuide, setDubbingGuide] = useState<DubbingLine[] | null>(null);
+    const [storyboardPrompts, setStoryboardPrompts] = useState<StoryboardPanel[] | null>(null);
+    
     const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,6 +68,10 @@ const ScriptTranslator: React.FC = () => {
         setCharacterProfiles(null);
         setCulturalReport(null);
         setAudienceReception(null);
+        setSceneBreakdown(null);
+        setCastingSides(null);
+        setDubbingGuide(null);
+        setStoryboardPrompts(null);
     };
 
     const handleTranslate = async () => {
@@ -70,7 +89,15 @@ const ScriptTranslator: React.FC = () => {
     };
 
     const handleRunAnalysis = async (tool: AiAnalysisTool) => {
-        if (!translatedText) return;
+        if (!translatedText && tool !== 'scene_breakdown' && tool !== 'casting_sheet' && tool !== 'storyboard') {
+             // Some tools can run on source text, but generally we want to work with translated content or force translation first.
+             // For simplicity, let's require source text for Pre-production tools and Translated text for Localization tools.
+             if(!sourceText) return;
+        } else if (!translatedText) {
+             setError("Please translate the script first for localization tools, or ensure source text is loaded.");
+             return;
+        }
+
         setIsAnalyzing(tool);
         setError(null);
 
@@ -80,21 +107,41 @@ const ScriptTranslator: React.FC = () => {
             case 'characters': setCharacterProfiles(null); break;
             case 'cultural': setCulturalReport(null); break;
             case 'audience': setAudienceReception(null); break;
+            case 'scene_breakdown': setSceneBreakdown(null); break;
+            case 'casting_sheet': setCastingSides(null); break;
+            case 'dubbing_script': setDubbingGuide(null); break;
+            case 'storyboard': setStoryboardPrompts(null); break;
         }
 
         try {
+            // Use Source Text for Pre-Production analysis to avoid translation errors affecting logic,
+            // Use Translated Text for Post-Production/Localization tasks.
+            const textToAnalyze = ['dubbing_script', 'cultural', 'audience'].includes(tool) ? translatedText : sourceText;
+
             switch (tool) {
                 case 'synopsis':
-                    setSynopsis(await generateSynopsis(translatedText, targetLang));
+                    setSynopsis(await generateSynopsis(textToAnalyze, targetLang));
                     break;
                 case 'characters':
-                    setCharacterProfiles(await analyzeCharacters(translatedText, targetLang));
+                    setCharacterProfiles(await analyzeCharacters(textToAnalyze, targetLang));
                     break;
                 case 'cultural':
                     setCulturalReport(await generateCulturalReport(sourceText, translatedText, sourceLang, targetLang));
                     break;
                 case 'audience':
-                    setAudienceReception(await analyzeAudienceReception(translatedText, targetLang));
+                    setAudienceReception(await analyzeAudienceReception(textToAnalyze, targetLang));
+                    break;
+                case 'scene_breakdown':
+                    setSceneBreakdown(await analyzeSceneBreakdown(sourceText));
+                    break;
+                case 'casting_sheet':
+                    setCastingSides(await generateCastingSide(sourceText));
+                    break;
+                case 'dubbing_script':
+                    setDubbingGuide(await generateDubbingGuide(translatedText, targetLang));
+                    break;
+                case 'storyboard':
+                    setStoryboardPrompts(await generateStoryboardPrompts(sourceText));
                     break;
             }
         } catch (err) {
@@ -158,21 +205,22 @@ const ScriptTranslator: React.FC = () => {
     if (!sourceText) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-8">
-                <div className="w-20 h-20 bg-accent/10 rounded-3xl flex items-center justify-center mb-6 border border-accent/20 shadow-xl shadow-accent/5">
-                    <ScriptIcon className="w-10 h-10 text-accent" />
+                <div className="w-24 h-24 bg-accent/10 rounded-3xl flex items-center justify-center mb-8 border border-accent/20 shadow-[0_0_40px_-10px_rgba(244,163,0,0.3)]">
+                    <ScriptIcon className="w-12 h-12 text-accent" />
                 </div>
-                <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">Script Translator Toolkit</h1>
-                <p className="text-lg text-text-secondary mb-10 max-w-xl leading-relaxed mx-auto">
-                    Professional localization for screenplays. Adapt nuance, slang, and idioms while preserving standard script formatting.
+                <h1 className="text-5xl font-black text-white mb-4 tracking-tight">Script Translator Toolkit</h1>
+                <p className="text-lg text-text-secondary mb-12 max-w-2xl leading-relaxed mx-auto">
+                    The enterprise standard for screenplay localization. 
+                    Generate <span className="text-accent">casting sides</span>, <span className="text-accent">dubbing scripts</span>, and <span className="text-accent">cultural reports</span> instantly.
                 </p>
                 <div 
                     onDrop={onDrop} 
                     onDragOver={onDragOver}
-                    className="w-full max-w-2xl h-64 border-2 border-dashed border-border-default rounded-2xl flex flex-col items-center justify-center bg-bg-surface/30 hover:border-accent hover:bg-bg-surface/50 transition-all cursor-pointer group mx-auto"
+                    className="w-full max-w-3xl h-64 border-2 border-dashed border-border-default rounded-3xl flex flex-col items-center justify-center bg-bg-surface/30 hover:border-accent hover:bg-bg-surface/50 transition-all cursor-pointer group mx-auto"
                 >
-                    <p className="text-text-primary font-medium group-hover:text-white transition-colors">Drag & drop your script file</p>
-                    <span className="text-xs text-text-secondary/50 my-3 uppercase tracking-widest font-bold">OR</span>
-                     <label className="bg-white/10 border border-white/10 text-white font-semibold px-6 py-2.5 rounded-lg cursor-pointer hover:bg-white/20 transition-all shadow-sm">
+                    <p className="text-text-primary font-medium group-hover:text-white transition-colors text-lg">Drag & drop your script file</p>
+                    <span className="text-xs text-text-secondary/50 my-4 uppercase tracking-widest font-bold">OR</span>
+                     <label className="bg-white/10 border border-white/10 text-white font-bold px-8 py-3 rounded-xl cursor-pointer hover:bg-white/20 transition-all shadow-lg backdrop-blur-sm">
                         Browse Files
                         <input type="file" className="hidden" onChange={handleFileChange} accept=".txt,.fountain,.fdx,.pdf" />
                     </label>
@@ -182,242 +230,282 @@ const ScriptTranslator: React.FC = () => {
         );
     }
     
-    const AI_ANALYSIS_TOOLS = [
-        { id: 'synopsis', name: 'Logline & Synopsis', icon: <SynopsisIcon className="w-5 h-5" /> },
-        { id: 'characters', name: 'Character Profiles', icon: <CharactersIcon className="w-5 h-5" /> },
-        { id: 'cultural', name: 'Cultural Report', icon: <CultureIcon className="w-5 h-5" /> },
-        { id: 'audience', name: 'Audience Insights', icon: <AudienceIcon className="w-5 h-5" /> },
+    // Categorized Tools
+    const PRODUCTION_TOOLS = [
+        { id: 'scene_breakdown', name: 'Scene Breakdown', icon: <ClapperboardIcon className="w-5 h-5" />, category: 'Production' },
+        { id: 'casting_sheet', name: 'Casting Sheet', icon: <UsersIcon className="w-5 h-5" />, category: 'Production' },
+        { id: 'dubbing_script', name: 'Dubbing Guide', icon: <MegaphoneIcon className="w-5 h-5" />, category: 'Localization' },
+        { id: 'cultural', name: 'Cultural Report', icon: <CultureIcon className="w-5 h-5" />, category: 'Localization' },
+        { id: 'storyboard', name: 'Storyboard Prompts', icon: <FilmStripIcon className="w-5 h-5" />, category: 'Visuals' },
+        { id: 'synopsis', name: 'Logline & Synopsis', icon: <SynopsisIcon className="w-5 h-5" />, category: 'Narrative' },
     ];
 
     return (
-        <div className="flex flex-col h-full animate-fade-in p-6 bg-bg-main overflow-hidden">
-            {/* Header / Control Bar */}
-            <div className="flex-shrink-0 bg-bg-surface border border-border-default rounded-xl p-5 mb-6 shadow-sm">
-                <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-                    {/* Title & File Info */}
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center text-blue-400">
-                            <ScriptIcon className="w-6 h-6" />
+        <div className="flex flex-col h-full animate-fade-in bg-bg-main overflow-hidden">
+            {/* Main Container for "Space on Edges" */}
+            <div className="flex-1 w-full max-w-[1920px] mx-auto p-4 sm:p-6 lg:p-8 flex flex-col min-h-0">
+                
+                {/* Header / Control Bar */}
+                <div className="flex-shrink-0 bg-bg-surface border border-border-default rounded-2xl p-5 mb-6 shadow-xl relative z-10">
+                    <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
+                        {/* Title & File Info */}
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-600/10 border border-blue-500/20 rounded-xl flex items-center justify-center text-blue-400">
+                                <ScriptIcon className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold text-white leading-tight">Script Editor <span className="text-text-secondary font-normal mx-2">|</span> <span className="text-accent text-sm uppercase tracking-wider">Production Mode</span></h1>
+                                <p className="text-xs text-text-secondary mt-1 font-mono flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                    {fileName}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h1 className="text-lg font-bold text-white leading-tight">Script Editor</h1>
-                            <p className="text-xs text-text-secondary mt-1 font-mono flex items-center gap-2">
-                                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                {fileName}
-                            </p>
-                        </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
-                         <div className="flex-1 lg:flex-none grid grid-cols-3 gap-2">
-                            <LanguageSelector label="Source" languages={LANGUAGES} value={sourceLang} onChange={setSourceLang} />
-                            <LanguageSelector label="Target" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
-                            <ToneSelector label="Tone" tones={TONES} value={tone} onChange={setTone} />
+                        {/* Actions */}
+                        <div className="flex items-center gap-3 w-full xl:w-auto">
+                             <div className="flex-1 xl:flex-none grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <LanguageSelector label="Source" languages={LANGUAGES} value={sourceLang} onChange={setSourceLang} />
+                                <LanguageSelector label="Target" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
+                                <div className="hidden md:block">
+                                    <ToneSelector label="Tone" tones={TONES} value={tone} onChange={setTone} />
+                                </div>
+                            </div>
+                            <div className="h-10 w-px bg-border-default mx-2 hidden xl:block"></div>
+                            <button onClick={handleTranslate} disabled={isLoading || !!isAnalyzing} className="px-6 py-3 bg-accent text-bg-main font-black text-xs rounded-xl hover:bg-white transition-colors shadow-lg shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest whitespace-nowrap">
+                                {isLoading ? 'Translating...' : 'Translate Script'}
+                            </button>
                         </div>
-                        <div className="h-8 w-px bg-border-default mx-1 hidden lg:block"></div>
-                        <button onClick={handleTranslate} disabled={isLoading || !!isAnalyzing} className="px-5 py-2.5 bg-accent text-bg-main font-bold text-xs rounded-lg hover:bg-white transition-colors shadow-lg shadow-accent/20 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wide whitespace-nowrap">
-                            {isLoading ? 'Translating...' : 'Translate'}
-                        </button>
                     </div>
                 </div>
-            </div>
 
-            {/* Workspace Grid */}
-            <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                {/* Editors Area */}
-                <div className="lg:col-span-8 xl:col-span-9 flex flex-col gap-4 min-h-0">
-                    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
-                        {/* Source Editor */}
-                        <div className="flex flex-col h-full bg-bg-surface border border-border-default rounded-xl overflow-hidden shadow-sm relative group focus-within:border-white/20 transition-colors">
-                            <div className="flex-shrink-0 p-3 border-b border-border-default bg-white/[0.02] flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Original Script</span>
-                                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[9px] text-text-primary font-mono">{sourceLang}</span>
+                {/* Workspace Grid */}
+                <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-12 gap-6">
+                    
+                    {/* Editors Area (Left) */}
+                    <div className="xl:col-span-8 flex flex-col gap-4 min-h-0">
+                        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
+                            {/* Source Editor */}
+                            <div className="flex flex-col h-full bg-[#0F0F0F] border border-border-default rounded-2xl overflow-hidden shadow-lg relative group focus-within:border-white/20 transition-all">
+                                <div className="flex-shrink-0 p-4 border-b border-border-default bg-white/[0.02] flex justify-between items-center backdrop-blur-md">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em]">Source Script</span>
+                                        <span className="px-1.5 py-0.5 rounded bg-white/10 text-[9px] text-text-primary font-mono border border-white/5">{sourceLang}</span>
+                                    </div>
+                                    <button onClick={handleReset} className="text-[10px] font-bold text-text-secondary hover:text-red-400 uppercase tracking-wider transition-colors">Clear</button>
                                 </div>
-                                <button onClick={handleReset} className="text-[10px] font-bold text-red-400 hover:text-red-300 uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">Clear</button>
+                                <textarea 
+                                    readOnly 
+                                    value={sourceText} 
+                                    className="flex-1 w-full p-6 bg-transparent resize-none font-mono text-sm text-text-primary/90 focus:outline-none custom-scrollbar leading-relaxed" 
+                                />
                             </div>
-                            <textarea 
-                                readOnly 
-                                value={sourceText} 
-                                className="flex-1 w-full p-5 bg-transparent resize-none font-mono text-sm text-text-primary/80 focus:outline-none custom-scrollbar" 
-                            />
-                        </div>
 
-                        {/* Target Editor */}
-                        <div className="flex flex-col h-full bg-[#0a0a0a] border border-border-default rounded-xl overflow-hidden shadow-sm relative group focus-within:border-accent/50 transition-colors">
-                             <div className="flex-shrink-0 p-3 border-b border-border-default bg-white/[0.02] flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Translation</span>
-                                    <span className="px-1.5 py-0.5 rounded bg-accent/10 text-[9px] text-accent font-mono">{targetLang}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button onClick={handleDownload} disabled={!translatedText} className="p-1.5 text-text-secondary hover:text-white rounded hover:bg-white/10 disabled:opacity-50 transition-colors" title="Download Script">
-                                        <DownloadIcon className="w-4 h-4" />
+                            {/* Target Editor */}
+                            <div className="flex flex-col h-full bg-[#050505] border border-border-default rounded-2xl overflow-hidden shadow-lg relative group focus-within:border-accent/50 transition-all">
+                                 <div className="flex-shrink-0 p-4 border-b border-border-default bg-white/[0.02] flex justify-between items-center backdrop-blur-md">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-accent uppercase tracking-[0.2em]">Translation</span>
+                                        <span className="px-1.5 py-0.5 rounded bg-accent/10 text-[9px] text-accent font-mono border border-accent/20">{targetLang}</span>
+                                    </div>
+                                    <button onClick={handleDownload} disabled={!translatedText} className="text-text-secondary hover:text-white transition-colors" title="Download Script">
+                                        <DownloadIcon className="w-5 h-5" />
                                     </button>
                                 </div>
-                            </div>
-                            <textarea 
-                                readOnly 
-                                value={translatedText} 
-                                placeholder="Translation will appear here..."
-                                className="flex-1 w-full p-5 bg-transparent resize-none font-mono text-sm text-white focus:outline-none custom-scrollbar placeholder:text-text-secondary/30" 
-                            />
-                            {isLoading && (
-                                <div className="absolute inset-0 bg-bg-surface/90 backdrop-blur-sm flex items-center justify-center z-10">
-                                    <div className="flex flex-col items-center gap-3">
-                                        <div className="flex items-center space-x-1.5">
-                                            <span className="h-3 w-3 bg-accent rounded-full animate-pulse-warm [animation-delay:-0.3s]"></span>
-                                            <span className="h-3 w-3 bg-accent rounded-full animate-pulse-warm [animation-delay:-0.15s]"></span>
-                                            <span className="h-3 w-3 bg-accent rounded-full animate-pulse-warm"></span>
+                                <textarea 
+                                    readOnly 
+                                    value={translatedText} 
+                                    placeholder="Translation will generate here..."
+                                    className="flex-1 w-full p-6 bg-transparent resize-none font-mono text-sm text-white focus:outline-none custom-scrollbar placeholder:text-text-secondary/30 leading-relaxed" 
+                                />
+                                {isLoading && (
+                                    <div className="absolute inset-0 bg-bg-surface/90 backdrop-blur-sm flex items-center justify-center z-10">
+                                        <div className="flex flex-col items-center gap-4">
+                                            <div className="flex items-center space-x-2">
+                                                <span className="h-3 w-3 bg-accent rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                                <span className="h-3 w-3 bg-accent rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                                <span className="h-3 w-3 bg-accent rounded-full animate-bounce"></span>
+                                            </div>
+                                            <span className="text-xs font-bold text-accent uppercase tracking-widest animate-pulse">Running Neural Engine...</span>
                                         </div>
-                                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest animate-pulse">Adapting Nuances...</span>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Analysis Sidebar */}
-                <div className="lg:col-span-4 xl:col-span-3 flex flex-col min-h-0 bg-bg-surface border border-border-default rounded-xl overflow-hidden shadow-sm">
-                    <div className="flex-shrink-0 p-4 border-b border-border-default bg-white/[0.02]">
-                        <h2 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2">
-                            <ThinkingIcon className="w-4 h-4 text-accent"/> 
-                            Production Toolkit
-                        </h2>
-                    </div>
-                    
-                    <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col gap-4">
-                        {!translatedText ? (
-                             <div className="flex-1 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-white/5 rounded-lg opacity-50">
-                                <ThinkingIcon className="w-8 h-8 text-text-secondary mb-2" />
-                                <p className="text-xs text-text-secondary">Translate your script to unlock AI production insights.</p>
+                    {/* Production Toolkit Sidebar (Right) */}
+                    <div className="xl:col-span-4 flex flex-col min-h-0 bg-bg-surface border border-border-default rounded-2xl overflow-hidden shadow-xl">
+                        <div className="flex-shrink-0 p-5 border-b border-border-default bg-white/[0.02] backdrop-blur-md">
+                            <h2 className="text-xs font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+                                <ThinkingIcon className="w-4 h-4 text-accent"/> 
+                                Global Production Toolkit
+                            </h2>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-5 custom-scrollbar flex flex-col gap-6">
+                            {/* Tool Selection Grid */}
+                            <div className="grid grid-cols-2 gap-2.5 flex-shrink-0">
+                                {PRODUCTION_TOOLS.map(tool => (
+                                     <button
+                                        key={tool.id}
+                                        onClick={() => handleRunAnalysis(tool.id as AiAnalysisTool)}
+                                        disabled={!!isAnalyzing}
+                                        className={`
+                                            flex flex-col items-start justify-between p-3.5 h-24 
+                                            bg-bg-main border border-border-default rounded-xl 
+                                            hover:border-accent/50 hover:bg-white/5 
+                                            disabled:opacity-50 disabled:cursor-not-allowed 
+                                            transition-all group relative overflow-hidden
+                                            ${isAnalyzing === tool.id ? 'border-accent ring-1 ring-accent/20' : ''}
+                                        `}
+                                    >
+                                        <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                            {React.cloneElement(tool.icon as React.ReactElement, { className: "w-12 h-12" })}
+                                        </div>
+                                        <div className={`${isAnalyzing === tool.id ? 'text-accent animate-pulse' : 'text-text-secondary group-hover:text-accent'}`}>
+                                            {tool.icon}
+                                        </div>
+                                        <div>
+                                            <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider block mb-0.5 opacity-60">{tool.category}</span>
+                                            <span className="text-[11px] font-bold text-white leading-tight">{tool.name}</span>
+                                        </div>
+                                    </button>
+                                ))}
                             </div>
-                        ) : (
-                            <>
-                                <div className="grid grid-cols-2 gap-2 flex-shrink-0">
-                                    {AI_ANALYSIS_TOOLS.map(tool => (
-                                         <button
-                                            key={tool.id}
-                                            onClick={() => handleRunAnalysis(tool.id as AiAnalysisTool)}
-                                            disabled={!!isAnalyzing}
-                                            className={`flex flex-col items-center justify-center gap-2 p-3 bg-bg-main border border-border-default rounded-lg hover:border-accent/50 hover:bg-accent/5 disabled:opacity-50 disabled:cursor-not-allowed transition-all group ${isAnalyzing === tool.id ? 'border-accent' : ''}`}
-                                        >
-                                            <div className={`${isAnalyzing === tool.id ? 'text-accent animate-pulse' : 'text-text-secondary group-hover:text-white'}`}>
-                                                {tool.icon}
-                                            </div>
-                                            <span className="text-[10px] font-bold text-text-secondary group-hover:text-white uppercase tracking-tight text-center leading-tight">{tool.name}</span>
-                                        </button>
-                                    ))}
-                                </div>
 
-                                {/* Results Area */}
-                                <div className="space-y-4">
-                                    {/* Synopsis Card */}
-                                    {synopsis && (
-                                        <div className="bg-bg-main rounded-lg border border-border-default overflow-hidden animate-fade-in">
-                                            <div className="p-3 border-b border-border-default flex justify-between items-center bg-white/[0.02]">
-                                                <h3 className="text-xs font-bold text-white">Logline & Synopsis</h3>
-                                                <button onClick={() => handleCopy('synopsis', `Logline: ${synopsis.logline}\n\nSynopsis: ${synopsis.synopsis}`)} className="p-1 rounded hover:bg-white/10 transition-colors">
-                                                    {copiedStates['synopsis'] ? <CheckIcon className="w-3.5 h-3.5 text-green-400"/> : <CopyIcon className="w-3.5 h-3.5 text-text-secondary hover:text-white"/>}
-                                                </button>
-                                            </div>
-                                            <div className="p-3 text-xs space-y-3">
-                                                <div>
-                                                    <span className="text-[9px] font-bold text-text-secondary uppercase block mb-1">Logline</span>
-                                                    <p className="text-text-primary italic leading-relaxed">"{synopsis.logline}"</p>
-                                                </div>
-                                                <div>
-                                                    <span className="text-[9px] font-bold text-text-secondary uppercase block mb-1">Synopsis</span>
-                                                    <p className="text-text-secondary leading-relaxed">{synopsis.synopsis}</p>
-                                                </div>
-                                            </div>
+                            {/* Results Area */}
+                            <div className="space-y-4">
+                                {/* Scene Breakdown */}
+                                {sceneBreakdown && (
+                                    <div className="bg-bg-main rounded-xl border border-border-default overflow-hidden animate-fade-in">
+                                        <div className="p-3 border-b border-border-default flex justify-between items-center bg-white/[0.02]">
+                                            <h3 className="text-xs font-bold text-white uppercase tracking-wider">Scene Breakdown</h3>
+                                            <button onClick={() => handleCopy('breakdown', JSON.stringify(sceneBreakdown, null, 2))} className="p-1.5 hover:bg-white/10 rounded transition-colors"><CopyIcon/></button>
                                         </div>
-                                    )}
+                                        <div className="max-h-[300px] overflow-y-auto">
+                                            <table className="w-full text-[10px] text-left">
+                                                <thead className="bg-white/5 text-text-secondary uppercase font-bold sticky top-0">
+                                                    <tr>
+                                                        <th className="p-2 w-10">#</th>
+                                                        <th className="p-2">Slugline</th>
+                                                        <th className="p-2">Cast</th>
+                                                        <th className="p-2 text-right">Dur.</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-white/5">
+                                                    {sceneBreakdown.map((scene, i) => (
+                                                        <tr key={i} className="hover:bg-white/5 transition-colors">
+                                                            <td className="p-2 text-text-secondary font-mono">{scene.sceneNumber}</td>
+                                                            <td className="p-2 font-bold text-white">{scene.slugline} <span className="text-text-secondary font-normal block text-[9px]">{scene.location} • {scene.time}</span></td>
+                                                            <td className="p-2 text-text-secondary">{scene.characters.join(', ')}</td>
+                                                            <td className="p-2 text-right font-mono text-accent">{scene.estimatedDuration}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
 
-                                    {/* Characters Card */}
-                                    {characterProfiles && (
-                                         <div className="bg-bg-main rounded-lg border border-border-default overflow-hidden animate-fade-in">
-                                             <div className="p-3 border-b border-border-default flex justify-between items-center bg-white/[0.02]">
-                                                <h3 className="text-xs font-bold text-white">Character Analysis</h3>
-                                                <button onClick={() => handleCopy('characters', characterProfiles.map(p => `Character: ${p.name}\nDescription: ${p.description}`).join('\n---\n'))} className="p-1 rounded hover:bg-white/10 transition-colors">
-                                                    {copiedStates['characters'] ? <CheckIcon className="w-3.5 h-3.5 text-green-400"/> : <CopyIcon className="w-3.5 h-3.5 text-text-secondary hover:text-white"/>}
-                                                </button>
-                                            </div>
-                                            <div className="p-3 text-xs space-y-3">
-                                                {characterProfiles.map(char => (
-                                                    <div key={char.name} className="border-b border-border-default/50 pb-2 last:border-b-0 last:pb-0">
-                                                        <h4 className="font-bold text-accent mb-1">{char.name}</h4>
-                                                        <p className="text-text-secondary leading-relaxed mb-1">{char.description}</p>
-                                                        <p className="text-[10px] text-text-primary"><span className="text-text-secondary">Motivation:</span> {char.motivation}</p>
+                                {/* Casting Sides */}
+                                {castingSides && (
+                                    <div className="space-y-3 animate-fade-in">
+                                        <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest pl-1">Casting Sides</h3>
+                                        {castingSides.map((side, i) => (
+                                            <div key={i} className="bg-bg-main rounded-xl border border-border-default p-4 hover:border-accent/30 transition-colors">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h4 className="text-sm font-bold text-white">{side.role}</h4>
+                                                        <p className="text-[10px] text-text-secondary">{side.ageRange} • {side.gender} • {side.ethnicity}</p>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                     {/* Cultural Report Card */}
-                                     {culturalReport && (
-                                        <div className="bg-bg-main rounded-lg border border-border-default overflow-hidden animate-fade-in">
-                                            <div className="p-3 border-b border-border-default flex justify-between items-center bg-white/[0.02]">
-                                                <h3 className="text-xs font-bold text-white">Cultural Report</h3>
-                                                <button onClick={() => handleCopy('cultural', culturalReport.summary)} className="p-1 rounded hover:bg-white/10 transition-colors">
-                                                     {copiedStates['cultural'] ? <CheckIcon className="w-3.5 h-3.5 text-green-400"/> : <CopyIcon className="w-3.5 h-3.5 text-text-secondary hover:text-white"/>}
-                                                </button>
-                                            </div>
-                                            <div className="p-3 text-xs space-y-3">
-                                                <p className="text-text-secondary leading-relaxed">{culturalReport.summary}</p>
-                                                <div className="space-y-2 mt-2">
-                                                    {culturalReport.adaptations.slice(0, 3).map((item, index) => (
-                                                        <div key={index} className="bg-white/5 p-2 rounded border border-white/5">
-                                                            <div className="flex justify-between mb-1">
-                                                                <span className="text-text-secondary line-through opacity-70">"{item.original}"</span>
-                                                                <span className="text-accent font-bold">"{item.adapted}"</span>
-                                                            </div>
-                                                            <p className="text-[10px] text-text-secondary">{item.reason}</p>
-                                                        </div>
+                                                    <button onClick={() => handleCopy(`cast-${i}`, side.bio)} className="text-text-secondary hover:text-white"><CopyIcon/></button>
+                                                </div>
+                                                <p className="text-xs text-text-primary mb-3 leading-relaxed">{side.bio}</p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {side.requirements.map((req, j) => (
+                                                        <span key={j} className="px-2 py-1 bg-accent/10 border border-accent/20 text-accent text-[9px] rounded font-bold">{req}</span>
                                                     ))}
                                                 </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        ))}
+                                    </div>
+                                )}
 
-                                    {/* Audience Reception Card */}
-                                    {audienceReception && (
-                                         <div className="bg-bg-main rounded-lg border border-border-default overflow-hidden animate-fade-in">
-                                            <div className="p-3 border-b border-border-default flex justify-between items-center bg-white/[0.02]">
-                                                <h3 className="text-xs font-bold text-white">Audience Reception</h3>
-                                                <button onClick={() => handleCopy('audience', audienceReception.targetDemographic)} className="p-1 rounded hover:bg-white/10 transition-colors">
-                                                    {copiedStates['audience'] ? <CheckIcon className="w-3.5 h-3.5 text-green-400"/> : <CopyIcon className="w-3.5 h-3.5 text-text-secondary hover:text-white"/>}
-                                                </button>
-                                            </div>
-                                            <div className="p-3 text-xs space-y-2">
-                                                <p><strong className="text-text-primary">Target:</strong> <span className="text-text-secondary">{audienceReception.targetDemographic}</span></p>
-                                                <p><strong className="text-text-primary">Genre Fit:</strong> <span className="text-text-secondary">{audienceReception.genreAppeal}</span></p>
-                                                <div>
-                                                    <strong className="text-green-400 block mb-1">Strengths</strong>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {audienceReception.keyStrengths.map(s => <span key={s} className="px-1.5 py-0.5 bg-green-500/10 text-green-400 rounded border border-green-500/20 text-[10px]">{s}</span>)}
+                                {/* Dubbing Guide */}
+                                {dubbingGuide && (
+                                    <div className="bg-bg-main rounded-xl border border-border-default overflow-hidden animate-fade-in">
+                                        <div className="p-3 border-b border-border-default flex justify-between items-center bg-white/[0.02]">
+                                            <h3 className="text-xs font-bold text-white uppercase tracking-wider">Dubbing Script</h3>
+                                            <button onClick={() => handleCopy('dubbing', JSON.stringify(dubbingGuide, null, 2))} className="p-1.5 hover:bg-white/10 rounded transition-colors"><CopyIcon/></button>
+                                        </div>
+                                        <div className="max-h-[300px] overflow-y-auto p-2 space-y-2">
+                                            {dubbingGuide.map((line, i) => (
+                                                <div key={i} className="bg-white/5 p-3 rounded border border-white/5 flex gap-3">
+                                                    <div className="text-[10px] font-mono text-accent pt-0.5">{line.timecode}</div>
+                                                    <div className="flex-1">
+                                                        <p className="text-xs text-text-secondary italic mb-1">"{line.original}"</p>
+                                                        <p className="text-sm font-bold text-white">{line.translated}</p>
+                                                        <div className="mt-2 flex items-center gap-1.5 text-[9px] text-orange-300 font-mono uppercase">
+                                                            <MegaphoneIcon className="w-3 h-3"/>
+                                                            {line.lipSyncNote}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            ))}
                                         </div>
-                                    )}
-                                </div>
-                            </>
-                        )}
+                                    </div>
+                                )}
+
+                                {/* Storyboard Prompts */}
+                                {storyboardPrompts && (
+                                    <div className="space-y-3 animate-fade-in">
+                                        <h3 className="text-xs font-bold text-text-secondary uppercase tracking-widest pl-1">Visual Prompts</h3>
+                                        {storyboardPrompts.map((panel, i) => (
+                                            <div key={i} className="bg-bg-main rounded-xl border border-border-default p-3">
+                                                <div className="flex justify-between mb-2">
+                                                    <span className="text-[10px] font-bold bg-white/10 px-2 py-0.5 rounded text-white">Scene {panel.sceneNumber}</span>
+                                                    <span className="text-[10px] text-text-secondary font-mono">{panel.cameraAngle}</span>
+                                                </div>
+                                                <div className="bg-black/40 p-2 rounded border border-white/5 font-mono text-[10px] text-green-400 mb-2 select-all">
+                                                    /imagine prompt: {panel.visualPrompt} --ar 16:9
+                                                </div>
+                                                <p className="text-[11px] text-text-secondary italic">{panel.description}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Cultural & Other Reports (Existing) */}
+                                {culturalReport && (
+                                    <div className="bg-bg-main rounded-xl border border-border-default p-4 animate-fade-in">
+                                        <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Cultural Adaptation Report</h3>
+                                        <p className="text-xs text-text-secondary mb-4 leading-relaxed">{culturalReport.summary}</p>
+                                        <div className="space-y-2">
+                                            {culturalReport.adaptations.slice(0, 3).map((item, index) => (
+                                                <div key={index} className="bg-white/5 p-2 rounded border border-white/5">
+                                                    <div className="flex justify-between mb-1">
+                                                        <span className="text-xs text-text-secondary line-through opacity-70 truncate max-w-[40%]">"{item.original}"</span>
+                                                        <span className="text-xs text-accent font-bold truncate max-w-[40%]">"{item.adapted}"</span>
+                                                    </div>
+                                                    <p className="text-[10px] text-text-primary">{item.reason}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
+                
+                {error && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-2xl text-xs font-bold animate-slide-in-up flex items-center gap-2 z-50">
+                        <CloseIcon className="w-4 h-4" />
+                        {error}
+                    </div>
+                )}
             </div>
-            
-            {error && (
-                <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-red-500 text-white px-4 py-2 rounded-lg shadow-2xl text-xs font-bold animate-slide-in-up flex items-center gap-2 z-50">
-                    <CloseIcon className="w-4 h-4" />
-                    {error}
-                </div>
-            )}
         </div>
     );
 };

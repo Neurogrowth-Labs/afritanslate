@@ -5,7 +5,6 @@ export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' 
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
-// FIX: Added 'home' to the View type to represent the landing page's main view.
 export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding';
 
 export type MeetingMode = 'live' | 'upload' | 'schedule';
@@ -133,7 +132,7 @@ export interface ScheduledMeeting {
 }
 
 // --- Script Translator AI Toolkit Types --- //
-export type AiAnalysisTool = 'synopsis' | 'characters' | 'cultural' | 'audience';
+export type AiAnalysisTool = 'synopsis' | 'characters' | 'cultural' | 'audience' | 'scene_breakdown' | 'casting_sheet' | 'dubbing_script' | 'storyboard';
 
 export interface Synopsis {
   logline: string;
@@ -163,6 +162,38 @@ export interface AudienceReception {
   keyStrengths: string[];
   potentialChallenges: string[];
   genreAppeal: string;
+}
+
+export interface SceneBreakdown {
+  sceneNumber: number;
+  slugline: string;
+  location: string;
+  time: string;
+  characters: string[];
+  estimatedDuration: string;
+}
+
+export interface CastingSide {
+  role: string;
+  ageRange: string;
+  gender: string;
+  ethnicity: string;
+  bio: string;
+  requirements: string[];
+}
+
+export interface DubbingLine {
+  original: string;
+  translated: string;
+  timecode: string;
+  lipSyncNote: string;
+}
+
+export interface StoryboardPanel {
+  sceneNumber: number;
+  description: string;
+  cameraAngle: string;
+  visualPrompt: string;
 }
 
 // --- Book Translator Types --- //
