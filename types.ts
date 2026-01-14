@@ -120,6 +120,7 @@ export interface User {
   goals?: string;
   onboarding_completed?: boolean;
   team_members?: string[];
+  trial_start_date?: string; // ISO string for trial start
 }
 
 export interface ScheduledMeeting {

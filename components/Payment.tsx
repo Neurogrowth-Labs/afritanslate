@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { AFRITRANSLATE_MODELS, ADD_ONS } from '../constants';
 import { PayPalIcon, BankIcon, VisaIcon, MastercardIcon, AmexIcon } from './Icons';
@@ -14,7 +13,7 @@ const Spinner = () => <svg className="animate-spin h-5 w-5 text-white" xmlns="ht
 
 const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'eft'>('card');
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'eft'>('paypal'); // Default to PayPal as it's the active method
 
     const planDetails = AFRITRANSLATE_MODELS.find(p => p.name === selectedItemName);
     const addonDetails = ADD_ONS.find(a => a.name === selectedItemName);
@@ -34,34 +33,34 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
 
     const handleCardPayment = () => {
         setIsLoading(true);
-        // Simulate API call for payment processing
+        // Secure card processing requires a backend server. 
+        // Disabled for this demo to prevent unauthorized access via simulation.
         setTimeout(() => {
-            if (selectedItemName) {
-                onPaymentSuccess(selectedItemName);
-            }
             setIsLoading(false);
-        }, 2000);
+            alert("Card payments are currently disabled for maintenance. Please use PayPal for secure, real-time activation.");
+        }, 1000);
     };
 
     const handlePayPalRedirect = () => {
         setIsLoading(true);
         
+        // Open PayPal in new tab
         if (selectedItemName === 'Basic') {
             window.open('https://www.paypal.com/ncp/payment/G636NNWVFJWLL', '_blank');
         } else if (selectedItemName === 'Premium') {
             window.open('https://www.paypal.com/ncp/payment/SPPVW8Q2PLRBN', '_blank');
         } else {
-            // In a real app, you'd generate a payment link on the backend and redirect.
-            // For this demo, we'll just open PayPal's site and simulate success for other items.
+            // Generic fallback
             window.open('https://www.paypal.com/signin', '_blank');
         }
 
+        // IMPORTANT: We do NOT auto-grant success here anymore.
+        // The user must complete payment and be redirected back to the app with ?payment_success=true
+        // The App.tsx component listens for this redirect parameter.
+        
         setTimeout(() => {
-             if (selectedItemName) {
-                onPaymentSuccess(selectedItemName);
-            }
             setIsLoading(false);
-        }, 2500);
+        }, 5000); // Just reset button state after a delay
     }
 
     const price = 'price' in itemDetails ? itemDetails.price : undefined;
@@ -87,12 +86,12 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
                     
                     {/* Payment Method Tabs */}
                     <div className="flex flex-wrap border-b border-border-default mb-6">
-                        <button onClick={() => setPaymentMethod('card')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'card' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
-                            Card
-                        </button>
                         <button onClick={() => setPaymentMethod('paypal')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'paypal' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
                             <PayPalIcon className="w-5 h-5" />
                             PayPal
+                        </button>
+                        <button onClick={() => setPaymentMethod('card')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'card' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
+                            Card
                         </button>
                          <button onClick={() => setPaymentMethod('eft')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'eft' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
                             <BankIcon className="w-5 h-5" />
@@ -101,13 +100,12 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
                     </div>
 
                     {paymentMethod === 'card' && (
-                        <div className="space-y-4 animate-fade-in">
-                            <div className="p-4 rounded-lg bg-amber-900/50 border border-amber-700 text-amber-300 text-sm">
-                                <strong>Note:</strong> This is a UI demonstration. Card details are not collected. Clicking "Pay" will simulate a successful transaction.
+                        <div className="space-y-4 animate-fade-in opacity-50 pointer-events-none filter grayscale">
+                            <div className="p-4 rounded-lg bg-bg-main border border-border-default text-text-secondary text-sm text-center">
+                                Credit Card processing is currently unavailable. Please use PayPal.
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-text-primary mb-1 block">Card Information</label>
-                                {/* This is the secure field placeholder */}
                                 <div className="bg-bg-main border border-border-default rounded-lg p-0 overflow-hidden">
                                     <div className="p-3 flex items-center justify-between border-b border-border-default">
                                         <span className="flex items-center gap-3 text-text-secondary">
@@ -128,24 +126,27 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
                             </div>
                             
                             <button 
-                                onClick={handleCardPayment} 
-                                disabled={isLoading}
-                                className="w-full py-3 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 transition-colors disabled:bg-border-default disabled:cursor-wait flex items-center justify-center"
+                                disabled
+                                className="w-full py-3 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 transition-colors disabled:bg-border-default disabled:cursor-not-allowed flex items-center justify-center"
                             >
-                                {isLoading ? <Spinner /> : `Pay ${price}`}
+                                Pay {price}
                             </button>
                         </div>
                     )}
 
                     {paymentMethod === 'paypal' && (
                         <div className="text-center p-4 animate-fade-in">
-                            <p className="text-text-secondary mb-6">You will be redirected to PayPal to complete your purchase securely. Once finished, you will be brought back to AfriTranslate AI.</p>
+                            <p className="text-text-secondary mb-6 text-sm">
+                                You will be redirected to PayPal to complete your transaction securely. 
+                                <br/><br/>
+                                <span className="text-accent font-bold">Important:</span> After payment, please wait to be automatically redirected back to this app to activate your plan.
+                            </p>
                              <button 
                                 onClick={handlePayPalRedirect} 
                                 disabled={isLoading}
-                                className="w-full max-w-xs py-3 bg-[#0070BA] text-white font-semibold rounded-lg hover:bg-[#005ea6] transition-colors disabled:bg-border-default disabled:cursor-wait flex items-center justify-center"
+                                className="w-full max-w-xs mx-auto py-3 bg-[#0070BA] text-white font-semibold rounded-lg hover:bg-[#005ea6] transition-colors disabled:bg-border-default disabled:cursor-wait flex items-center justify-center gap-2"
                             >
-                                {isLoading ? <Spinner /> : `Continue with PayPal`}
+                                {isLoading ? <Spinner /> : <>Pay with <PayPalIcon className="w-4 h-4 fill-white" /></>}
                             </button>
                         </div>
                     )}
@@ -161,7 +162,7 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
                                 <p><strong className="text-text-primary w-28 inline-block">Branch Code:</strong> 098765</p>
                                 <p><strong className="text-text-primary w-28 inline-block">Reference:</strong> Your Account Email</p>
                             </div>
-                            <p className="text-xs text-text-secondary mt-4">Once payment is complete, please email proof of payment to <span className="text-accent">billing@afritranslate.ai</span>. Your plan will be activated within 24 hours.</p>
+                            <p className="text-xs text-text-secondary mt-4">Once payment is complete, please email proof of payment to <span className="text-accent">billing@afritranslate.ai</span>. Your plan will be manually activated within 24 hours.</p>
                         </div>
                     )}
 

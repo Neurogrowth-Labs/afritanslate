@@ -70,6 +70,9 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deletingConversationId, setDeletingConversationId] = useState<number | null>(null);
 
+    // Trial Expiration Notification State
+    const [isTrialExpiredModalOpen, setIsTrialExpiredModalOpen] = useState(false);
+
     // State for Library->Studio integration
     const [studioInitialText, setStudioInitialText] = useState('');
 
@@ -95,14 +98,81 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         };
     }, []);
 
+    const checkTrialStatus = async (user: User) => {
+        if (user.plan === 'Premium' && user.trial_start_date) {
+            const startDate = new Date(user.trial_start_date);
+            const now = new Date();
+            const diffTime = Math.abs(now.getTime() - startDate.getTime());
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            if (diffDays > 7) {
+                // Trial Expired: Downgrade locally and in DB
+                const updatedUser = { ...user, plan: 'Free' as const };
+                setCurrentUser(updatedUser);
+                setIsTrialExpiredModalOpen(true);
+
+                try {
+                    await supabase.from('profiles').update({ plan: 'Free' }).eq('id', user.id);
+                } catch (error) {
+                    console.error("Error downgrading plan:", error);
+                }
+            }
+        }
+    };
+
+    const handlePaymentSuccess = async (planName: string) => {
+        if (!currentUser) return;
+        const updatedUser = { ...currentUser, plan: planName as any };
+        setCurrentUser(updatedUser);
+        setSelectedPlanForPayment(planName);
+        try {
+            // Clear trial date if they purchase a plan
+            await supabase.from('profiles').update({ plan: planName, trial_start_date: null }).eq('id', currentUser.id);
+            const { data: refreshedData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
+            if (refreshedData) setCurrentUser(refreshedData as User);
+        } catch (error) { console.error("Error updating plan:", error); }
+        setCurrentView('paymentSuccess');
+    };
+
+    // Check for payment redirect on load
+    useEffect(() => {
+        if (currentUser) {
+            const queryParams = new URLSearchParams(window.location.search);
+            const success = queryParams.get('payment_success');
+            const plan = queryParams.get('plan');
+
+            if (success === 'true' && plan) {
+                // Handle success
+                handlePaymentSuccess(plan);
+                // Clean URL
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        }
+    }, [currentUser]);
+
     useEffect(() => {
         const fetchUserData = async () => {
             const { data: { session } } = await supabase.auth.getSession();
             if (session?.user) {
-                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                let { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
+                
+                // If it was a signup, verify trial data is set (in case DB trigger didn't handle it)
+                if (wasSignup && data && (!data.trial_start_date || data.plan !== 'Premium')) {
+                     const trialStart = new Date().toISOString();
+                     // Force update
+                     await supabase.from('profiles').update({
+                         plan: 'Premium',
+                         trial_start_date: trialStart
+                     }).eq('id', session.user.id);
+                     
+                     // Use updated data for local state
+                     data = { ...data, plan: 'Premium', trial_start_date: trialStart };
+                }
+
                 if (data) {
                     const user = data as User;
                     setCurrentUser(user);
+                    checkTrialStatus(user); // Check if trial has expired
                     if (wasSignup && !user.onboarding_completed) {
                         setCurrentView('onboarding');
                     }
@@ -314,25 +384,12 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         }
     };
 
-    const handlePaymentSuccess = async (planName: string) => {
-        if (!currentUser) return;
-        const updatedUser = { ...currentUser, plan: planName as any };
-        setCurrentUser(updatedUser);
-        setSelectedPlanForPayment(planName);
-        try {
-            await supabase.from('profiles').update({ plan: planName }).eq('id', currentUser.id);
-            const { data: refreshedData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-            if (refreshedData) setCurrentUser(refreshedData as User);
-        } catch (error) { console.error("Error updating plan:", error); }
-        setCurrentView('paymentSuccess');
-    };
-
     const renderContent = () => {
         if (currentView === 'onboarding' && currentUser) return <OnboardingAgent user={currentUser} onComplete={(u) => { setCurrentUser(u); setCurrentView('chat'); }} />;
         if (currentView === 'profile' && currentUser) return <ProfileDashboard user={currentUser} onUpdateUser={setCurrentUser} />;
         if (currentView === 'library') return <Library libraryItems={libraryItems} onSelectExample={handleSelectLibraryItem} />;
         if (currentView === 'pricing') return <Pricing onChoosePlan={(plan) => {setSelectedPlanForPayment(plan); setCurrentView('payment');}} onContactSales={() => setCurrentView('contact')} currentUserPlan={currentUser?.plan || 'Free'} />;
-        if (currentView === 'payment') return <Payment selectedItemName={selectedPlanForPayment} onBack={() => setCurrentView('pricing')} onPaymentSuccess={(plan) => { setSelectedPlanForPayment(plan); setCurrentView('paymentSuccess'); }} />;
+        if (currentView === 'payment') return <Payment selectedItemName={selectedPlanForPayment} onBack={() => setCurrentView('pricing')} onPaymentSuccess={handlePaymentSuccess} />;
         if (currentView === 'paymentSuccess') return <PaymentSuccess planName={selectedPlanForPayment} onGoToDashboard={handleNewChat} />;
         if (currentView === 'terms') return <TermsOfService />;
         if (currentView === 'privacy') return <PrivacyPolicy />;
@@ -439,6 +496,14 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             onConfirm={confirmDeleteConversation} 
             title="Delete Conversation" 
             message="Are you sure you want to delete this conversation? This action cannot be undone."
+          />
+          {/* Trial Expiration Modal */}
+          <ConfirmationModal 
+            isOpen={isTrialExpiredModalOpen}
+            onClose={() => setIsTrialExpiredModalOpen(false)}
+            onConfirm={() => { setIsTrialExpiredModalOpen(false); setIsUpgradeModalOpen(true); }}
+            title="Free Trial Expired"
+            message="Your 7-day Premium trial has ended. Your account has been reverted to the Free plan. To continue using Premium features like voice translation and unlimited access, please upgrade."
           />
       </div>
     );
@@ -615,7 +680,19 @@ const App: React.FC = () => {
 
     const handleSignUp = async (name: string, email: string, pass: string) => {
         wasJustSignedUpRef.current = true;
-        const { error } = await supabase.auth.signUp({ email, password: pass, options: { data: { name } } });
+        // On sign up, explicitly set metadata for the trial
+        const { error } = await supabase.auth.signUp({ 
+            email, 
+            password: pass, 
+            options: { 
+                data: { 
+                    name,
+                    plan: 'Premium',
+                    trial_start_date: new Date().toISOString()
+                } 
+            } 
+        });
+        
         return !error;
     };
 

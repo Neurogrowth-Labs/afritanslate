@@ -63,6 +63,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, er
                 setIsLoading(false);
                 return;
             }
+            // Logic handled in App.tsx handleSignUp to include metadata
             success = await onSignUp(name, email, password);
         }
         
@@ -159,7 +160,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, er
                           }`
                         }
                     >
-                        {isLoading ? <Spinner /> : (isLogin ? (showAdminUI ? 'Access Portal' : 'Log In') : 'Create Account')}
+                        {isLoading ? <Spinner /> : (isLogin ? (showAdminUI ? 'Access Portal' : 'Log In') : 'Start 7-Day Premium Trial')}
                     </button>
                 </form>
 
