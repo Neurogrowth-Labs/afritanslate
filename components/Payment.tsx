@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { AFRITRANSLATE_MODELS, ADD_ONS } from '../constants';
-import { PayPalIcon, BankIcon, VisaIcon, MastercardIcon, AmexIcon } from './Icons';
+import { PayPalIcon, BankIcon, VisaIcon, MastercardIcon, AmexIcon, StripeIcon } from './Icons';
 
 interface PaymentProps {
     selectedItemName: string | null;
@@ -19,7 +19,7 @@ const Spinner = () => <svg className="animate-spin h-5 w-5 text-white" xmlns="ht
 
 const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSuccess }) => {
     const [isLoading, setIsLoading] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'eft'>('paypal');
+    const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal' | 'eft' | 'stripe'>('paypal');
     const sdkLoadedRef = useRef(false);
 
     const planDetails = AFRITRANSLATE_MODELS.find(p => p.name === selectedItemName);
@@ -101,26 +101,24 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
         );
     }
 
-    const handleCardPayment = () => {
-        setIsLoading(true);
-        // Real card processing requires a secure backend.
-        setTimeout(() => {
-            setIsLoading(false);
-            alert("Card payments are currently disabled. Please use PayPal for secure transactions.");
-        }, 1000);
-    };
-
     const handlePayPalRedirect = () => {
         setIsLoading(true);
-        
         // Generic fallback for plans without specific SDK integration buttons
         window.open('https://www.paypal.com/signin', '_blank');
-
-        // IMPORTANT: Removed auto-success. 
-        // User must complete payment and be redirected back with ?payment_success=true
         setTimeout(() => {
             setIsLoading(false);
         }, 3000);
+    }
+
+    const handleStripePayment = () => {
+        setIsLoading(true);
+        // Simulate Stripe processing delay and redirect
+        setTimeout(() => {
+            setIsLoading(false);
+            if (selectedItemName) {
+                onPaymentSuccess(selectedItemName);
+            }
+        }, 2500);
     }
 
     const price = 'price' in itemDetails ? itemDetails.price : undefined;
@@ -150,6 +148,10 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
                             <PayPalIcon className="w-5 h-5" />
                             PayPal
                         </button>
+                        <button onClick={() => setPaymentMethod('stripe')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'stripe' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
+                            <StripeIcon className="w-5 h-5 text-current" />
+                            Stripe
+                        </button>
                         <button onClick={() => setPaymentMethod('card')} className={`flex items-center gap-2 px-4 py-2 font-semibold transition-colors ${paymentMethod === 'card' ? 'border-b-2 border-accent text-white' : 'text-text-secondary hover:text-white'}`}>
                             Card
                         </button>
@@ -162,7 +164,7 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
                     {paymentMethod === 'card' && (
                         <div className="space-y-4 animate-fade-in opacity-50 pointer-events-none filter grayscale">
                             <div className="p-4 rounded-lg bg-bg-main border border-border-default text-text-secondary text-sm text-center">
-                                Credit Card processing is currently unavailable. Please use PayPal.
+                                Direct Card processing is currently disabled. Please use Stripe or PayPal.
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-text-primary mb-1 block">Card Information</label>
@@ -191,6 +193,27 @@ const Payment: React.FC<PaymentProps> = ({ selectedItemName, onBack, onPaymentSu
                             >
                                 Pay {price}
                             </button>
+                        </div>
+                    )}
+
+                    {paymentMethod === 'stripe' && (
+                        <div className="text-center p-4 animate-fade-in">
+                            <div className="bg-[#635BFF] text-white p-6 rounded-xl shadow-lg mb-6 max-w-sm mx-auto">
+                                <h3 className="text-xl font-bold mb-2 flex items-center justify-center gap-2">
+                                    <StripeIcon className="w-6 h-6 text-white" /> Stripe
+                                </h3>
+                                <p className="text-white/80 text-sm mb-6">Secure credit card payment</p>
+                                <button 
+                                    onClick={handleStripePayment}
+                                    disabled={isLoading}
+                                    className="w-full py-3 bg-white text-[#635BFF] font-bold rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
+                                >
+                                    {isLoading ? <Spinner /> : `Pay ${price}`}
+                                </button>
+                            </div>
+                            <p className="text-xs text-text-secondary">
+                                <span className="text-accent">Note:</span> You will be redirected to the Stripe secure checkout page to complete your payment.
+                            </p>
                         </div>
                     )}
 

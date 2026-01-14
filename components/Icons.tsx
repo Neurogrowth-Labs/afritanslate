@@ -1,3 +1,4 @@
+
 import React from 'react';
 
 export const LogoIcon: React.FC<{className?: string}> = ({ className }) => (
@@ -251,6 +252,13 @@ export const MastercardIcon: React.FC<{className?: string}> = ({ className }) =>
 export const AmexIcon: React.FC<{className?: string}> = ({ className }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
         <path d="M2 5h20v14H2V5zm3.5 3.5v7h3v-2.5h2.5v2.5h3v-7h-3v2.5h-2.5v-2.5h-3z" />
+    </svg>
+);
+
+export const StripeIcon: React.FC<{className?: string}> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className}>
+        <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.895-1.356 2.622-1.356 1.856 0 4.002.588 5.4 1.182v-3.5c-1.39-.58-3.356-1.069-5.4-1.069-4.816 0-8.032 2.603-8.032 6.822 0 6.649 9.387 7.023 9.387 9.53 0 1.018-1.22 1.542-3.03 1.542-2.122 0-4.632-.875-6.31-1.634v3.665c1.678.831 4.102 1.403 6.31 1.403 5.143 0 8.358-2.522 8.358-6.908 0-6.953-9.387-7.462-9.387-9.58 0-.848 1.018-1.42 2.867-1.42 1.509 0 3.1.4 4.2.9l-3.587-6.183z"/>
+        <path d="M13.9 10.3c-2.2-.8-3.4-1.4-3.4-2.4 0-.8.9-1.4 2.6-1.4 1.9 0 4 .6 5.4 1.2v-3.5c-1.4-.6-3.4-1.1-5.4-1.1-4.8 0-8 2.6-8 6.8 0 6.6 9.4 7 9.4 9.5 0 1-.9 1.6-2.7 1.6-2.1 0-4.6-.9-6.3-1.6v3.7c1.7.8 4.1 1.4 6.3 1.4 5.1 0 8.4-2.5 8.4-6.9 0-7-9.4-7.5-9.4-9.6 0-.8 1-1.4 2.9-1.4 1.5 0 3.1.4 4.2.9l-4 2.8z"/>
     </svg>
 );
 
