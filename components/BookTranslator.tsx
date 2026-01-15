@@ -431,16 +431,16 @@ ${culturalNotes}
                             <p className="text-[11px] text-text-secondary truncate max-w-xs mt-1 font-mono">{fileName}</p>
                         </div>
                     </div>
-                     <div className="flex items-center gap-3 w-full xl:w-auto">
+                     <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto no-scrollbar">
                          <button 
                             onClick={() => setShowIntegrityPanel(!showIntegrityPanel)}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-xs font-bold transition-colors ${showIntegrityPanel ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-main border-border-default text-text-secondary hover:text-white'}`}
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-xs font-bold transition-colors whitespace-nowrap ${showIntegrityPanel ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-main border-border-default text-text-secondary hover:text-white'}`}
                          >
                             <BrainIcon className="w-4 h-4"/>
-                            <span>Cultural Integrity</span>
+                            <span>Integrity</span>
                          </button>
-                         <div className="h-6 w-px bg-border-default mx-1"></div>
-                         <button onClick={handleTranslate} disabled={isLoading} className="flex-1 xl:flex-none px-6 py-2.5 bg-accent text-bg-main font-bold rounded-lg hover:scale-105 active:scale-95 disabled:bg-border-default disabled:cursor-not-allowed transition-all shadow-lg shadow-accent/20">
+                         <div className="h-6 w-px bg-border-default mx-1 flex-shrink-0"></div>
+                         <button onClick={handleTranslate} disabled={isLoading} className="flex-1 xl:flex-none px-6 py-2.5 bg-accent text-bg-main font-bold rounded-lg hover:scale-105 active:scale-95 disabled:bg-border-default disabled:cursor-not-allowed transition-all shadow-lg shadow-accent/20 whitespace-nowrap">
                             {isLoading ? 'Translating...' : 'Translate Manuscript'}
                         </button>
                         <button onClick={handleDownload} disabled={!translatedText} className="p-2.5 bg-bg-main border border-border-default text-white rounded-lg hover:bg-border-default disabled:opacity-50 transition-colors" title="Download">
@@ -491,14 +491,14 @@ ${culturalNotes}
                 metrics={metrics}
             />
 
-            {/* Main 2-Column Editor Layout */}
-            <div className="flex-1 flex min-h-0 overflow-hidden">
+            {/* Main 2-Column Editor Layout - Responsive update here */}
+            <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
                 {/* 1. Source Text Reader */}
-                <div className="flex-1 flex flex-col border-r border-border-default min-w-[300px]">
+                <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-border-default min-h-[40%] lg:min-w-[300px]">
                     <div className="p-2 border-b border-border-default bg-bg-surface/50 flex justify-between items-center sticky top-0">
                         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Source Book Reader</span>
                         <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1.5">
+                            <div className="hidden sm:flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full bg-blue-500"></span><span className="text-[9px] text-text-secondary">Idiom</span>
                                 <span className="w-2 h-2 rounded-full bg-orange-500"></span><span className="text-[9px] text-text-secondary">Culture</span>
                                 <span className="w-2 h-2 rounded-full bg-purple-500"></span><span className="text-[9px] text-text-secondary">Proverb</span>
@@ -517,7 +517,7 @@ ${culturalNotes}
                 </div>
 
                 {/* 2. Translation Workspace */}
-                <div className="flex-1 flex flex-col min-w-[300px] bg-[#111]">
+                <div className="flex-1 flex flex-col min-h-[40%] lg:min-w-[300px] bg-[#111]">
                     <div className="p-2 border-b border-border-default bg-bg-surface/50 flex justify-between items-center sticky top-0">
                         <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Translation Workspace</span>
                         <div className="flex items-center gap-2">

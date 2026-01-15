@@ -280,7 +280,7 @@ const ScriptTranslator: React.FC = () => {
                                 <ScriptIcon className="w-6 h-6" />
                             </div>
                             <div>
-                                <h1 className="text-xl font-bold text-white leading-tight">Script Editor <span className="text-text-secondary font-normal mx-2">|</span> <span className="text-accent text-sm uppercase tracking-wider">Production Mode</span></h1>
+                                <h1 className="text-xl font-bold text-white leading-tight">Script Editor <span className="text-text-secondary font-normal mx-2 hidden sm:inline">|</span> <span className="text-accent text-sm uppercase tracking-wider block sm:inline mt-1 sm:mt-0">Production Mode</span></h1>
                                 <p className="text-xs text-text-secondary mt-1 font-mono flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                                     {fileName}
@@ -289,7 +289,7 @@ const ScriptTranslator: React.FC = () => {
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-3 w-full xl:w-auto">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto mt-4 xl:mt-0">
                              <div className="flex-1 xl:flex-none grid grid-cols-2 md:grid-cols-3 gap-3">
                                 <LanguageSelector label="Source" languages={LANGUAGES} value={sourceLang} onChange={setSourceLang} />
                                 <LanguageSelector label="Target" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
@@ -306,13 +306,13 @@ const ScriptTranslator: React.FC = () => {
                 </div>
 
                 {/* Workspace Grid */}
-                <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-12 gap-6">
+                <div className="flex-1 min-h-0 grid grid-cols-1 xl:grid-cols-12 gap-6 overflow-y-auto xl:overflow-hidden">
                     
                     {/* Editors Area (Left) */}
                     <div className="xl:col-span-8 flex flex-col gap-4 min-h-0">
                         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
                             {/* Source Editor */}
-                            <div className="flex flex-col h-full bg-[#0F0F0F] border border-border-default rounded-2xl overflow-hidden shadow-lg relative group focus-within:border-white/20 transition-all">
+                            <div className="flex flex-col min-h-[300px] h-full bg-[#0F0F0F] border border-border-default rounded-2xl overflow-hidden shadow-lg relative group focus-within:border-white/20 transition-all">
                                 <div className="flex-shrink-0 p-4 border-b border-border-default bg-white/[0.02] flex justify-between items-center backdrop-blur-md">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em]">Source Script</span>
@@ -328,7 +328,7 @@ const ScriptTranslator: React.FC = () => {
                             </div>
 
                             {/* Target Editor */}
-                            <div className="flex flex-col h-full bg-[#050505] border border-border-default rounded-2xl overflow-hidden shadow-lg relative group focus-within:border-accent/50 transition-all">
+                            <div className="flex flex-col min-h-[300px] h-full bg-[#050505] border border-border-default rounded-2xl overflow-hidden shadow-lg relative group focus-within:border-accent/50 transition-all">
                                  <div className="flex-shrink-0 p-4 border-b border-border-default bg-white/[0.02] flex justify-between items-center backdrop-blur-md">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-bold text-accent uppercase tracking-[0.2em]">Translation</span>
@@ -361,7 +361,7 @@ const ScriptTranslator: React.FC = () => {
                     </div>
 
                     {/* Production Toolkit Sidebar (Right) */}
-                    <div className="xl:col-span-4 flex flex-col min-h-0 bg-bg-surface border border-border-default rounded-2xl overflow-hidden shadow-xl">
+                    <div className="xl:col-span-4 flex flex-col min-h-[400px] xl:min-h-0 bg-bg-surface border border-border-default rounded-2xl overflow-hidden shadow-xl mb-6 xl:mb-0">
                         <div className="flex-shrink-0 p-5 border-b border-border-default bg-white/[0.02] backdrop-blur-md">
                             <h2 className="text-xs font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
                                 <ThinkingIcon className="w-4 h-4 text-accent"/> 

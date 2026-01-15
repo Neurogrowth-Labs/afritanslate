@@ -122,10 +122,10 @@ const Studio: React.FC<StudioProps> = ({ isOffline, initialText = '' }) => {
                             <ToneSelector label="Persona" tones={TONES} value={tone} onChange={setTone} />
                         </div>
                         
-                        <div className="hidden md:block w-px h-8 bg-white/10 mx-2"></div>
+                        <div className="w-px h-8 bg-white/10 mx-2"></div>
                         
-                        {/* Context Toggle (Simple Input for now to save space) */}
-                        <div className="hidden md:flex flex-col flex-1 min-w-[150px]">
+                        {/* Context Toggle */}
+                        <div className="flex flex-col flex-1 min-w-[150px]">
                             <label className="text-[9px] font-bold text-text-secondary uppercase tracking-wider mb-1">Context</label>
                             <input 
                                 type="text" 
@@ -137,7 +137,7 @@ const Studio: React.FC<StudioProps> = ({ isOffline, initialText = '' }) => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 w-full md:w-auto justify-end px-2">
+                    <div className="flex items-center gap-3 w-full md:w-auto justify-end px-2 mt-2 md:mt-0">
                          <button 
                             onClick={() => setIsBatchMode(!isBatchMode)}
                             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wide border transition-all ${
@@ -170,7 +170,7 @@ const Studio: React.FC<StudioProps> = ({ isOffline, initialText = '' }) => {
             {/* Main Workspace */}
             <div className="flex-1 flex flex-col md:flex-row gap-4 p-4 min-h-0">
                 {/* Source Input */}
-                <div className="flex-1 bg-bg-surface/40 border border-white/5 rounded-2xl flex flex-col relative focus-within:ring-1 focus-within:ring-accent/50 focus-within:bg-bg-surface/60 transition-all shadow-lg overflow-hidden">
+                <div className="flex-1 bg-bg-surface/40 border border-white/5 rounded-2xl flex flex-col relative focus-within:ring-1 focus-within:ring-accent/50 focus-within:bg-bg-surface/60 transition-all shadow-lg overflow-hidden min-h-[200px]">
                     <div className="flex justify-between items-center p-3 border-b border-white/5 bg-white/5">
                         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest pl-1">Source Text</span>
                         {sourceText && (
@@ -189,7 +189,7 @@ const Studio: React.FC<StudioProps> = ({ isOffline, initialText = '' }) => {
                 </div>
 
                 {/* Target Output */}
-                <div className="flex-1 bg-[#0c0c0c]/80 border border-white/5 rounded-2xl flex flex-col relative shadow-inner overflow-hidden">
+                <div className="flex-1 bg-[#0c0c0c]/80 border border-white/5 rounded-2xl flex flex-col relative shadow-inner overflow-hidden min-h-[200px]">
                     <div className="flex justify-between items-center p-3 border-b border-white/5 bg-black/40">
                         <span className="text-[10px] font-bold text-accent uppercase tracking-widest pl-1">Translation</span>
                         {translationResult && !isBatchMode && (
