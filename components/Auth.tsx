@@ -75,7 +75,14 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, er
     const handleGoogleAuth = async () => {
         setError(null);
         setIsLoading(true);
-        await onGoogleLogin();
+        try {
+            await onGoogleLogin();
+        } catch (err: any) {
+            // Log for debugging but show friendly message
+            console.error("Google Auth Error:", err);
+            setError(err.message || "Unable to initiate Google Login. Please check configuration.");
+            setIsLoading(false);
+        }
     };
 
     const toggleView = () => {

@@ -782,7 +782,14 @@ const App: React.FC = () => {
 
     const handleGoogleLogin = async () => {
         wasJustSignedUpRef.current = false;
-        await supabase.auth.signInWithOAuth({ provider: 'google' });
+        // Include redirect URL to current origin to handle dynamic preview domains
+        const { error } = await supabase.auth.signInWithOAuth({ 
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin
+            }
+        });
+        if (error) throw error;
     };
 
     if (loading) return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;
