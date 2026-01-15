@@ -35,7 +35,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, LockIcon, BoltIcon } from './components/Icons';
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, LockIcon, BoltIcon, CheckIcon, ScriptIcon, BookIcon, EmailIcon, ImageIcon, MeetingIcon } from './components/Icons';
 import * as geminiService from './services/geminiService'; // Import service for chat logic
 
 // --- PLACEHOLDER COMPONENTS --- //
@@ -497,8 +497,179 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                             </div>
                         </section>
 
-                        {/* VALUE PROPS */}
+                        {/* CONTEXT GAP SECTION */}
+                        <section className="py-24 bg-bg-surface/30 border-y border-white/5 relative overflow-hidden">
+                            {/* Decorative background elements */}
+                            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+                                <div className="absolute -top-[20%] -left-[10%] w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[100px]"></div>
+                                <div className="absolute -bottom-[20%] -right-[10%] w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px]"></div>
+                            </div>
+
+                            <div className="container mx-auto px-6 relative z-10">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                                    <div>
+                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest mb-6">
+                                            The Problem
+                                        </div>
+                                        <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight">
+                                            Standard AI has a <br/>
+                                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">Context Blindspot.</span>
+                                        </h2>
+                                        <p className="text-lg text-text-secondary leading-relaxed mb-8">
+                                            Legacy translation engines treat language as math. They ignore social hierarchy, historical idioms, and emotional subtext.
+                                            <br/><br/>
+                                            In Africa, where context defines meaning, this leads to catastrophic misunderstandings and brand damage.
+                                        </p>
+                                        <div className="space-y-4">
+                                            <div className="p-4 rounded-xl bg-bg-main border border-border-default opacity-60">
+                                                <p className="text-xs text-text-secondary uppercase font-bold mb-2">Generic Engine Input</p>
+                                                <p className="text-white italic">"The elder is coming."</p>
+                                                <div className="mt-2 text-red-400 text-xs font-mono">⚠ Missing honorifics. Disrespectful tone detected.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-accent/20 to-purple-500/20 blur-3xl rounded-full opacity-30"></div>
+                                        <div className="relative bg-bg-main border border-white/10 rounded-2xl p-8 shadow-2xl">
+                                            <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-6">
+                                                <div>
+                                                    <h3 className="text-xl font-bold text-white">AfriTranslate Core</h3>
+                                                    <p className="text-xs text-accent">Cultural Intelligence Module Active</p>
+                                                </div>
+                                                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
+                                                    <BoltIcon className="w-5 h-5"/>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="space-y-6">
+                                                <div className="flex gap-4">
+                                                    <div className="w-1 h-full bg-border-default rounded-full relative">
+                                                        <div className="absolute top-0 left-0 w-full h-1/2 bg-accent rounded-full"></div>
+                                                    </div>
+                                                    <div className="flex-1 space-y-4">
+                                                        <div>
+                                                            <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Analysis</p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <span className="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-white">Age: Elder (70+)</span>
+                                                                <span className="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-white">Region: Yoruba (SW)</span>
+                                                                <span className="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-white">Setting: Formal</span>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Output Generation</p>
+                                                            <p className="text-lg font-serif text-white">"Baba agba n bo."</p>
+                                                            <p className="text-xs text-green-400 mt-1 flex items-center gap-1"><CheckIcon className="w-3 h-3"/> Honorifics applied. Cultural resonance 99%.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* PLATFORM CAPABILITIES */}
                         <section className="py-24 bg-bg-main">
+                            <div className="container mx-auto px-6">
+                                <div className="text-center max-w-3xl mx-auto mb-20">
+                                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Complete Cultural Infrastructure</h2>
+                                    <p className="text-text-secondary text-lg">
+                                        One platform to manage every aspect of your localization strategy. From real-time voice to legal documentation.
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                    {/* Card 1 */}
+                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
+                                        <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 text-purple-400 group-hover:scale-110 transition-transform">
+                                            <MicrophoneIcon className="w-7 h-7"/>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Live Voice Relay</h3>
+                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+                                            Real-time speech-to-speech translation that adapts accents and dialects instantly for Zoom, Teams, and physical meetings.
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-purple-400 transition-colors">
+                                            <span>Explore Live</span> <span className="text-lg">→</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Card 2 */}
+                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
+                                        <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition-transform">
+                                            <ScriptIcon className="w-7 h-7"/>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Script Studio</h3>
+                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+                                            Automated screenplay localization. Generates casting sides, dubbing guides, and cultural reports for film & TV production.
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-blue-400 transition-colors">
+                                            <span>Localize Scripts</span> <span className="text-lg">→</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Card 3 */}
+                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
+                                        <div className="w-14 h-14 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-6 text-orange-400 group-hover:scale-110 transition-transform">
+                                            <BookIcon className="w-7 h-7"/>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Literary Engine</h3>
+                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+                                            Long-form translation for books and research papers. Maintains narrative continuity and adapts metaphors for local readers.
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-orange-400 transition-colors">
+                                            <span>Translate Books</span> <span className="text-lg">→</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Card 4 */}
+                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
+                                        <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center mb-6 text-green-400 group-hover:scale-110 transition-transform">
+                                            <EmailIcon className="w-7 h-7"/>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Enterprise Comm.</h3>
+                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+                                            Context-aware email and document localization. Ensures professional etiquette matches the recipient's cultural status.
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-green-400 transition-colors">
+                                            <span>Business Tools</span> <span className="text-lg">→</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Card 5 */}
+                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
+                                        <div className="w-14 h-14 bg-pink-500/10 rounded-2xl flex items-center justify-center mb-6 text-pink-400 group-hover:scale-110 transition-transform">
+                                            <ImageIcon className="w-7 h-7"/>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Visual & Motion</h3>
+                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+                                            Generative visual arts adapted for African aesthetics. Create video and imagery that feels native to the region.
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-pink-400 transition-colors">
+                                            <span>Create Visuals</span> <span className="text-lg">→</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Card 6 */}
+                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
+                                        <div className="w-14 h-14 bg-yellow-500/10 rounded-2xl flex items-center justify-center mb-6 text-yellow-400 group-hover:scale-110 transition-transform">
+                                            <MeetingIcon className="w-7 h-7"/>
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white mb-3">Meeting Intelligence</h3>
+                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
+                                            Automated meeting summaries and action items, translated into multiple languages for cross-border teams.
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-yellow-400 transition-colors">
+                                            <span>Analyze Meetings</span> <span className="text-lg">→</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* VALUE PROPS */}
+                        <section className="py-24 bg-bg-main border-t border-white/5">
                             <div className="container mx-auto px-6">
                                 <div className="text-center max-w-3xl mx-auto mb-20">
                                     <h2 className="text-3xl font-bold text-white mb-4">Strategic Advantages</h2>
