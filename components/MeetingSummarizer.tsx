@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { summarizeMeeting, translateMeetingChunk } from '../services/geminiService';
-import { parseZoomLink, authenticateZoom, connectBotToMeeting } from '../services/zoomService';
-import { MOCK_MEETING_TRANSCRIPT, LANGUAGES, TONES } from '../constants';
-import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon } from './Icons';
+import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
+import { summarizeMeeting } from '../services/geminiService';
+import { MOCK_MEETING_TRANSCRIPT, LANGUAGES } from '../constants';
+import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon, MicrophoneIcon } from './Icons';
 import type { MeetingMode, User, ScheduledMeeting } from '../types';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
@@ -11,6 +11,53 @@ import { supabase } from '../supabaseClient';
 
 interface MeetingSummarizerProps {
     currentUser: User;
+}
+
+// --- Audio Helper Functions for Real-Time Capture ---
+const audioWorkletCode = `
+class AudioProcessor extends AudioWorkletProcessor {
+  constructor(options) {
+    super();
+    this.bufferSize = options.processorOptions.bufferSize || 4096;
+    this.buffer = new Float32Array(this.bufferSize);
+    this.bufferIndex = 0;
+  }
+  process(inputs) {
+    const input = inputs[0];
+    const inputChannel = input[0];
+    if (!inputChannel) return true;
+    for (let i = 0; i < inputChannel.length; i++) {
+      this.buffer[this.bufferIndex++] = inputChannel[i];
+      if (this.bufferIndex === this.bufferSize) {
+        this.port.postMessage(this.buffer.slice(0));
+        this.bufferIndex = 0;
+      }
+    }
+    return true;
+  }
+}
+registerProcessor('audio-processor', AudioProcessor);
+`;
+
+function encode(bytes: Uint8Array): string {
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+function createBlob(data: Float32Array): { data: string; mimeType: string } {
+    const l = data.length;
+    const int16 = new Int16Array(l);
+    for (let i = 0; i < l; i++) {
+        int16[i] = data[i] * 32768;
+    }
+    return {
+        data: encode(new Uint8Array(int16.buffer)),
+        mimeType: 'audio/pcm;rate=16000',
+    };
 }
 
 const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) => {
@@ -24,14 +71,14 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
     const [fileName, setFileName] = useState('');
     const [isEditing, setIsEditing] = useState(false);
 
-    // States for live transcription simulation
+    // States for Live Transcription
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [liveTranscript, setLiveTranscript] = useState('');
     const [transcriptionLang, setTranscriptionLang] = useState('en');
-    const [transcriptionTone, setTranscriptionTone] = useState('Business');
     const [summaryLang, setSummaryLang] = useState('en');
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<string>('');
+    const [captureStream, setCaptureStream] = useState<MediaStream | null>(null);
 
     // Scheduling States
     const [scheduledMeetings, setScheduledMeetings] = useState<ScheduledMeeting[]>([]);
@@ -42,48 +89,29 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
     const [isScheduling, setIsScheduling] = useState(false);
     const [currentMonth, setCurrentMonth] = useState(new Date());
 
+    // Refs for Audio Processing
     const transcriptEndRef = useRef<HTMLDivElement>(null);
+    const aiRef = useRef<GoogleGenAI | null>(null);
+    const sessionRef = useRef<any>(null); // LiveSession type is inferred
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const workletNodeRef = useRef<AudioWorkletNode | null>(null);
+    const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
+    const workletUrlRef = useRef<string | null>(null);
 
     const isZoomLink = meetingLink.includes('zoom.us');
     const isMeetingLinkValid = isZoomLink || meetingLink.includes('meet.google.com') || meetingLink.includes('teams.microsoft.com');
 
-    // Auto-scroll to bottom of transcript
+    // Initialize Gemini Client
+    useEffect(() => {
+        if (process.env.API_KEY) {
+            aiRef.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        }
+    }, []);
+
+    // Auto-scroll
     useEffect(() => {
         transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [liveTranscript]);
-
-    // Live Transcription & Translation Loop
-    useEffect(() => {
-        let interval: ReturnType<typeof setInterval>;
-        let currentLine = 0;
-        const transcriptLines = MOCK_MEETING_TRANSCRIPT.trim().split('\n');
-
-        const processNextLine = async () => {
-            if (currentLine < transcriptLines.length) {
-                const line = transcriptLines[currentLine];
-                if (line.trim()) {
-                    // Translate the line on the fly if needed
-                    let processedLine = line;
-                    if (transcriptionLang !== 'en') {
-                        const targetLangName = LANGUAGES.find(l => l.code === transcriptionLang)?.name || 'English';
-                        processedLine = await translateMeetingChunk(line, targetLangName, transcriptionTone);
-                    }
-                    setLiveTranscript(prev => prev + processedLine + '\n');
-                } else {
-                    setLiveTranscript(prev => prev + '\n');
-                }
-                currentLine++;
-            } else {
-                clearInterval(interval);
-            }
-        };
-
-        if (isTranscribing) {
-            // Speed up simulation slightly for demo purposes
-            interval = setInterval(processNextLine, 1500); 
-        }
-        return () => clearInterval(interval);
-    }, [isTranscribing, transcriptionLang, transcriptionTone]);
 
     // Fetch scheduled meetings when entering schedule mode
     useEffect(() => {
@@ -103,7 +131,6 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         
         if (error) {
             console.error("Error fetching meetings:", error.message || JSON.stringify(error));
-            // Don't show error to user for fetch fail, just empty list
         } else {
             setScheduledMeetings(data as ScheduledMeeting[]);
         }
@@ -200,7 +227,6 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
 
                 if (dbError) {
                     console.error("Failed to save meeting summary:", dbError.message || JSON.stringify(dbError));
-                    // Non-blocking error, user still sees summary
                 }
             }
 
@@ -211,53 +237,139 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         }
     };
 
+    // --- REAL-TIME TRANSCRIPTION LOGIC ---
+
+    const cleanupAudio = () => {
+        if (captureStream) {
+            captureStream.getTracks().forEach(track => track.stop());
+            setCaptureStream(null);
+        }
+        if (audioContextRef.current) {
+            audioContextRef.current.close().catch(() => {});
+            audioContextRef.current = null;
+        }
+        if (sessionRef.current) {
+            // Check if there is a close method, depends on SDK version, otherwise just nullify
+            sessionRef.current = null;
+        }
+        if (workletUrlRef.current) {
+            URL.revokeObjectURL(workletUrlRef.current);
+            workletUrlRef.current = null;
+        }
+    };
+
     const handleStartLiveTranscription = async () => {
+        if (!aiRef.current) {
+            setError("AI Service not initialized.");
+            return;
+        }
+
         setIsConnecting(true);
         setError(null);
-        setConnectionStatus('Initializing connection...');
+        setConnectionStatus('Initializing audio capture...');
+        setLiveTranscript('');
 
         try {
-            // Special handling for Zoom links using the Zoom Service
-            if (isZoomLink) {
-                const zoomDetails = parseZoomLink(meetingLink);
-                if (!zoomDetails) {
-                    throw new Error("Invalid Zoom link format.");
-                }
-
-                setConnectionStatus('Authenticating with Zoom App...');
-                const isAuthenticated = await authenticateZoom();
-                
-                if (!isAuthenticated) {
-                    throw new Error("Zoom authentication failed. Check credentials.");
-                }
-
-                setConnectionStatus(`Joining meeting ${zoomDetails.meetingId}...`);
-                const connectionMsg = await connectBotToMeeting(zoomDetails.meetingId);
-                console.log(connectionMsg); // "AfriTranslate Bot connected..."
-            } else {
-                // Fallback for simulation of other platforms
-                await new Promise(resolve => setTimeout(resolve, 2000));
+            // 1. Capture System Audio (e.g., from Zoom/Teams tab/window)
+            // video: true is required for getDisplayMedia to capture audio, but we ignore the video track.
+            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+            
+            // Check if user shared audio
+            if (stream.getAudioTracks().length === 0) {
+                stream.getTracks().forEach(t => t.stop());
+                throw new Error("No audio track detected. Please make sure to check 'Share audio' when selecting the window/tab.");
             }
 
-            setConnectionStatus('Connected. Starting transcription stream...');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            setIsConnecting(false);
-            setLiveTranscript(''); // Clear previous
-            setIsTranscribing(true);
+            setCaptureStream(stream);
+            setConnectionStatus('Connecting to Gemini Live...');
 
-        } catch (err) {
+            // 2. Setup Audio Context & Worklet
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+            audioContextRef.current = audioContext;
+
+            const blob = new Blob([audioWorkletCode], { type: 'application/javascript' });
+            const url = URL.createObjectURL(blob);
+            workletUrlRef.current = url;
+            
+            await audioContext.audioWorklet.addModule(url);
+
+            const source = audioContext.createMediaStreamSource(stream);
+            sourceNodeRef.current = source;
+            
+            const worklet = new AudioWorkletNode(audioContext, 'audio-processor');
+            workletNodeRef.current = worklet;
+
+            source.connect(worklet);
+            // We do NOT connect to destination to avoid feedback loop (hearing yourself/meeting twice)
+
+            // 3. Connect to Gemini Live
+            const sessionPromise = aiRef.current.live.connect({
+                model: 'gemini-2.5-flash-native-audio-preview-12-2025',
+                config: {
+                    responseModalities: [Modality.AUDIO], // We need audio to keep connection alive, but we ignore it
+                    inputAudioTranscription: { model: "google-speech-v1" }, // Request transcription of input
+                    systemInstruction: "You are a passive meeting scribe. Your only task is to listen and transcribe. Do not speak. Do not answer questions.",
+                },
+                callbacks: {
+                    onopen: () => {
+                        setIsConnecting(false);
+                        setIsTranscribing(true);
+                        setConnectionStatus('Connected & Listening...');
+                        
+                        // Start piping audio data
+                        worklet.port.onmessage = (event) => {
+                            const pcmBlob = createBlob(event.data);
+                            sessionPromise.then(session => session.sendRealtimeInput({ media: pcmBlob }));
+                        };
+                    },
+                    onmessage: (msg: LiveServerMessage) => {
+                        // Capture transcription of the INPUT audio (the meeting)
+                        if (msg.serverContent?.inputTranscription) {
+                            const text = msg.serverContent.inputTranscription.text;
+                            if (text) {
+                                setLiveTranscript(prev => prev + text);
+                            }
+                        }
+                    },
+                    onclose: () => {
+                        console.log("Session closed");
+                        handleStopLiveTranscription();
+                    },
+                    onerror: (err) => {
+                        console.error("Session error:", err);
+                        setError("Connection lost. Please restart.");
+                        handleStopLiveTranscription();
+                    }
+                }
+            });
+            
+            sessionRef.current = sessionPromise;
+
+            // Handle stream stop (user clicks "Stop sharing" in browser UI)
+            stream.getVideoTracks()[0].onended = () => {
+                handleStopLiveTranscription();
+            };
+
+        } catch (err: any) {
+            console.error("Transcription start error:", err);
+            cleanupAudio();
             setIsConnecting(false);
-            setError(err instanceof Error ? err.message : "Connection failed.");
+            setError(err.message || "Failed to start transcription.");
         }
     };
 
     const handleStopLiveTranscription = () => {
+        cleanupAudio();
         setIsTranscribing(false);
-        const finalTranscript = liveTranscript || MOCK_MEETING_TRANSCRIPT;
-        setTranscript(finalTranscript);
-        setFileName('Live Meeting Transcript');
-        handleGenerate(finalTranscript);
+        setIsConnecting(false);
+        
+        // Auto-generate summary if we have content
+        if (liveTranscript.trim().length > 0) {
+            const finalTranscript = liveTranscript;
+            setTranscript(finalTranscript);
+            setFileName('Live Meeting Transcript');
+            handleGenerate(finalTranscript);
+        }
     };
 
     const renderSummaryHtml = (markdown: string): string => {
@@ -404,6 +516,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         setNewMeetingDate('');
         setNewMeetingTime('');
         setNewMeetingLink('');
+        cleanupAudio();
     };
 
     // --- Calendar Helper Functions ---
@@ -420,30 +533,30 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                  {isConnecting ? (
                      <>
                         <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <h2 className="text-2xl font-bold text-text-primary">Connecting...</h2>
+                        <h2 className="text-2xl font-bold text-text-primary">Establishing Link...</h2>
                         <p className="text-text-secondary mt-2">{connectionStatus}</p>
+                        <button onClick={handleStopLiveTranscription} className="mt-6 text-sm text-red-400 hover:text-red-300">Cancel</button>
                      </>
                  ) : (
                     <>
                         <div className="flex items-center gap-3 mb-4">
-                            {isZoomLink && <div className="bg-blue-600 p-1.5 rounded-full"><ZoomIcon className="w-5 h-5 text-white" /></div>}
+                            <div className="bg-red-600/20 p-2 rounded-full border border-red-500/30 animate-pulse">
+                                <MicrophoneIcon className="w-6 h-6 text-red-500" />
+                            </div>
                             <h2 className="text-2xl font-bold text-text-primary flex items-center gap-3">
-                                <span className="relative flex h-3 w-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                                </span>
-                                Transcription Active
+                                Live Transcription Active
                             </h2>
                         </div>
                         <div className="mb-2 text-xs text-accent uppercase tracking-widest font-bold">
-                            Live Translation: {LANGUAGES.find(l=>l.code===transcriptionLang)?.name} ({transcriptionTone})
+                            Listening to System Audio
                         </div>
-                        <div className="w-full max-w-3xl h-96 bg-bg-surface border border-border-default rounded-lg p-4 text-left overflow-y-auto font-mono text-sm whitespace-pre-wrap shadow-inner relative">
-                            {liveTranscript}
+                        <div className="w-full max-w-3xl h-96 bg-bg-surface border border-border-default rounded-lg p-6 text-left overflow-y-auto font-mono text-sm whitespace-pre-wrap shadow-inner relative custom-scrollbar">
+                            {liveTranscript || <span className="text-text-secondary italic">Waiting for speech...</span>}
                             <div ref={transcriptEndRef} />
                         </div>
-                        <button onClick={handleStopLiveTranscription} className="mt-6 px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-lg">
-                            Stop Transcription & Generate Summary
+                        <button onClick={handleStopLiveTranscription} className="mt-6 px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-lg flex items-center gap-2">
+                            <div className="w-3 h-3 bg-white rounded-sm"></div>
+                            Stop & Summarize
                         </button>
                     </>
                  )}
@@ -636,7 +749,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                     {mode === 'live' ? (
                         <div className="bg-bg-surface p-6 rounded-lg border border-border-default space-y-4 animate-fade-in">
                             <div>
-                                <label className="block text-sm font-medium text-text-primary mb-2">Meeting Link</label>
+                                <label className="block text-sm font-medium text-text-primary mb-2">Meeting Link (Optional)</label>
                                 <input
                                     type="url"
                                     value={meetingLink}
@@ -653,13 +766,16 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                                     </div>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                               <LanguageSelector label="Live Output Language" languages={LANGUAGES} value={transcriptionLang} onChange={setTranscriptionLang} />
-                               <ToneSelector label="Live Output Tone" tones={TONES} value={transcriptionTone} onChange={setTranscriptionTone} />
-                               <LanguageSelector label="Summary Language" languages={LANGUAGES} value={summaryLang} onChange={setSummaryLang} />
+                            <div className="mt-4">
+                                <LanguageSelector label="Generate Summary In" languages={LANGUAGES} value={summaryLang} onChange={setSummaryLang} />
                             </div>
-                             <button onClick={handleStartLiveTranscription} disabled={!isMeetingLinkValid} className="w-full py-3 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 disabled:bg-border-default disabled:cursor-not-allowed transition-colors">
-                                Start Live Transcription
+                            
+                            <div className="mt-4 bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg text-xs text-yellow-200">
+                                <strong>Note:</strong> When you start, please select the window or tab where your meeting is running and enable <strong>"Share audio"</strong> in the browser prompt.
+                            </div>
+
+                             <button onClick={handleStartLiveTranscription} className="w-full mt-4 py-3 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 transition-colors shadow-lg">
+                                Start Live Capturing
                             </button>
                             {error && <p className="text-red-400 text-center mt-4 text-sm bg-red-500/10 p-2 rounded-md">{error}</p>}
                         </div>
