@@ -32,7 +32,7 @@ const Library: React.FC<LibraryProps> = ({ libraryItems, onSelectExample }) => {
   };
 
   return (
-    <div className="flex flex-col h-full animate-fade-in max-w-6xl mx-auto py-2 px-4">
+    <div className="flex flex-col animate-fade-in max-w-6xl mx-auto py-2 px-4">
         <div className="text-center mb-6">
             <h1 className="text-2xl md:text-3xl font-bold text-text-primary">Content Library</h1>
             <p className="text-sm text-text-secondary mt-1 max-w-xl mx-auto">

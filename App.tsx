@@ -35,8 +35,8 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, LockIcon, BoltIcon, CheckIcon, ScriptIcon, BookIcon, EmailIcon, ImageIcon, MeetingIcon } from './components/Icons';
-import * as geminiService from './services/geminiService'; // Import service for chat logic
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon } from './components/Icons';
+import { getNuancedTranslation } from './services/geminiService'; // Import service
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
@@ -63,18 +63,14 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     
+    // Chat Configuration State (for new chats or creating context)
+    const [chatConfig, setChatConfig] = useState({ source: 'en', target: 'sw', tone: 'Friendly' });
+
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
     const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<string | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deletingConversationId, setDeletingConversationId] = useState<number | null>(null);
-
-    // Chat local state (if no conversation selected)
-    const [tempChatState, setTempChatState] = useState({
-        sourceLang: 'en',
-        targetLang: 'sw',
-        tone: 'Friendly'
-    });
 
     const [offlinePacks, setOfflinePacks] = useState<string[]>(() => {
         const savedPacks = localStorage.getItem('offlinePacks');
@@ -142,7 +138,10 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
 
     const handleSetView = (view: View) => {
         setCurrentView(view);
-        if (view !== 'chat' && view !== 'profile') setCurrentMode('chat');
+        // Default to 'chat' mode (AI Assistant) when navigating to 'chat' view unless specified
+        if (view === 'chat' && currentMode !== 'chat' && currentMode !== 'studio') {
+             setCurrentMode('chat');
+        }
         setIsSidebarOpen(false);
     };
 
@@ -154,6 +153,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
 
     const handleNewChat = () => {
         setActiveConversation(null);
+        setChatConfig({ source: 'en', target: 'sw', tone: 'Friendly' });
         handleSetView('chat');
         setCurrentMode('chat');
     };
@@ -161,150 +161,114 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     const handleSelectConversation = async (id: number) => {
         setIsLoading(true);
         handleSetView('chat');
-        setCurrentMode('chat'); // Ensure we are in chat mode
+        // Ensure we are in chat mode when selecting a conversation, usually conversations are chats
+        setCurrentMode('chat'); 
+        
         const { data: convoData } = await supabase.from('conversations').select('*').eq('id', id).single();
         if (convoData) {
             const { data: messagesData } = await supabase.from('chat_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
-            setActiveConversation({ ...convoData, messages: messagesData as ChatMessage[] });
+            const convo = { ...convoData, messages: messagesData as ChatMessage[] };
+            setActiveConversation(convo);
+            setChatConfig({
+                source: convo.sourceLang,
+                target: convo.targetLang,
+                tone: convo.tone
+            });
         }
         setIsLoading(false);
     };
 
-    // --- CHAT LOGIC ---
-    const handleChatSubmit = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
+    const handleChatSendMessage = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
+        if (!currentUser) return;
         setIsLoading(true);
-        
-        // 1. Determine effective config
-        const effectiveSourceLang = activeConversation?.sourceLang || tempChatState.sourceLang;
-        const effectiveTargetLang = activeConversation?.targetLang || tempChatState.targetLang;
-        const effectiveTone = activeConversation?.tone || tempChatState.tone;
-
-        // 2. Create optimistic user message
-        const newUserMsg: ChatMessage = {
-            id: Date.now(),
-            conversation_id: activeConversation?.id || 0,
-            role: 'user',
-            originalText: text,
-            created_at: new Date().toISOString(),
-            originalAudioFileName: audioSourceFileName || undefined,
-            attachments: attachments.map(f => ({ name: f.name, type: f.type }))
-        };
-
-        // Update UI immediately
-        if (activeConversation) {
-            setActiveConversation(prev => prev ? ({ ...prev, messages: [...prev.messages, newUserMsg] }) : null);
-        } else {
-            // Temporary local state for new unsaved chat
-            setActiveConversation({
-                id: 0,
-                user_id: currentUser?.id || '',
-                title: 'New Conversation',
-                messages: [newUserMsg],
-                sourceLang: effectiveSourceLang,
-                targetLang: effectiveTargetLang,
-                tone: effectiveTone,
-                created_at: new Date().toISOString()
-            });
-        }
 
         try {
-            // 3. Get AI Response
-            const result = await geminiService.getNuancedTranslation(
-                text, 
-                effectiveSourceLang, 
-                effectiveTargetLang, 
-                effectiveTone, 
-                attachments
-            );
+            let conversationId = activeConversation?.id;
+            let currentConvo = activeConversation;
 
-            const newAiMsg: ChatMessage = {
-                id: Date.now() + 1,
-                conversation_id: activeConversation?.id || 0,
-                role: 'ai',
-                originalText: '', // AI translation is in the result object
-                translation: result,
-                created_at: new Date().toISOString(),
-            };
+            // 1. Create Conversation if needed
+            if (!conversationId) {
+                const { data, error } = await supabase.from('conversations').insert({
+                    user_id: currentUser.id,
+                    title: text.substring(0, 30) + (text.length > 30 ? '...' : ''),
+                    sourceLang: chatConfig.source,
+                    targetLang: chatConfig.target,
+                    tone: chatConfig.tone
+                }).select().single();
 
-            // 4. Save to DB (if not a temp chat, or create if it is)
-            if (currentUser) {
-                let convoId = activeConversation?.id;
-
-                if (!convoId || convoId === 0) {
-                    // Create new conversation
-                    const { data: newConvo, error: convoError } = await supabase
-                        .from('conversations')
-                        .insert({
-                            user_id: currentUser.id,
-                            title: text.substring(0, 30) + '...',
-                            sourceLang: effectiveSourceLang,
-                            targetLang: effectiveTargetLang,
-                            tone: effectiveTone
-                        })
-                        .select()
-                        .single();
-                    
-                    if (newConvo) {
-                        convoId = newConvo.id;
-                        // Refresh conversation list sidebar
-                        const { data: convos } = await supabase.from('conversations').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
-                        setConversations(convos || []);
-                    }
-                }
-
-                if (convoId) {
-                    // Save messages
-                    await supabase.from('chat_messages').insert([
-                        { 
-                            conversation_id: convoId, 
-                            role: 'user', 
-                            originalText: text,
-                            // Simplification: Not storing attachments blobs in this demo
-                        },
-                        {
-                            conversation_id: convoId,
-                            role: 'ai',
-                            originalText: '',
-                            translation: result // JSONB column
-                        }
-                    ]);
-                    
-                    // Update active conversation with real ID
-                    setActiveConversation(prev => prev ? ({ ...prev, id: convoId!, messages: [...prev.messages, newAiMsg] }) : null);
-                } else {
-                     // Fallback local update if DB save fails
-                     setActiveConversation(prev => prev ? ({ ...prev, messages: [...prev.messages, newAiMsg] }) : null);
+                if (error) throw error;
+                if (data) {
+                    conversationId = data.id;
+                    currentConvo = { ...data, messages: [] };
+                    setActiveConversation(currentConvo);
+                    setConversations(prev => [data, ...prev]);
                 }
             }
 
-        } catch (error) {
-            console.error("Chat error:", error);
-            // Add error system message
-            const errorMsg: ChatMessage = {
-                id: Date.now() + 2,
-                conversation_id: activeConversation?.id || 0,
+            if (!conversationId || !currentConvo) throw new Error("Failed to initialize conversation");
+
+            // 2. Add User Message Locally & DB
+            const userMsg: ChatMessage = {
+                id: Date.now(), // Temporary ID
+                conversation_id: conversationId,
+                role: 'user',
+                originalText: text,
+                created_at: new Date().toISOString(),
+                attachments: attachments.map(f => ({ name: f.name, type: f.type })),
+                originalAudioFileName: audioSourceFileName || undefined
+            };
+
+            // Optimistic update
+            const messagesWithUser = [...currentConvo.messages, userMsg];
+            setActiveConversation({ ...currentConvo, messages: messagesWithUser });
+
+            // Persist user message
+            // Note: In a real app, upload attachments to storage first. Skipping here for demo simplicity.
+            await supabase.from('chat_messages').insert({
+                conversation_id: conversationId,
+                role: 'user',
+                "originalText": text,
+                attachments: userMsg.attachments,
+                "originalAudioFileName": audioSourceFileName
+            });
+
+            // 3. Generate AI Response
+            const result = await getNuancedTranslation(text, chatConfig.source, chatConfig.target, chatConfig.tone, attachments);
+
+            const aiMsg: ChatMessage = {
+                id: Date.now() + 1,
+                conversation_id: conversationId,
                 role: 'ai',
-                originalText: "I apologize, but I encountered an error processing your request. Please check your connection or quota and try again.",
+                originalText: result.culturallyAwareTranslation,
+                translation: result,
                 created_at: new Date().toISOString()
             };
-            setActiveConversation(prev => prev ? ({ ...prev, messages: [...prev.messages, errorMsg] }) : null);
+
+            // 4. Update UI & DB with AI Response
+            setActiveConversation({ ...currentConvo, messages: [...messagesWithUser, aiMsg] });
+            
+            await supabase.from('chat_messages').insert({
+                conversation_id: conversationId,
+                role: 'ai',
+                "originalText": result.culturallyAwareTranslation,
+                translation: result
+            });
+
+        } catch (error) {
+            console.error("Chat error:", error);
+            // Optionally add an error message to the chat
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleUpdateConfig = (key: 'sourceLang' | 'targetLang' | 'tone', value: string) => {
-        if (activeConversation && activeConversation.id !== 0) {
-            // Update existing conversation settings
-            const updates = { [key]: value };
-            setActiveConversation(prev => prev ? ({ ...prev, ...updates }) : null);
-            supabase.from('conversations').update(updates).eq('id', activeConversation.id).then();
-        } else {
-            // Update temp state
-            setTempChatState(prev => ({ ...prev, [key]: value }));
-            if (activeConversation) {
-                 setActiveConversation(prev => prev ? ({ ...prev, [key]: value }) : null);
-            }
+    const handleRateMessage = async (id: number, rating: 'good' | 'bad') => {
+        // Optimistic update
+        if (activeConversation) {
+            const updatedMessages = activeConversation.messages.map(m => 
+                m.id === id ? { ...m, rating } : m
+            );
+            setActiveConversation({ ...activeConversation, messages: updatedMessages });
         }
     };
 
@@ -331,24 +295,23 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             case 'meetings': return <MeetingSummarizer currentUser={currentUser} />;
             case 'email': return <EmailTranslator />;
             case 'transcriber': return <AudioTranscriber />;
-            case 'studio': return <Studio isOffline={isOffline} />; // Explicit Studio Mode
+            case 'studio': return <Studio isOffline={isOffline} />;
             case 'chat':
+                return <Chat 
+                    isOffline={isOffline} 
+                    messages={activeConversation?.messages || []}
+                    onSendMessage={handleChatSendMessage}
+                    onRateMessage={handleRateMessage}
+                    sourceLang={chatConfig.source}
+                    targetLang={chatConfig.target}
+                    tone={chatConfig.tone}
+                    onSourceLangChange={(lang) => setChatConfig(prev => ({ ...prev, source: lang }))}
+                    onTargetLangChange={(lang) => setChatConfig(prev => ({ ...prev, target: lang }))}
+                    onToneChange={(tone) => setChatConfig(prev => ({ ...prev, tone }))}
+                    isLoading={isLoading}
+                />;
             default:
-                return (
-                    <Chat 
-                        isOffline={isOffline}
-                        messages={activeConversation?.messages || []}
-                        onSendMessage={handleChatSubmit}
-                        onRateMessage={() => {}}
-                        isLoading={isLoading}
-                        sourceLang={activeConversation?.sourceLang || tempChatState.sourceLang}
-                        targetLang={activeConversation?.targetLang || tempChatState.targetLang}
-                        tone={activeConversation?.tone || tempChatState.tone}
-                        onSourceLangChange={(v) => handleUpdateConfig('sourceLang', v)}
-                        onTargetLangChange={(v) => handleUpdateConfig('targetLang', v)}
-                        onToneChange={(v) => handleUpdateConfig('tone', v)}
-                    />
-                );
+                return <Studio isOffline={isOffline} />;
         }
     };
     
@@ -358,20 +321,15 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         return <AdminPortal currentLibrary={libraryItems} users={allUsers} onAddItem={() => fetchLibraryItems()} onUpdateItem={() => fetchLibraryItems()} onDeleteItem={() => fetchLibraryItems()} onLogout={handleLogout} currentUser={currentUser} />;
     }
     
-    // Determine padding based on view
-    const viewsWithFullHeight = ['live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio'];
-    const shouldUseFullHeight = viewsWithFullHeight.includes(currentView) || viewsWithFullHeight.includes(currentMode);
+    // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
+    // vs views that act like traditional web pages (Page-like behavior)
+    const fullHeightViews: (View | TranslationMode)[] = [
+        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image'
+    ];
+    const isFullHeightView = fullHeightViews.includes(currentView) || fullHeightViews.includes(currentMode);
 
     return (
-      <div className="flex h-[100dvh] w-screen bg-bg-main font-sans text-text-primary overflow-hidden relative">
-          {/* Mobile Sidebar Backdrop */}
-          {isSidebarOpen && (
-            <div 
-                className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity" 
-                onClick={() => setIsSidebarOpen(false)}
-            />
-          )}
-          
+      <div className="flex h-screen w-screen bg-bg-main font-sans text-text-primary overflow-hidden relative">
           <Sidebar
               conversations={conversations}
               currentConversationId={activeConversation?.id || null}
@@ -407,14 +365,12 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
                   onLogout={handleLogout}
               />
               <main className="flex-1 overflow-hidden bg-[#0d0d0d] relative min-h-0 flex flex-col">
-                  {/* Chat/Studio views handle their own scrolling/layout */}
-                  <div className={`flex-1 min-h-0 ${shouldUseFullHeight ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
-                    <div className={!shouldUseFullHeight ? "p-4 sm:p-6 lg:p-8 h-full" : "h-full"}>
+                  <div className={`flex-1 min-h-0 ${isFullHeightView ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
+                    <div className={!isFullHeightView ? "p-4 sm:p-6 lg:p-8 min-h-full" : "h-full"}>
                         {renderContent()}
                     </div>
                   </div>
-                  {/* Hide footer for full-height interactive tools on mobile to save space, or if the view is chat/studio which has internal footers */}
-                  {!shouldUseFullHeight && (
+                  {!isFullHeightView && (
                       <Footer onShowTerms={() => handleSetView('terms')} onShowPrivacy={() => handleSetView('privacy')} onShowLanding={onShowLanding} />
                   )}
               </main>
@@ -430,320 +386,55 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
 
     const renderContent = () => {
         switch(currentView) {
-            case 'about': return <div className="py-12"><AboutPage isLandingSection={false} /></div>;
-            case 'useCases': return <div className="py-12"><UseCasesPage /></div>;
-            case 'testimonials': return <div className="py-12"><TestimonialsPage /></div>;
+            case 'about': return <div id="about" className="py-12"><AboutPage isLandingSection /></div>;
+            case 'useCases': return <div id="useCases" className="py-12"><UseCasesPage /></div>;
+            case 'testimonials': return <div id="testimonials" className="py-12"><TestimonialsPage /></div>;
             case 'home':
             default:
                 return (
                     <>
-                        {/* HERO SECTION */}
-                        <section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
-                            <div className="absolute inset-0 pointer-events-none">
-                                <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-accent/5 rounded-full blur-[120px]"></div>
-                                <div className="absolute bottom-0 right-0 w-[800px] h-[600px] bg-purple-500/5 rounded-full blur-[120px]"></div>
-                            </div>
-                            
-                            <div className="container mx-auto px-6 relative z-10 text-center">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-accent text-[10px] font-bold uppercase tracking-widest mb-8 animate-fade-in backdrop-blur-md">
-                                    The Enterprise Standard for African Localization
-                                </div>
-                                <h1 className="text-5xl md:text-7xl lg:text-8xl font-brand font-bold text-white tracking-tighter mb-8 leading-[1.1] animate-slide-in-up">
-                                    Unlock the World's Next <br/>
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-yellow-200">Global Growth Engine.</span>
+                        <section className="py-20 md:py-32 text-center relative overflow-hidden">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,163,0,0.04),transparent)]"></div>
+                            <div className="container mx-auto px-4 relative z-10">
+                                <h1 className="text-3xl sm:text-5xl md:text-6xl font-brand font-bold text-white tracking-tighter mb-4 animate-slide-in-up">
+                                    Beyond Words. <br />
+                                    <span className="text-accent">Pure Culture.</span>
                                 </h1>
-                                <p className="max-w-2xl mx-auto text-lg text-text-secondary leading-relaxed mb-12 animate-slide-in-up [animation-delay:0.1s]">
-                                    AfriTranslate Studio is the first AI infrastructure designed to bridge the gap between global business and African cultural reality. Scale operations across 54 countries with culturally intelligent automation.
+                                <p className="mt-4 max-w-lg mx-auto text-xs sm:text-sm text-text-secondary leading-relaxed mb-8 animate-slide-in-up">
+                                    World's most advanced cultural localization engine. We bridge heritage, idioms, and social nuances in real-time.
                                 </p>
-                                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-in-up [animation-delay:0.2s]">
-                                    <button onClick={() => onStart('chat')} className="px-8 py-4 bg-accent text-bg-main font-black text-sm rounded-xl hover:bg-white hover:scale-105 transition-all shadow-[0_0_40px_-10px_rgba(244,163,0,0.4)] w-full sm:w-auto uppercase tracking-wide">
-                                        Start Translating
-                                    </button>
-                                    <button onClick={() => setCurrentView('demo')} className="px-8 py-4 bg-white/5 border border-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/10 transition-all w-full sm:w-auto uppercase tracking-wide backdrop-blur-md">
-                                        View Demo
-                                    </button>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* PARTNERS SECTION */}
-                        <section className="py-12 border-y border-white/5 bg-black/20">
-                            <div className="container mx-auto px-6">
-                                <p className="text-center text-[10px] font-bold text-text-secondary uppercase tracking-[0.3em] mb-8 opacity-70">Trusted by Global Industry Leaders</p>
-                                <div className="flex flex-wrap justify-center items-center gap-x-12 gap-y-8 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
-                                    {['NETFLIX', 'GOOGLE', 'MTN', 'STANDARD BANK', 'UNICEF', 'CANAL+', 'SPOTIFY', 'UBER', 'MICROSOFT', 'BBC AFRICA', 'COCA-COLA', 'TOYOTA', 'JUMIA', 'MPESA'].map((partner) => (
-                                        <h3 key={partner} className="text-xl md:text-2xl font-brand font-bold text-white tracking-tight cursor-default hover:text-accent transition-colors">{partner}</h3>
-                                    ))}
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* STATS SECTION */}
-                        <section className="py-20 border-b border-white/5 bg-bg-surface/10 backdrop-blur-sm">
-                            <div className="container mx-auto px-6">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-12 text-center">
-                                    {[
-                                        { value: '2,000+', label: 'Dialects Supported' },
-                                        { value: '99.4%', label: 'Cultural Accuracy' },
-                                        { value: '<200ms', label: 'Voice Latency' },
-                                        { value: 'SOC-2', label: 'Compliant Security' }
-                                    ].map((stat, i) => (
-                                        <div key={i} className="space-y-2 group cursor-default">
-                                            <div className="text-4xl md:text-5xl font-black text-white group-hover:text-accent transition-colors">{stat.value}</div>
-                                            <div className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{stat.label}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* CONTEXT GAP SECTION */}
-                        <section className="py-24 bg-bg-surface/30 border-y border-white/5 relative overflow-hidden">
-                            {/* Decorative background elements */}
-                            <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-                                <div className="absolute -top-[20%] -left-[10%] w-[500px] h-[500px] bg-red-500/5 rounded-full blur-[100px]"></div>
-                                <div className="absolute -bottom-[20%] -right-[10%] w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px]"></div>
-                            </div>
-
-                            <div className="container mx-auto px-6 relative z-10">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                                    <div>
-                                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-widest mb-6">
-                                            The Problem
-                                        </div>
-                                        <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight">
-                                            Standard AI has a <br/>
-                                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-orange-400">Context Blindspot.</span>
-                                        </h2>
-                                        <p className="text-lg text-text-secondary leading-relaxed mb-8">
-                                            Legacy translation engines treat language as math. They ignore social hierarchy, historical idioms, and emotional subtext.
-                                            <br/><br/>
-                                            In Africa, where context defines meaning, this leads to catastrophic misunderstandings and brand damage.
-                                        </p>
-                                        <div className="space-y-4">
-                                            <div className="p-4 rounded-xl bg-bg-main border border-border-default opacity-60">
-                                                <p className="text-xs text-text-secondary uppercase font-bold mb-2">Generic Engine Input</p>
-                                                <p className="text-white italic">"The elder is coming."</p>
-                                                <div className="mt-2 text-red-400 text-xs font-mono">⚠ Missing honorifics. Disrespectful tone detected.</div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-accent/20 to-purple-500/20 blur-3xl rounded-full opacity-30"></div>
-                                        <div className="relative bg-bg-main border border-white/10 rounded-2xl p-8 shadow-2xl">
-                                            <div className="flex items-center justify-between mb-8 border-b border-white/5 pb-6">
-                                                <div>
-                                                    <h3 className="text-xl font-bold text-white">AfriTranslate Core</h3>
-                                                    <p className="text-xs text-accent">Cultural Intelligence Module Active</p>
-                                                </div>
-                                                <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
-                                                    <BoltIcon className="w-5 h-5"/>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="space-y-6">
-                                                <div className="flex gap-4">
-                                                    <div className="w-1 h-full bg-border-default rounded-full relative">
-                                                        <div className="absolute top-0 left-0 w-full h-1/2 bg-accent rounded-full"></div>
-                                                    </div>
-                                                    <div className="flex-1 space-y-4">
-                                                        <div>
-                                                            <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Analysis</p>
-                                                            <div className="flex flex-wrap gap-2">
-                                                                <span className="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-white">Age: Elder (70+)</span>
-                                                                <span className="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-white">Region: Yoruba (SW)</span>
-                                                                <span className="px-2 py-1 rounded bg-white/5 border border-white/5 text-[10px] text-white">Setting: Formal</span>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-xs text-text-secondary uppercase tracking-wider mb-1">Output Generation</p>
-                                                            <p className="text-lg font-serif text-white">"Baba agba n bo."</p>
-                                                            <p className="text-xs text-green-400 mt-1 flex items-center gap-1"><CheckIcon className="w-3 h-3"/> Honorifics applied. Cultural resonance 99%.</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* PLATFORM CAPABILITIES */}
-                        <section className="py-24 bg-bg-main">
-                            <div className="container mx-auto px-6">
-                                <div className="text-center max-w-3xl mx-auto mb-20">
-                                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Complete Cultural Infrastructure</h2>
-                                    <p className="text-text-secondary text-lg">
-                                        One platform to manage every aspect of your localization strategy. From real-time voice to legal documentation.
-                                    </p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                                    {/* Card 1 */}
-                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
-                                        <div className="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center mb-6 text-purple-400 group-hover:scale-110 transition-transform">
-                                            <MicrophoneIcon className="w-7 h-7"/>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Live Voice Relay</h3>
-                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
-                                            Real-time speech-to-speech translation that adapts accents and dialects instantly for Zoom, Teams, and physical meetings.
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-purple-400 transition-colors">
-                                            <span>Explore Live</span> <span className="text-lg">→</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Card 2 */}
-                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
-                                        <div className="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition-transform">
-                                            <ScriptIcon className="w-7 h-7"/>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Script Studio</h3>
-                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
-                                            Automated screenplay localization. Generates casting sides, dubbing guides, and cultural reports for film & TV production.
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-blue-400 transition-colors">
-                                            <span>Localize Scripts</span> <span className="text-lg">→</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Card 3 */}
-                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
-                                        <div className="w-14 h-14 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-6 text-orange-400 group-hover:scale-110 transition-transform">
-                                            <BookIcon className="w-7 h-7"/>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Literary Engine</h3>
-                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
-                                            Long-form translation for books and research papers. Maintains narrative continuity and adapts metaphors for local readers.
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-orange-400 transition-colors">
-                                            <span>Translate Books</span> <span className="text-lg">→</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Card 4 */}
-                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
-                                        <div className="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center mb-6 text-green-400 group-hover:scale-110 transition-transform">
-                                            <EmailIcon className="w-7 h-7"/>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Enterprise Comm.</h3>
-                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
-                                            Context-aware email and document localization. Ensures professional etiquette matches the recipient's cultural status.
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-green-400 transition-colors">
-                                            <span>Business Tools</span> <span className="text-lg">→</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Card 5 */}
-                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
-                                        <div className="w-14 h-14 bg-pink-500/10 rounded-2xl flex items-center justify-center mb-6 text-pink-400 group-hover:scale-110 transition-transform">
-                                            <ImageIcon className="w-7 h-7"/>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Visual & Motion</h3>
-                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
-                                            Generative visual arts adapted for African aesthetics. Create video and imagery that feels native to the region.
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-pink-400 transition-colors">
-                                            <span>Create Visuals</span> <span className="text-lg">→</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Card 6 */}
-                                    <div className="bg-bg-surface p-8 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1">
-                                        <div className="w-14 h-14 bg-yellow-500/10 rounded-2xl flex items-center justify-center mb-6 text-yellow-400 group-hover:scale-110 transition-transform">
-                                            <MeetingIcon className="w-7 h-7"/>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-3">Meeting Intelligence</h3>
-                                        <p className="text-sm text-text-secondary leading-relaxed mb-6">
-                                            Automated meeting summaries and action items, translated into multiple languages for cross-border teams.
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs font-bold text-white/50 group-hover:text-yellow-400 transition-colors">
-                                            <span>Analyze Meetings</span> <span className="text-lg">→</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* VALUE PROPS */}
-                        <section className="py-24 bg-bg-main border-t border-white/5">
-                            <div className="container mx-auto px-6">
-                                <div className="text-center max-w-3xl mx-auto mb-20">
-                                    <h2 className="text-3xl font-bold text-white mb-4">Strategic Advantages</h2>
-                                    <p className="text-text-secondary">Why Fortune 500 companies and NGOs choose AfriTranslate for their African expansion strategies.</p>
-                                </div>
-                                
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                    {[
-                                        { title: 'Hyper-Localization', desc: 'Move beyond generic translation. Our engine adapts content to regional dialects, ensuring your marketing resonates deeply.', icon: <GlobeIcon className="w-6 h-6"/> },
-                                        { title: 'Brand Safety', desc: 'Avoid costly cultural misunderstandings. Our system flags potential taboos and suggests culturally appropriate alternatives.', icon: <LockIcon className="w-6 h-6"/> },
-                                        { title: 'Seamless Integration', desc: 'Connect AfriTranslate directly into your CMS, CRM, or support platform via our robust API. Optimized for enterprise.', icon: <BoltIcon className="w-6 h-6"/> }
-                                    ].map((feature, i) => (
-                                        <div key={i} className="bg-bg-surface p-10 rounded-3xl border border-white/5 hover:border-accent/30 transition-all group hover:-translate-y-1 duration-300">
-                                            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mb-8 text-accent group-hover:scale-110 transition-transform">
-                                                {feature.icon}
-                                            </div>
-                                            <h3 className="text-xl font-bold text-white mb-4">{feature.title}</h3>
-                                            <p className="text-text-secondary leading-relaxed text-sm">{feature.desc}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* DEMO SECTION */}
-                        <div id="demo" className="py-24 border-t border-white/5 bg-bg-surface/20">
-                            <DemoSection isLandingSection={true} />
-                        </div>
-
-                        {/* CTA */}
-                        <section className="py-32 relative overflow-hidden">
-                            <div className="absolute inset-0 bg-accent/5"></div>
-                            <div className="container mx-auto px-6 relative z-10 text-center">
-                                <h2 className="text-4xl md:text-5xl font-bold text-white mb-8">Ready to expand your reach?</h2>
-                                <p className="text-text-secondary max-w-2xl mx-auto mb-12 text-lg">
-                                    Join 10,000+ creators, businesses, and NGOs using AfriTranslate to connect authentically with the African continent.
-                                </p>
-                                <button onClick={() => onStart('chat')} className="px-12 py-5 bg-accent text-bg-main font-black text-sm rounded-xl hover:bg-white hover:scale-105 transition-all shadow-2xl uppercase tracking-wider">
-                                    GET STARTED FOR FREE
+                                <button onClick={() => onStart('chat')} className="px-8 py-3 bg-accent text-bg-main text-[12px] font-black rounded-lg hover:scale-105 transition-all shadow-xl">
+                                    START LOCALIZING
                                 </button>
                             </div>
                         </section>
+                        <div id="demo-section" className="py-12 border-y border-border-default bg-bg-surface/30">
+                            <DemoSection isLandingSection={true} />
+                        </div>
                     </>
                 );
         }
     };
 
     return (
-        <div className="bg-bg-main h-full w-full text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
-            <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-20 transition-all duration-300 flex-shrink-0">
-                <div className="container mx-auto px-6 h-full flex items-center justify-between">
-                    <button onClick={() => setCurrentView('home')} className="flex items-center gap-3 hover:opacity-80 transition-opacity group">
-                        <div className="text-accent group-hover:scale-110 transition-transform"><LogoIcon className="w-8 h-8" /></div>
-                        <span className="text-lg font-brand font-bold text-white tracking-tighter">AfriTranslate AI</span>
+        <div className="bg-bg-main min-h-screen text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
+            <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-14 flex-shrink-0">
+                <div className="container mx-auto px-4 h-full flex items-center justify-between">
+                    <button onClick={() => setCurrentView('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                        <LogoIcon className="w-6 h-6" />
+                        <span className="text-sm sm:text-base font-brand font-bold text-white tracking-tighter">AfriTranslate AI</span>
                     </button>
-                    <nav className="hidden lg:flex items-center gap-10">
-                        <button onClick={() => setCurrentView('home')} className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${currentView === 'home' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Home</button>
-                        <button onClick={() => setCurrentView('about')} className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Mission</button>
-                        <button onClick={() => setCurrentView('useCases')} className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${currentView === 'useCases' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Solutions</button>
-                        <button onClick={() => setCurrentView('testimonials')} className={`text-[11px] font-bold uppercase tracking-widest transition-colors ${currentView === 'testimonials' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Partners</button>
+                    <nav className="hidden lg:flex items-center gap-6">
+                        <button onClick={() => setCurrentView('about')} className={`text-[11px] font-semibold transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>About</button>
+                        <button onClick={() => setCurrentView('useCases')} className={`text-[11px] font-semibold transition-colors ${currentView === 'useCases' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Use Cases</button>
+                        <button onClick={() => setCurrentView('testimonials')} className={`text-[11px] font-semibold transition-colors ${currentView === 'testimonials' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Users</button>
                     </nav>
-                    <div className="flex items-center gap-6">
-                        <button onClick={() => onStart('chat')} className="text-xs font-bold text-white hover:text-accent transition-colors hidden sm:block uppercase tracking-wide">Log In</button>
-                        <button onClick={() => onStart('chat')} className="px-6 py-2.5 bg-accent text-bg-main font-black text-xs rounded-lg hover:bg-white hover:scale-105 transition-all shadow-lg shadow-accent/20 uppercase tracking-wide">
-                            LAUNCH STUDIO
-                        </button>
-                    </div>
+                    <button onClick={() => onStart('chat')} className="px-4 py-1.5 bg-accent text-bg-main font-bold text-[11px] rounded hover:scale-105 transition-all">Launch Studio</button>
                 </div>
             </header>
-
             <main className="flex-1">
                 {renderContent()}
             </main>
-
             <Footer onShowTerms={() => onStart('terms')} onShowPrivacy={() => onStart('privacy')} onShowLanding={() => setCurrentView('home')} />
         </div>
     );
@@ -782,14 +473,7 @@ const App: React.FC = () => {
 
     const handleGoogleLogin = async () => {
         wasJustSignedUpRef.current = false;
-        // Include redirect URL to current origin to handle dynamic preview domains
-        const { error } = await supabase.auth.signInWithOAuth({ 
-            provider: 'google',
-            options: {
-                redirectTo: window.location.origin
-            }
-        });
-        if (error) throw error;
+        await supabase.auth.signInWithOAuth({ provider: 'google' });
     };
 
     if (loading) return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;

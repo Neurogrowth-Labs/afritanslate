@@ -70,7 +70,7 @@ const SourceReader: React.FC<SourceReaderProps> = ({ text, annotations, scrollMo
         });
 
         return (
-            <div className="whitespace-pre-wrap leading-relaxed font-serif text-[15px] text-text-primary/90">
+            <div className="whitespace-pre-wrap leading-relaxed font-serif text-[14px] text-text-primary/90">
                 {parts.map((part, i) => {
                     if (part.annotation) {
                         let colorClass = "";
@@ -102,15 +102,15 @@ const SourceReader: React.FC<SourceReaderProps> = ({ text, annotations, scrollMo
     }, [text, annotations, scrollMode, currentPage]);
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full min-h-0">
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                 {renderHighlightedText}
             </div>
             {scrollMode === 'paginated' && pageCount > 1 && (
-                <div className="flex justify-between items-center p-3 border-t border-border-default bg-bg-surface/50 text-xs">
-                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="hover:text-white disabled:opacity-30">Previous</button>
-                    <span>Page {currentPage} of {pageCount}</span>
-                    <button disabled={currentPage === pageCount} onClick={() => setCurrentPage(p => p + 1)} className="hover:text-white disabled:opacity-30">Next</button>
+                <div className="flex justify-between items-center p-2 border-t border-border-default bg-bg-surface/50 text-[10px]">
+                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} className="hover:text-white disabled:opacity-30 px-2 py-1">Prev</button>
+                    <span className="text-text-secondary">Page {currentPage} / {pageCount}</span>
+                    <button disabled={currentPage === pageCount} onClick={() => setCurrentPage(p => p + 1)} className="hover:text-white disabled:opacity-30 px-2 py-1">Next</button>
                 </div>
             )}
         </div>
@@ -135,29 +135,29 @@ const CulturalIntegrityPanel: React.FC<CulturalIntegrityPanelProps> = ({ isOpen,
 
     const renderScore = (label: string, score: number, color: string) => (
         <div className="flex flex-col items-center gap-1">
-            <div className="relative w-12 h-12 flex items-center justify-center">
+            <div className="relative w-10 h-10 flex items-center justify-center">
                 <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="24" cy="24" r="20" className="text-border-default stroke-current" strokeWidth="4" fill="none" />
+                    <circle cx="20" cy="20" r="16" className="text-border-default stroke-current" strokeWidth="3" fill="none" />
                     <circle 
-                        cx="24" cy="24" r="20" 
+                        cx="20" cy="20" r="16" 
                         className={`stroke-current ${color} transition-all duration-1000 ease-out`} 
-                        strokeWidth="4" 
+                        strokeWidth="3" 
                         fill="none" 
-                        strokeDasharray={126} 
-                        strokeDashoffset={126 - (126 * score) / 100} 
+                        strokeDasharray={100} 
+                        strokeDashoffset={100 - (100 * score) / 100} 
                     />
                 </svg>
-                <span className="absolute text-[10px] font-bold text-white">{score}</span>
+                <span className="absolute text-[9px] font-bold text-white">{score}</span>
             </div>
-            <span className="text-[9px] text-text-secondary uppercase tracking-wider text-center leading-tight">{label}</span>
+            <span className="text-[8px] text-text-secondary uppercase tracking-wider text-center leading-tight">{label}</span>
         </div>
     );
 
     const renderSlider = (label: string, leftLabel: string, rightLabel: string, value: number, onChange: (val: number) => void) => (
         <div className="space-y-2">
             <div className="flex justify-between items-end">
-                <span className="text-[10px] font-bold text-text-primary uppercase tracking-widest">{label}</span>
-                <span className="text-[10px] text-accent font-bold">{value}%</span>
+                <span className="text-[9px] font-bold text-text-primary uppercase tracking-widest">{label}</span>
+                <span className="text-[9px] text-accent font-bold">{value}%</span>
             </div>
             <input 
                 type="range" 
@@ -165,9 +165,9 @@ const CulturalIntegrityPanel: React.FC<CulturalIntegrityPanelProps> = ({ isOpen,
                 max="100" 
                 value={value} 
                 onChange={(e) => onChange(parseInt(e.target.value))}
-                className="w-full h-1.5 bg-border-default rounded-lg appearance-none cursor-pointer accent-accent"
+                className="w-full h-1 bg-border-default rounded-lg appearance-none cursor-pointer accent-accent"
             />
-            <div className="flex justify-between text-[9px] text-text-secondary font-medium">
+            <div className="flex justify-between text-[8px] text-text-secondary font-medium">
                 <span>{leftLabel}</span>
                 <span>{rightLabel}</span>
             </div>
@@ -175,32 +175,32 @@ const CulturalIntegrityPanel: React.FC<CulturalIntegrityPanelProps> = ({ isOpen,
     );
 
     return (
-        <div className="absolute top-16 right-4 w-72 bg-bg-surface/95 backdrop-blur-md border border-accent/30 rounded-xl shadow-2xl z-50 animate-fade-in flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-border-default flex justify-between items-center bg-accent/5">
+        <div className="absolute top-16 right-4 w-64 bg-bg-surface/95 backdrop-blur-md border border-accent/30 rounded-xl shadow-2xl z-50 animate-fade-in flex flex-col overflow-hidden">
+            <div className="p-3 border-b border-border-default flex justify-between items-center bg-accent/5">
                 <div className="flex items-center gap-2">
-                    <BrainIcon className="w-4 h-4 text-accent" />
-                    <h3 className="text-xs font-bold text-white uppercase tracking-widest">Cultural Integrity</h3>
+                    <BrainIcon className="w-3.5 h-3.5 text-accent" />
+                    <h3 className="text-[10px] font-bold text-white uppercase tracking-widest">Cultural Integrity</h3>
                 </div>
-                <button onClick={onClose} className="text-text-secondary hover:text-white transition-colors"><CloseIcon className="w-4 h-4"/></button>
+                <button onClick={onClose} className="text-text-secondary hover:text-white transition-colors"><CloseIcon className="w-3.5 h-3.5"/></button>
             </div>
 
             {/* Metrics Section */}
-            <div className="p-4 grid grid-cols-2 gap-4 border-b border-border-default bg-bg-main/30">
-                {renderScore("Cultural Accuracy", metrics?.culturalAccuracy || 0, "text-green-400")}
-                {renderScore("Idiom Preservation", metrics?.idiomPreservation || 0, "text-blue-400")}
+            <div className="p-3 grid grid-cols-2 gap-3 border-b border-border-default bg-bg-main/30">
+                {renderScore("Cultural", metrics?.culturalAccuracy || 0, "text-green-400")}
+                {renderScore("Idioms", metrics?.idiomPreservation || 0, "text-blue-400")}
                 {renderScore("Readability", metrics?.readability || 0, "text-yellow-400")}
-                {renderScore("Localization Depth", metrics?.localizationDepth || 0, "text-purple-400")}
+                {renderScore("Depth", metrics?.localizationDepth || 0, "text-purple-400")}
             </div>
 
             {/* Controls Section */}
-            <div className="p-5 space-y-6">
+            <div className="p-4 space-y-5">
                 {renderSlider("Translation Style", "Literal", "Adaptive", sliders.style, (v) => onSliderChange('style', v))}
                 {renderSlider("Dialect Preference", "Modern", "Traditional", sliders.dialect, (v) => onSliderChange('dialect', v))}
                 {renderSlider("Tone & Voice", "Academic", "Storytelling", sliders.tone, (v) => onSliderChange('tone', v))}
                 
                 <div className="pt-2">
-                    <p className="text-[10px] text-text-secondary italic text-center">
-                        Adjust sliders to refine the next translation chunk.
+                    <p className="text-[9px] text-text-secondary italic text-center">
+                        Refine parameters for next chunk.
                     </p>
                 </div>
             </div>
@@ -396,90 +396,89 @@ ${culturalNotes}
                 <div className="w-16 h-16 bg-accent/10 rounded-full flex items-center justify-center mb-6">
                     <BookIcon className="w-8 h-8 text-accent" />
                 </div>
-                <h1 className="text-4xl font-bold text-text-primary">Literary Studio</h1>
-                <p className="text-lg text-text-secondary mt-3 max-w-2xl">
-                    Professional long-form translation with deep cultural intelligence. 
-                    Preserves narrative continuity, adapts idioms, and provides reasoning notes.
+                <h1 className="text-3xl font-bold text-text-primary">Literary Studio</h1>
+                <p className="text-sm text-text-secondary mt-2 max-w-xl mx-auto">
+                    Professional long-form translation with deep cultural intelligence.
                 </p>
                 
                 <div 
                     onDrop={onDrop} 
                     onDragOver={onDragOver}
-                    className="mt-10 w-full max-w-2xl h-64 border-2 border-dashed border-border-default rounded-2xl flex flex-col items-center justify-center bg-bg-surface/30 hover:border-accent hover:bg-bg-surface transition-all group cursor-pointer"
+                    className="mt-8 w-full max-w-xl h-48 border-2 border-dashed border-border-default rounded-2xl flex flex-col items-center justify-center bg-bg-surface/30 hover:border-accent hover:bg-bg-surface transition-all group cursor-pointer"
                 >
-                    <p className="text-text-primary font-medium group-hover:scale-105 transition-transform">Drag & drop your manuscript here</p>
-                    <p className="text-text-secondary my-2 text-sm">or</p>
-                     <label className="bg-accent text-bg-main font-bold px-6 py-2.5 rounded-xl cursor-pointer hover:bg-accent/90 transition-colors shadow-lg shadow-accent/10">
+                    <p className="text-text-primary font-medium text-sm group-hover:scale-105 transition-transform">Drag & drop your manuscript here</p>
+                    <p className="text-text-secondary my-2 text-xs">or</p>
+                     <label className="bg-accent text-bg-main font-bold px-6 py-2 rounded-lg cursor-pointer hover:bg-accent/90 transition-colors shadow-lg shadow-accent/10 text-xs">
                         Upload File
                         <input type="file" className="hidden" onChange={handleFileChange} accept=".txt,.md,.docx,.pdf" />
                     </label>
-                    <p className="text-[10px] text-text-secondary mt-4 uppercase tracking-widest opacity-60">Supports .txt, .md</p>
+                    <p className="text-[10px] text-text-secondary mt-3 uppercase tracking-widest opacity-60">Supports .txt, .md</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="flex flex-col h-full animate-fade-in bg-[#0d0d0d] relative">
+        <div className="flex flex-col h-full animate-fade-in bg-[#0d0d0d] relative w-full">
             {/* Header Configuration Panel */}
-            <div className="flex-shrink-0 p-4 border-b border-border-default bg-bg-surface z-10 shadow-sm">
-                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4 mb-4">
+            <div className="flex-shrink-0 p-3 border-b border-border-default bg-bg-surface z-10 shadow-sm">
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 mb-3">
                      <div className="flex items-center gap-3">
-                        <div className="bg-accent/20 p-2 rounded-lg"><BookIcon className="w-5 h-5 text-accent"/></div>
+                        <div className="bg-accent/20 p-1.5 rounded-lg"><BookIcon className="w-4 h-4 text-accent"/></div>
                         <div>
-                            <h1 className="text-xl font-bold text-white leading-none">Literary Studio</h1>
-                            <p className="text-[11px] text-text-secondary truncate max-w-xs mt-1 font-mono">{fileName}</p>
+                            <h1 className="text-lg font-bold text-white leading-none">Literary Studio</h1>
+                            <p className="text-[10px] text-text-secondary truncate max-w-xs mt-0.5 font-mono">{fileName}</p>
                         </div>
                     </div>
-                     <div className="flex items-center gap-3 w-full xl:w-auto overflow-x-auto no-scrollbar">
+                     <div className="flex items-center gap-2 w-full xl:w-auto overflow-x-auto no-scrollbar">
                          <button 
                             onClick={() => setShowIntegrityPanel(!showIntegrityPanel)}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border text-xs font-bold transition-colors whitespace-nowrap ${showIntegrityPanel ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-main border-border-default text-text-secondary hover:text-white'}`}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-md border text-[10px] font-bold transition-colors whitespace-nowrap ${showIntegrityPanel ? 'bg-accent/10 border-accent text-accent' : 'bg-bg-main border-border-default text-text-secondary hover:text-white'}`}
                          >
-                            <BrainIcon className="w-4 h-4"/>
+                            <BrainIcon className="w-3.5 h-3.5"/>
                             <span>Integrity</span>
                          </button>
-                         <div className="h-6 w-px bg-border-default mx-1 flex-shrink-0"></div>
-                         <button onClick={handleTranslate} disabled={isLoading} className="flex-1 xl:flex-none px-6 py-2.5 bg-accent text-bg-main font-bold rounded-lg hover:scale-105 active:scale-95 disabled:bg-border-default disabled:cursor-not-allowed transition-all shadow-lg shadow-accent/20 whitespace-nowrap">
+                         <div className="h-5 w-px bg-border-default mx-1 flex-shrink-0"></div>
+                         <button onClick={handleTranslate} disabled={isLoading} className="flex-1 xl:flex-none px-4 py-2 bg-accent text-bg-main font-bold rounded-md hover:scale-105 active:scale-95 disabled:bg-border-default disabled:cursor-not-allowed transition-all text-[10px] uppercase tracking-wide whitespace-nowrap">
                             {isLoading ? 'Translating...' : 'Translate Manuscript'}
                         </button>
-                        <button onClick={handleDownload} disabled={!translatedText} className="p-2.5 bg-bg-main border border-border-default text-white rounded-lg hover:bg-border-default disabled:opacity-50 transition-colors" title="Download">
-                            <DownloadIcon className="w-5 h-5"/>
+                        <button onClick={handleDownload} disabled={!translatedText} className="p-2 bg-bg-main border border-border-default text-white rounded-md hover:bg-border-default disabled:opacity-50 transition-colors" title="Download">
+                            <DownloadIcon className="w-4 h-4"/>
                         </button>
-                        <button onClick={handleReset} className="px-4 py-2.5 bg-bg-main border border-border-default text-text-secondary font-semibold rounded-lg hover:text-white transition-colors">New</button>
+                        <button onClick={handleReset} className="px-3 py-2 bg-bg-main border border-border-default text-text-secondary font-semibold rounded-md hover:text-white transition-colors text-[10px] uppercase">New</button>
                     </div>
                 </div>
 
                 {/* Basic Controls */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-bg-main rounded-xl border border-border-default/50">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-2 bg-bg-main rounded-lg border border-border-default/50">
                     <LanguageSelector label="Source" languages={LANGUAGES} value={sourceLang} onChange={setSourceLang} />
                     <LanguageSelector label="Target" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
                     
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                         <label className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Genre</label>
-                        <select value={genre} onChange={e => setGenre(e.target.value as BookGenre)} className="w-full p-1.5 bg-bg-surface border border-border-default rounded text-[11px] text-white focus:ring-1 focus:ring-accent outline-none">
+                        <select value={genre} onChange={e => setGenre(e.target.value as BookGenre)} className="w-full p-1.5 bg-bg-surface border border-border-default rounded text-[11px] text-white focus:ring-1 focus:ring-accent outline-none h-[28px]">
                             {['Literary Fiction', 'Academic', 'Business', 'Religious', 'Children', 'Poetry', 'Non-Fiction'].map(g => <option key={g} value={g}>{g}</option>)}
                         </select>
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                         <label className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Target Context</label>
                         <input 
                             type="text" 
                             value={culturalContext} 
                             onChange={e => setCulturalContext(e.target.value)} 
                             placeholder="e.g. Modern Urban Youth" 
-                            className="w-full p-1.5 bg-bg-surface border border-border-default rounded text-[11px] text-white focus:ring-1 focus:ring-accent outline-none placeholder:text-text-secondary/50"
+                            className="w-full p-1.5 bg-bg-surface border border-border-default rounded text-[11px] text-white focus:ring-1 focus:ring-accent outline-none placeholder:text-text-secondary/50 h-[28px]"
                         />
                     </div>
                 </div>
 
                  {(isLoading || progress > 0) && (
-                    <div className="mt-4 relative h-1 bg-border-default rounded-full overflow-hidden">
+                    <div className="mt-3 relative h-1 bg-border-default rounded-full overflow-hidden">
                         <div className="absolute top-0 left-0 h-full bg-accent transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
                     </div>
                 )}
-                {error && <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-xs text-center">{error}</div>}
+                {error && <div className="mt-2 p-1.5 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-[10px] text-center">{error}</div>}
             </div>
 
             {/* Cultural Integrity Panel (Floating) */}
@@ -494,18 +493,18 @@ ${culturalNotes}
             {/* Main 2-Column Editor Layout - Responsive update here */}
             <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
                 {/* 1. Source Text Reader */}
-                <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-border-default min-h-[40%] lg:min-w-[300px]">
-                    <div className="p-2 border-b border-border-default bg-bg-surface/50 flex justify-between items-center sticky top-0">
-                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Source Book Reader</span>
+                <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-border-default min-h-0 lg:min-w-[300px]">
+                    <div className="p-2 border-b border-border-default bg-bg-surface/50 flex justify-between items-center flex-shrink-0">
+                        <span className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Source Reader</span>
                         <div className="flex items-center gap-3">
                             <div className="hidden sm:flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-blue-500"></span><span className="text-[9px] text-text-secondary">Idiom</span>
-                                <span className="w-2 h-2 rounded-full bg-orange-500"></span><span className="text-[9px] text-text-secondary">Culture</span>
-                                <span className="w-2 h-2 rounded-full bg-purple-500"></span><span className="text-[9px] text-text-secondary">Proverb</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span><span className="text-[9px] text-text-secondary">Idiom</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span><span className="text-[9px] text-text-secondary">Culture</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span><span className="text-[9px] text-text-secondary">Proverb</span>
                             </div>
                             <button 
                                 onClick={() => setScrollMode(prev => prev === 'paginated' ? 'continuous' : 'paginated')}
-                                className="text-[9px] font-bold px-2 py-1 bg-bg-main border border-border-default rounded hover:bg-border-default transition-colors uppercase tracking-wider"
+                                className="text-[8px] font-bold px-2 py-0.5 bg-bg-main border border-border-default rounded hover:bg-border-default transition-colors uppercase tracking-wider"
                             >
                                 {scrollMode} view
                             </button>
@@ -517,11 +516,11 @@ ${culturalNotes}
                 </div>
 
                 {/* 2. Translation Workspace */}
-                <div className="flex-1 flex flex-col min-h-[40%] lg:min-w-[300px] bg-[#111]">
-                    <div className="p-2 border-b border-border-default bg-bg-surface/50 flex justify-between items-center sticky top-0">
-                        <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Translation Workspace</span>
+                <div className="flex-1 flex flex-col min-h-0 lg:min-w-[300px] bg-[#111]">
+                    <div className="p-2 border-b border-border-default bg-bg-surface/50 flex justify-between items-center flex-shrink-0">
+                        <span className="text-[9px] font-bold text-accent uppercase tracking-widest">Translation Output</span>
                         <div className="flex items-center gap-2">
-                            <span className="text-[9px] text-green-400 font-bold uppercase animate-pulse">{isLoading ? 'Syncing...' : 'Live'}</span>
+                            <span className="text-[8px] text-green-400 font-bold uppercase animate-pulse">{isLoading ? 'Syncing...' : 'Live'}</span>
                         </div>
                     </div>
                     <div className="flex-1 flex flex-col overflow-hidden">
@@ -529,16 +528,16 @@ ${culturalNotes}
                             value={translatedText}
                             onChange={(e) => setTranslatedText(e.target.value)}
                             placeholder="Translation will generate here..."
-                            className="flex-1 w-full p-6 bg-transparent resize-none focus:outline-none text-[15px] leading-relaxed text-text-primary font-serif overflow-y-auto custom-scrollbar" 
+                            className="flex-1 w-full p-6 bg-transparent resize-none focus:outline-none text-[14px] leading-relaxed text-text-primary font-serif overflow-y-auto custom-scrollbar" 
                         />
                         {/* Inline Explanations Section (Collapsible) */}
                         {culturalNotes && (
-                            <div className="border-t border-border-default bg-bg-surface/20 max-h-[30%] flex flex-col">
-                                <div className="p-2 px-4 bg-bg-surface/50 text-[10px] font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 cursor-pointer hover:text-white">
-                                    <InfoIcon className="w-3 h-3"/> AI Explanations & Notes
+                            <div className="border-t border-border-default bg-bg-surface/20 max-h-[30%] flex flex-col flex-shrink-0">
+                                <div className="p-1.5 px-3 bg-bg-surface/50 text-[9px] font-bold text-text-secondary uppercase tracking-widest flex items-center gap-2 cursor-pointer hover:text-white">
+                                    <InfoIcon className="w-3 h-3"/> AI Notes
                                 </div>
-                                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                                    <div className="prose prose-invert prose-sm max-w-none text-[12px] text-text-secondary leading-normal whitespace-pre-wrap font-mono">
+                                <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+                                    <div className="prose prose-invert prose-sm max-w-none text-[11px] text-text-secondary leading-normal whitespace-pre-wrap font-mono">
                                         {culturalNotes}
                                     </div>
                                 </div>
