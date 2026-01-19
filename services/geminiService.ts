@@ -47,26 +47,38 @@ async function fileToGenerativePart(file: File) {
     return { inlineData: { mimeType: file.type, data: await base64EncodedDataPromise } };
 }
 
-export async function getNuancedTranslation(text: string, sourceLang: string, targetLang: string, tone: string, attachments: File[] = []): Promise<TranslationResult> {
+export async function getNuancedTranslation(
+    text: string, 
+    sourceLang: string, 
+    targetLang: string, 
+    tone: string, 
+    attachments: File[] = [], 
+    targetRegion?: string
+): Promise<TranslationResult> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // ENHANCED PROMPT FOR TECHNICAL ACCURACY + CULTURAL NUANCE
+    // ENHANCED PROMPT FOR TECHNICAL ACCURACY + REGIONAL CULTURAL NUANCE
+    const regionInstruction = targetRegion && targetRegion !== 'General' 
+        ? `**STRICT REGIONAL LOCALIZATION**: You are translating specifically for ${targetRegion}. You MUST use the vocabulary, slang, idioms, and social etiquette specific to ${targetRegion}. For example, if French (DRC) is selected, use terms like "Sapeur" or "Cadeau" in their local context, different from Metropolitan French.` 
+        : `**Standard Localization**: Translate for a general audience of the target language.`;
+
     const prompt = `
       You are an expert Linguistic AI specialized in African languages and technical localization.
       
       Task: Translate the source text from ${sourceLang} to ${targetLang}.
       Target Tone: ${tone}.
+      ${regionInstruction}
       
       CRITICAL INSTRUCTIONS:
-      1. **Technical Precision**: If the input contains Medical, Legal, Engineering, or Financial terminology, you MUST preserve the exact technical meaning. Do not use colloquial metaphors that dilute technical accuracy. Use widely accepted loanwords if a native term does not exist for a specific technical concept (e.g., "MRI scan", "Subpoena", "Encryption").
-      2. **Cultural Resonance**: For non-technical phrases, greetings, and social connectors, adapt them deeply to match the local culture, idioms, and social hierarchy of the ${targetLang} speaking region.
+      1. **Technical Precision**: If the input contains Medical, Legal, Engineering, or Financial terminology, you MUST preserve the exact technical meaning. Do not use colloquial metaphors that dilute technical accuracy. Use widely accepted loanwords if a native term does not exist for a specific technical concept.
+      2. **Cultural Resonance**: For non-technical phrases, greetings, and social connectors, adapt them deeply to match the local culture, idioms, and social hierarchy of the target region (${targetRegion || 'General'}).
       3. **Formal Tone**: If Tone is 'Formal' or 'Business', ensure strict adherence to honorifics and respectful address.
       
       Output Format: JSON with the following fields:
       - directTranslation: A literal translation.
-      - culturallyAwareTranslation: The final polished version blending technical accuracy with cultural flow.
-      - explanation: A brief note explaining 1) any technical terms preserved/adapted and 2) cultural nuances added.
+      - culturallyAwareTranslation: The final polished version blending technical accuracy with specific regional nuances.
+      - explanation: A brief note explaining 1) any technical terms preserved/adapted and 2) specific regional cultural nuances added (e.g., "Used 'Jambo' typical in Kenya" vs "Habari" elsewhere).
       - pronunciation: A phonetic guide for the culturally aware translation.
 
       Source Text: "${text}"
@@ -78,50 +90,26 @@ export async function getNuancedTranslation(text: string, sourceLang: string, ta
     const response = await ai.models.generateContent({
       model: "gemini-flash-lite-latest",
       contents: { parts: contents.parts },
-      config: { responseMimeType: "application/json", responseSchema: translationSchema, temperature: 0.4 }, // Lower temperature for technical accuracy
+      config: { responseMimeType: "application/json", responseSchema: translationSchema, temperature: 0.4 }, 
     });
     return JSON.parse(response.text.trim()) as TranslationResult;
   } catch (error) { throw handleApiError(error, "getting translation"); }
 }
 
-// New function for low-latency live meeting translation
-export async function translateMeetingChunk(text: string, targetLang: string, tone: string): Promise<string> {
-    if (!text.trim()) return "";
-    try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `
-        Translate this meeting transcript chunk into ${targetLang}.
-        Tone: ${tone} (use appropriate idioms/expressions).
-        Keep names and speaker labels intact if present.
-        Return ONLY the translated text. No JSON.
-        
-        Text: "${text}"
-        `;
-        
-        const response = await ai.models.generateContent({
-            model: "gemini-flash-lite-latest",
-            contents: prompt,
-            config: { temperature: 0.3 }
-        });
-        return response.text.trim();
-    } catch (error) {
-        console.error("Chunk translation failed", error);
-        return text; // Fallback to original text on failure
-    }
-}
-
-export async function localizeEmail(subject: string, body: string, targetLang: string, tone: string, context: string): Promise<EmailLocalizationResult> {
+export async function localizeEmail(subject: string, body: string, targetLang: string, tone: string, context: string, targetRegion?: string): Promise<EmailLocalizationResult> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const regionContext = targetRegion ? `Target Region: ${targetRegion}.` : '';
+    
     const prompt = `
     Role: Professional Executive Assistant & Cultural Liaison.
     Task: Localize this email into ${targetLang} with a ${tone} tone.
-    Context: ${context}.
+    Context: ${context}. ${regionContext}
     
     GUIDELINES:
-    1. **Business Protocol**: Ensure the greeting and sign-off perfectly match the social hierarchy defined in the context.
-    2. **Terminology**: If the email discusses business contracts, medical issues, or technical projects, maintain strict terminology accuracy. Do not "dumb down" professional language.
-    3. **Cultural Nuance**: Adjust the level of directness. (e.g., in some African cultures, jumping straight to business is rude; add necessary pleasantries).
+    1. **Business Protocol**: Ensure the greeting and sign-off perfectly match the social hierarchy defined in the context and the specific ${targetRegion || 'General'} culture.
+    2. **Deep Localization**: Use phrasing specific to ${targetRegion || targetLang}.
+    3. **Cultural Nuance**: Adjust the level of directness.
     
     Source Subject: "${subject}"
     Source Body: "${body}"
@@ -141,6 +129,7 @@ export async function localizeEmail(subject: string, body: string, targetLang: s
   } catch (error) { throw handleApiError(error, "localizing email"); }
 }
 
+// ... existing textToSpeech, transcribeAudio ... 
 export async function textToSpeech(text: string, voiceName: string = 'Kore'): Promise<string> {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -166,48 +155,26 @@ export async function transcribeAudio(audioFile: File, style: TranscriptionStyle
     } catch (error) { throw handleApiError(error, "transcribing audio"); }
 }
 
-export async function translateScript(scriptText: string, sourceLang: string, targetLang: string, tone: string): Promise<string> {
+export async function translateScript(scriptText: string, sourceLang: string, targetLang: string, tone: string, targetRegion?: string): Promise<string> {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `Translate script from ${sourceLang} to ${targetLang} (${tone}). Keep formatting. Adapt for cultural resonance but preserve technical plot points or terminology if present. Text: ${scriptText}`;
+        const regionPrompt = targetRegion ? `Localize strictly for ${targetRegion}.` : '';
+        const prompt = `Translate script from ${sourceLang} to ${targetLang} (${tone}). ${regionPrompt} Keep formatting. Adapt for specific cultural resonance of the region but preserve technical plot points. Text: ${scriptText}`;
         const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { temperature: 0.5 } });
         return response.text;
     } catch (error) { throw handleApiError(error, "translating script"); }
 }
 
-// Master AI Prompt for Book Translation implemented as System Instruction
+// ... existing translateBook ...
 const BOOK_TRANSLATOR_SYSTEM_INSTRUCTION = `
 🔹 SYSTEM ROLE
-Long-form literary translation
-Academic and professional publishing
-African, global, and indigenous cultural contexts
-Idioms, metaphors, proverbs, oral traditions, and narrative nuance
-Cross-chapter semantic memory and narrative continuity
+Long-form literary translation.
 You do not translate words literally unless explicitly instructed.
-You translate meaning, intent, emotion, and cultural significance.
+You translate meaning, intent, emotion, and cultural significance specific to the target region.
 
 🔹 CULTURAL INTELLIGENCE RULES (CRITICAL)
 Identify idioms, metaphors, proverbs, and culturally loaded phrases.
-If no direct equivalent exists: Adapt the meaning using a culturally appropriate expression. Preserve emotional and symbolic intent.
-Never translate idioms word-for-word if it distorts meaning.
-Retain cultural references where meaningful. When references may be unfamiliar to the target culture: Subtly localize without erasing the original context.
-Add an internal reasoning note (not visible to end readers unless requested).
-
-🔹 QUALITY STANDARDS
-Translation must be: Fluent, Natural, Culturally intelligent, Free from machine-translation artifacts, Suitable for professional publication.
-The final text should pass as: “Translated by a native-level literary translator with cultural expertise.”
-
-🔹 METRICS EVALUATION
-Evaluate your own translation on a scale of 0-100 for:
-- Cultural Accuracy
-- Idiom Preservation
-- Readability
-- Localization Depth
-
-🔹 FAILURE CONDITIONS
-Do not: Translate idioms literally when meaning is lost. Erase cultural identity. Simplify complex ideas unnecessarily. Change the author’s intent or ideology.
-
-Translate with respect, intelligence, and cultural depth. Your role is not just to translate language — your role is to translate humanity.
+If no direct equivalent exists: Adapt the meaning using a culturally appropriate expression for the target REGION.
 `;
 
 export async function translateBook(
@@ -219,8 +186,6 @@ export async function translateBook(
     onProgress: (progress: number, chunk: string, notes: string, annotations: BookAnnotation[], metrics: TranslationMetrics) => void
 ): Promise<void> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    // Chunking strategy: 4000 characters to maintain context but stay within reasonable generation limits
     const chunkSize = 4000;
     const chunks = [];
     for (let i = 0; i < bookText.length; i += chunkSize) {
@@ -241,49 +206,25 @@ export async function translateBook(
         Dialect Preference: ${config.dialect}
         Book Section: Chunk ${i + 1} of ${chunks.length}
 
-        🔹 NARRATIVE CONTINUITY CONTEXT
-        (Use this to maintain consistency in voice, names, and terminology from previous chunks)
-        ${previousContext}
-
         🔹 SOURCE TEXT TO TRANSLATE
         "${chunks[i]}"
 
         🔹 OUTPUT REQUIREMENT
-        Return valid JSON only. Format:
-        {
-            "translation": "The full translated text for this chunk...",
-            "notes": "Bulleted list of cultural and idiom notes explaining specific adaptations made in this chunk.",
-            "annotations": [
-                {
-                    "originalPhrase": "Exact substring from source text",
-                    "type": "idiom" | "cultural" | "proverb" | "entity",
-                    "explanation": "Brief explanation of meaning and adaptation"
-                }
-            ],
-            "metrics": {
-                "culturalAccuracy": 85,
-                "idiomPreservation": 90,
-                "readability": 88,
-                "localizationDepth": 80
-            }
-        }
+        Return valid JSON only.
         `;
 
         try {
-            // Using gemini-3-pro-preview for complex literary reasoning as requested
             const response = await ai.models.generateContent({ 
                 model: "gemini-3-pro-preview", 
                 contents: prompt,
                 config: {
                     systemInstruction: BOOK_TRANSLATOR_SYSTEM_INSTRUCTION,
                     responseMimeType: "application/json",
-                    temperature: 0.4 // Balanced for creativity and fidelity
+                    temperature: 0.4
                 }
             });
 
             const result = JSON.parse(response.text.trim());
-            
-            // Update context for next chunk (keeping it brief to avoid token overflow)
             previousContext = `Last 200 chars of prev chunk: "...${result.translation.slice(-200)}"`;
 
             onProgress(
@@ -296,7 +237,6 @@ export async function translateBook(
 
         } catch (error) {
             console.error("Chunk translation error", error);
-            // Fallback for this chunk to prevent total failure
             onProgress(
                 Math.round(((i + 1) / chunks.length) * 100), 
                 `[Error translating chunk ${i+1}. Original text retained.]\n${chunks[i]}\n\n`,
@@ -308,6 +248,7 @@ export async function translateBook(
     }
 }
 
+// ... existing summarizeMeeting ...
 export async function summarizeMeeting(transcript: string, meetingLink?: string, summaryLangName: string = 'English'): Promise<string> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -317,26 +258,56 @@ export async function summarizeMeeting(transcript: string, meetingLink?: string,
   } catch (error) { throw handleApiError(error, "summarizing meeting"); }
 }
 
-export async function startVideoGeneration(prompt: string, imageFile?: File, config?: { resolution?: '720p' | '1080p', aspectRatio?: '16:9' | '9:16' }) {
+export async function startVideoGeneration(
+    prompt: string, 
+    imageFile?: File, 
+    config?: { 
+        resolution?: '720p' | '1080p', 
+        aspectRatio?: '16:9' | '9:16',
+        duration?: string,
+        tone?: string,
+        context?: string,
+        region?: string,
+        isDeepLocalized?: boolean
+    }
+) {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     let imagePart = undefined;
     if (imageFile) {
         const part = await fileToGenerativePart(imageFile);
         imagePart = { imageBytes: part.inlineData.data, mimeType: part.inlineData.mimeType };
     }
+
+    // Enhance prompt with new parameters
+    let finalPrompt = prompt;
+    if (config) {
+        const toneStr = config.tone ? `Tone: ${config.tone}.` : '';
+        const contextStr = config.context ? `Context: ${config.context}.` : '';
+        const durationStr = config.duration ? `Duration: ${config.duration}.` : '';
+        
+        let localizationStr = '';
+        if (config.isDeepLocalized) {
+            localizationStr = `DEEP LOCALIZATION: Use culturally specific aesthetics, movement, and visual language specific to ${config.region || 'Africa'}. Ensure authentic representation of local customs.`;
+        }
+
+        finalPrompt = `${finalPrompt} ${toneStr} ${contextStr} ${durationStr} ${localizationStr}`.trim();
+    }
+
     return await ai.models.generateVideos({
         model: 'veo-3.1-fast-generate-preview',
-        prompt,
+        prompt: finalPrompt,
         image: imagePart,
         config: { numberOfVideos: 1, resolution: config?.resolution || '720p', aspectRatio: config?.aspectRatio || '16:9' }
     });
 }
 
+// ... existing pollVideoOperation ...
 export async function pollVideoOperation(operation: any) {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     return await ai.operations.getVideosOperation({ operation });
 }
 
+// ... existing analysis functions (generateSynopsis, etc) ...
 export async function generateSynopsis(scriptText: string, targetLang: string): Promise<Synopsis> {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `Generate logline and synopsis for: ${scriptText} in ${targetLang}. JSON.`;
@@ -365,12 +336,10 @@ export async function analyzeAudienceReception(scriptText: string, targetLang: s
     return JSON.parse(response.text) as AudienceReception;
 }
 
-// --- NEW PRODUCTION TOOLKIT FUNCTIONS ---
-
 export async function analyzeSceneBreakdown(scriptText: string): Promise<SceneBreakdown[]> {
     try {
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        const prompt = `Analyze the script text and extract scene breakdown details. Identify Scene Numbers, Sluglines, Locations (INT/EXT), Time of Day, List of Characters in scene, and Estimated Duration (assuming 1 page = 1 minute). Return JSON array. Script: ${scriptText.slice(0, 30000)}`; // Truncate if too large
+        const prompt = `Analyze the script text and extract scene breakdown details. Identify Scene Numbers, Sluglines, Locations (INT/EXT), Time of Day, List of Characters in scene, and Estimated Duration (assuming 1 page = 1 minute). Return JSON array. Script: ${scriptText.slice(0, 30000)}`; 
         
         const response = await ai.models.generateContent({
             model: "gemini-3-flash-preview",
@@ -492,18 +461,19 @@ export async function getBatchTranslations(
   sourceLang: string,
   targetLang: string,
   tone: string,
-  context: string
+  context: string,
+  targetRegion?: string
 ): Promise<TranslationResult[]> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const regionInstruction = targetRegion ? `Target Region: ${targetRegion}.` : '';
+    
     const prompt = `Batch translate these texts from ${sourceLang} to ${targetLang} with a ${tone} tone. 
-    Context: ${context}.
+    Context: ${context}. ${regionInstruction}
     CRITICAL: If technical, legal, or medical terms are present, preserve their exact professional meaning.
     
-    Return a JSON array of objects. Each object must have: "original" (the source text), "directTranslation", "culturallyAwareTranslation", "explanation", "pronunciation".
-    
-    Texts:
-    ${JSON.stringify(texts)}
+    Return a JSON array of objects.
+    Texts: ${JSON.stringify(texts)}
     `;
 
     const response = await ai.models.generateContent({
