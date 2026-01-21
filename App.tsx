@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
@@ -291,6 +292,27 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         fetchLibraryItems();
     };
 
+    const handleConfirmDeleteConversation = async () => {
+        if (deletingConversationId !== null) {
+            const id = deletingConversationId;
+            
+            // Optimistic UI update
+            setConversations(prev => prev.filter(c => c.id !== id));
+            
+            // If deleting the active chat, reset to new chat
+            if (activeConversation?.id === id) {
+                handleNewChat();
+            }
+
+            // Perform DB deletion
+            await supabase.from('conversations').delete().eq('id', id);
+            
+            // Close modal
+            setIsDeleteModalOpen(false);
+            setDeletingConversationId(null);
+        }
+    };
+
     const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
         await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
         const { data } = await supabase.from('profiles').select('*');
@@ -371,7 +393,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
               currentMode={currentMode}
               onNewChat={handleNewChat}
               onSelectConversation={handleSelectConversation}
-              onDeleteConversation={() => {}}
+              onDeleteConversation={(id) => { setDeletingConversationId(id); setIsDeleteModalOpen(true); }}
               onShowLibrary={() => handleSetView('library')}
               onShowPricing={() => handleSetView('pricing')}
               onChooseAddon={(name) => { setHighlightedPlan(name); setIsUpgradeModalOpen(true); }}
@@ -410,6 +432,14 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
               </main>
           </div>
           <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} highlightedPlan={highlightedPlan} onChoosePlan={(plan) => { setSelectedPlanForPayment(plan); setIsUpgradeModalOpen(false); setCurrentView('payment'); }} onContactSales={() => { setIsUpgradeModalOpen(false); setCurrentView('contact');}} />
+          
+          <ConfirmationModal 
+              isOpen={isDeleteModalOpen}
+              onClose={() => { setIsDeleteModalOpen(false); setDeletingConversationId(null); }}
+              onConfirm={handleConfirmDeleteConversation}
+              title="Delete Conversation?"
+              message="This action cannot be undone. This conversation will be permanently removed from your history."
+          />
       </div>
     );
 };

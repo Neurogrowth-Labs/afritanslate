@@ -180,34 +180,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={!hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
                     </div>
                 </div>
-
-                <div>
-                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">History</h4>
-                    {filteredConversations.length > 0 ? (
-                        <div className="space-y-0.5">
-                            {filteredConversations.map(convo => (
-                                <div key={convo.id} className="group relative px-1">
-                                    <button
-                                        onClick={() => { onSelectConversation(convo.id); setIsOpen(false); }}
-                                        className={`w-full text-left px-3 py-2 rounded-lg text-xs truncate transition-all ${
-                                            String(currentConversationId) === String(convo.id) ? 'bg-white/10 text-white font-medium' : 'text-text-secondary hover:bg-white/5 hover:text-text-primary'
-                                        }`}
-                                    >
-                                        {convo.title}
-                                    </button>
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); onDeleteConversation(convo.id); }}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    >
-                                        <TrashIcon className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="px-3 text-[10px] text-text-secondary/50 italic">No history found</p>
-                    )}
-                </div>
             </div>
 
             {/* Bottom Meta Sections */}
