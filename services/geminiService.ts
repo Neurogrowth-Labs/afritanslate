@@ -1,6 +1,7 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics, SceneBreakdown, CastingSide, DubbingLine, StoryboardPanel } from '../types';
+import { GLOTTOLOG_METADATA } from '../constants';
 
 function handleApiError(error: unknown, context: string): Error {
     console.error(`Error during ${context}:`, error);
@@ -21,6 +22,37 @@ const translationSchema = {
     culturallyAwareTranslation: { type: Type.STRING },
     explanation: { type: Type.STRING },
     pronunciation: { type: Type.STRING },
+    linguisticAnalysis: {
+        type: Type.OBJECT,
+        properties: {
+            structural: {
+                type: Type.OBJECT,
+                properties: {
+                    tonality: { type: Type.STRING, description: "Notes on tone spread, downstep, or melodies if applicable (e.g., Niger-Congo)." },
+                    nounClasses: { type: Type.STRING, description: "Notes on noun class/gender agreement (e.g., Bantu structure)." },
+                    phonetics: { type: Type.STRING, description: "Notes on unique sounds: clicks, labial-velar stops, implosives." },
+                    grammarNotes: { type: Type.STRING, description: "Notes on serial verb constructions or other specific grammar." }
+                }
+            },
+            sociolinguistic: {
+                type: Type.OBJECT,
+                properties: {
+                    intellectualization: { type: Type.STRING, description: "Strategy for technical terms: Indigenous coinage vs Loanwords." },
+                    translanguaging: { type: Type.STRING, description: "Presence of code-switching or urban superdiversity (e.g., Sheng)." },
+                    culturalContext: { type: Type.STRING, description: "The 'African Linguistic Gaze' perspective." }
+                }
+            },
+            glottolog: {
+                type: Type.OBJECT,
+                properties: {
+                    family: { type: Type.STRING },
+                    parent: { type: Type.STRING },
+                    glottocode: { type: Type.STRING },
+                    features: { type: Type.STRING }
+                }
+            }
+        }
+    }
   },
   required: ["directTranslation", "culturallyAwareTranslation", "explanation"]
 };
@@ -60,26 +92,50 @@ export async function getNuancedTranslation(
     
     // ENHANCED PROMPT FOR TECHNICAL ACCURACY + REGIONAL CULTURAL NUANCE
     const regionInstruction = targetRegion && targetRegion !== 'General' 
-        ? `**STRICT REGIONAL LOCALIZATION**: You are translating specifically for ${targetRegion}. You MUST use the vocabulary, slang, idioms, and social etiquette specific to ${targetRegion}. For example, if French (DRC) is selected, use terms like "Sapeur" or "Cadeau" in their local context, different from Metropolitan French.` 
+        ? `**STRICT REGIONAL LOCALIZATION**: You are translating specifically for ${targetRegion}. You MUST use the vocabulary, slang, idioms, and social etiquette specific to ${targetRegion}.` 
         : `**Standard Localization**: Translate for a general audience of the target language.`;
 
+    // Inject Glottolog Data
+    const glottologInfo = GLOTTOLOG_METADATA[targetLang];
+    const glottologPrompt = glottologInfo 
+        ? `
+        [SCIENTIFIC CLASSIFICATION - GLOTTOLOG]
+        Target Language: ${targetLang}
+        Family: ${glottologInfo.family} > ${glottologInfo.parent}
+        Glottocode: ${glottologInfo.glottocode}
+        Typological Features to Enforce: ${glottologInfo.features}
+        
+        INSTRUCTION: Because this language belongs to the ${glottologInfo.family} family, you must strictly adhere to its specific structural rules (e.g., if Bantu, enforce noun class concordance; if Afroasiatic/Chadic, ensure gender/number agreement).
+        `
+        : '';
+
     const prompt = `
-      You are an expert Linguistic AI specialized in African languages and technical localization.
+      You are an expert Linguistic AI specialized in African languages, rooted in decolonial frameworks and the "African Linguistic Gaze".
       
       Task: Translate the source text from ${sourceLang} to ${targetLang}.
       Target Tone: ${tone}.
       ${regionInstruction}
+      ${glottologPrompt}
       
-      CRITICAL INSTRUCTIONS:
-      1. **Technical Precision**: If the input contains Medical, Legal, Engineering, or Financial terminology, you MUST preserve the exact technical meaning. Do not use colloquial metaphors that dilute technical accuracy. Use widely accepted loanwords if a native term does not exist for a specific technical concept.
-      2. **Cultural Resonance**: For non-technical phrases, greetings, and social connectors, adapt them deeply to match the local culture, idioms, and social hierarchy of the target region (${targetRegion || 'General'}).
-      3. **Formal Tone**: If Tone is 'Formal' or 'Business', ensure strict adherence to honorifics and respectful address.
+      CRITICAL AFRICAN LINGUISTIC PRINCIPLES:
+      1. **Structural Integrity**:
+         - **Tonality**: If the target language is tonal (e.g., Yoruba, Igbo), indicate pitch changes where ambiguity might arise.
+         - **Noun Classes**: For Bantu languages (e.g., Swahili, Zulu), ensure strict noun class agreement across the sentence.
+         - **Phonetics**: Note usage of clicks (Khoisan/Bantu), labial-velar stops (West/Central), or implosives/ejectives.
+         - **Grammar**: Identify Serial Verb Constructions if applicable (e.g., West African languages).
       
-      Output Format: JSON with the following fields:
-      - directTranslation: A literal translation.
-      - culturallyAwareTranslation: The final polished version blending technical accuracy with specific regional nuances.
-      - explanation: A brief note explaining 1) any technical terms preserved/adapted and 2) specific regional cultural nuances added (e.g., "Used 'Jambo' typical in Kenya" vs "Habari" elsewhere).
-      - pronunciation: A phonetic guide for the culturally aware translation.
+      2. **Sociolinguistic & Theoretical Context**:
+         - **Intellectualization**: If technical terms exist in the indigenous language (e.g., UKZN scientific terminology for Zulu), USE THEM. Do not default to English loanwords unless necessary. Explain the choice.
+         - **Translanguaging**: If the tone is 'Informal' or 'Urban', assume a context of "superdiversity". Blend languages naturally (e.g., Sheng, Naija Pidgin) if appropriate for the region.
+         - **Linguistic Complementarity**: Communicate indigenous wisdom without sacrificing original ontological meanings.
+      
+      Output Format: JSON with:
+      - directTranslation: Literal meaning.
+      - culturallyAwareTranslation: The final polished version blending the principles above.
+      - explanation: Brief note on cultural nuances.
+      - pronunciation: Phonetic guide.
+      - linguisticAnalysis: A structured object detailing Structural (tonality, nounClasses, phonetics) and Sociolinguistic (intellectualization, translanguaging, culturalContext) factors used in this translation. 
+        Also populate the 'glottolog' field with the scientific data provided above.
 
       Source Text: "${text}"
     `;
@@ -468,8 +524,21 @@ export async function getBatchTranslations(
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const regionInstruction = targetRegion ? `Target Region: ${targetRegion}.` : '';
     
+    // Inject Glottolog Data
+    const glottologInfo = GLOTTOLOG_METADATA[targetLang];
+    const glottologPrompt = glottologInfo 
+        ? `
+        [SCIENTIFIC CLASSIFICATION - GLOTTOLOG]
+        Target Language: ${targetLang}
+        Family: ${glottologInfo.family} > ${glottologInfo.parent}
+        Features: ${glottologInfo.features}
+        STRICTLY ENFORCE THESE STRUCTURAL RULES.
+        `
+        : '';
+
     const prompt = `Batch translate these texts from ${sourceLang} to ${targetLang} with a ${tone} tone. 
     Context: ${context}. ${regionInstruction}
+    ${glottologPrompt}
     CRITICAL: If technical, legal, or medical terms are present, preserve their exact professional meaning.
     
     Return a JSON array of objects.

@@ -5,6 +5,7 @@ export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' 
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
+// FIX: Added 'home' to the View type to represent the landing page's main view.
 export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding';
 
 export type MeetingMode = 'live' | 'upload' | 'schedule';
@@ -25,12 +26,35 @@ export interface Tone {
   description: string;
 }
 
+export interface GlottologData {
+    family: string;
+    parent: string;
+    glottocode: string;
+    features: string;
+}
+
+export interface LinguisticAnalysis {
+  structural: {
+    tonality?: string;
+    nounClasses?: string;
+    phonetics?: string;
+    grammarNotes?: string;
+  };
+  sociolinguistic: {
+    intellectualization?: string; // e.g. usage of indigenous technical terms vs loanwords
+    translanguaging?: string; // e.g. code-switching notes
+    culturalContext?: string; // The "African Linguistic Gaze"
+  };
+  glottolog?: GlottologData;
+}
+
 export interface TranslationResult {
   directTranslation: string;
   culturallyAwareTranslation: string;
   explanation: string;
   pronunciation?: string;
   original?: string;
+  linguisticAnalysis?: LinguisticAnalysis;
 }
 
 export interface EmailLocalizationResult {
@@ -76,8 +100,8 @@ export interface Conversation {
   user_id: string;
   title: string;
   messages: ChatMessage[];
-  sourceLang: string;
-  targetLang: string;
+  source_lang: string;
+  target_lang: string;
   tone: string;
   created_at: string;
 }

@@ -2,13 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import type { TranslationResult } from '../types';
+import type { TranslationResult, LinguisticAnalysis } from '../types';
 import * as geminiService from '../services/geminiService';
 import { getOfflineTranslation, getBatchOfflineTranslations } from '../services/offlineService';
 import { LANGUAGES, TONES } from '../constants';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
-import { TranslateIcon, CheckIcon, InfoIcon, BatchIcon } from './Icons';
+import { TranslateIcon, CheckIcon, InfoIcon, BatchIcon, ThinkingIcon, GlobeIcon } from './Icons';
 
 interface StudioProps {
     isOffline: boolean;
@@ -32,6 +32,50 @@ const CopyIcon: React.FC<{ className?: string }> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.75H18.5a1.125 1.125 0 011.125 1.125v9.75M9.75 3.75v13.5H3.375" />
     </svg>
 );
+
+const LinguisticDeepDive: React.FC<{ analysis: LinguisticAnalysis }> = ({ analysis }) => {
+    return (
+        <div className="bg-black/30 p-4 rounded-xl border border-white/10 mt-4 animate-fade-in">
+            <h4 className="text-[10px] font-black text-accent uppercase tracking-widest mb-3 flex items-center gap-2">
+                <ThinkingIcon className="w-3.5 h-3.5"/> African Linguistic Deep Dive
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                {/* Glottolog Classification - New Column */}
+                {analysis.glottolog && (
+                    <div className="bg-white/5 p-3 rounded-lg border border-white/5">
+                        <h5 className="text-[9px] font-bold text-accent uppercase tracking-widest border-b border-white/10 pb-1 mb-2 flex items-center gap-1.5">
+                            <GlobeIcon className="w-3 h-3"/> Glottolog Classification
+                        </h5>
+                        <ul className="space-y-1.5">
+                            <li className="text-[11px] text-text-primary"><strong className="text-white/60 text-[9px] uppercase block mb-0.5">Family Tree</strong> {analysis.glottolog.family} &gt; {analysis.glottolog.parent}</li>
+                            <li className="text-[11px] text-text-primary"><strong className="text-white/60 text-[9px] uppercase block mb-0.5">Glottocode</strong> <span className="font-mono text-accent">{analysis.glottolog.glottocode}</span></li>
+                            <li className="text-[11px] text-text-primary"><strong className="text-white/60 text-[9px] uppercase block mb-0.5">Typology</strong> {analysis.glottolog.features}</li>
+                        </ul>
+                    </div>
+                )}
+
+                <div>
+                    <h5 className="text-[9px] font-bold text-text-secondary uppercase tracking-widest border-b border-white/5 pb-1 mb-2">Structural Principles</h5>
+                    <ul className="space-y-2">
+                        {analysis.structural.tonality && <li className="text-[11px] text-text-primary"><strong className="text-white">Tonality:</strong> {analysis.structural.tonality}</li>}
+                        {analysis.structural.nounClasses && <li className="text-[11px] text-text-primary"><strong className="text-white">Noun Classes:</strong> {analysis.structural.nounClasses}</li>}
+                        {analysis.structural.phonetics && <li className="text-[11px] text-text-primary"><strong className="text-white">Phonetics:</strong> {analysis.structural.phonetics}</li>}
+                        {analysis.structural.grammarNotes && <li className="text-[11px] text-text-primary"><strong className="text-white">Grammar:</strong> {analysis.structural.grammarNotes}</li>}
+                    </ul>
+                </div>
+                <div>
+                    <h5 className="text-[9px] font-bold text-text-secondary uppercase tracking-widest border-b border-white/5 pb-1 mb-2">Sociolinguistic Context</h5>
+                    <ul className="space-y-2">
+                        {analysis.sociolinguistic.intellectualization && <li className="text-[11px] text-text-primary"><strong className="text-white">Intellectualization:</strong> {analysis.sociolinguistic.intellectualization}</li>}
+                        {analysis.sociolinguistic.translanguaging && <li className="text-[11px] text-text-primary"><strong className="text-white">Translanguaging:</strong> {analysis.sociolinguistic.translanguaging}</li>}
+                        {analysis.sociolinguistic.culturalContext && <li className="text-[11px] text-text-primary"><strong className="text-white">The 'Gaze':</strong> {analysis.sociolinguistic.culturalContext}</li>}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 const Studio: React.FC<StudioProps> = ({ isOffline, initialText = '' }) => {
     const [sourceText, setSourceText] = useState(initialText);
@@ -268,6 +312,10 @@ const Studio: React.FC<StudioProps> = ({ isOffline, initialText = '' }) => {
                                         </div>
                                     )}
                                 </section>
+
+                                {translationResult.linguisticAnalysis && (
+                                    <LinguisticDeepDive analysis={translationResult.linguisticAnalysis} />
+                                )}
 
                                 <div className="h-px bg-white/10"></div>
 

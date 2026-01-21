@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
 // --- MAIN APPLICATION IMPORTS --- //
-import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage } from './types';
+import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
 
 // Import all components needed for the app
 import { Auth } from './components/Auth';
@@ -170,8 +170,8 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             const convo = { ...convoData, messages: messagesData as ChatMessage[] };
             setActiveConversation(convo);
             setChatConfig({
-                source: convo.sourceLang,
-                target: convo.targetLang,
+                source: convo.source_lang,
+                target: convo.target_lang,
                 tone: convo.tone
             });
         }
@@ -191,8 +191,8 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
                 const { data, error } = await supabase.from('conversations').insert({
                     user_id: currentUser.id,
                     title: text.substring(0, 30) + (text.length > 30 ? '...' : ''),
-                    sourceLang: chatConfig.source,
-                    targetLang: chatConfig.target,
+                    source_lang: chatConfig.source,
+                    target_lang: chatConfig.target,
                     tone: chatConfig.tone
                 }).select().single();
 
@@ -272,6 +272,28 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         }
     };
 
+    const handleAddItem = async (item: Omit<LibraryItem, 'id'>) => {
+        await supabase.from('library_items').insert(item);
+        fetchLibraryItems();
+    };
+
+    const handleUpdateItem = async (item: LibraryItem) => {
+        const { id, ...rest } = item;
+        await supabase.from('library_items').update(rest).eq('id', id);
+        fetchLibraryItems();
+    };
+
+    const handleDeleteItem = async (id: number) => {
+        await supabase.from('library_items').delete().eq('id', id);
+        fetchLibraryItems();
+    };
+
+    const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
+        await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+        const { data } = await supabase.from('profiles').select('*');
+        setAllUsers(data as User[] || []);
+    };
+
     const renderContent = () => {
         if (currentView === 'onboarding' && currentUser) return <OnboardingAgent user={currentUser} onComplete={(u) => { setCurrentUser(u); setCurrentView('chat'); }} />;
         if (currentView === 'profile' && currentUser) return <ProfileDashboard user={currentUser} onUpdateUser={setCurrentUser} />;
@@ -318,7 +340,16 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     if (!currentUser) return null;
 
     if (currentUser.role === 'admin') {
-        return <AdminPortal currentLibrary={libraryItems} users={allUsers} onAddItem={() => fetchLibraryItems()} onUpdateItem={() => fetchLibraryItems()} onDeleteItem={() => fetchLibraryItems()} onLogout={handleLogout} currentUser={currentUser} />;
+        return <AdminPortal 
+            currentLibrary={libraryItems} 
+            users={allUsers} 
+            onAddItem={handleAddItem} 
+            onUpdateItem={handleUpdateItem} 
+            onDeleteItem={handleDeleteItem} 
+            onLogout={handleLogout} 
+            currentUser={currentUser} 
+            onUpdateUserRole={handleUpdateUserRole}
+        />;
     }
     
     // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
@@ -353,8 +384,8 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
           />
           <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden relative md:border-l border-border-default">
               <Header
-                  sourceLangName={activeConversation?.sourceLang}
-                  targetLangName={activeConversation?.targetLang}
+                  sourceLangName={activeConversation?.source_lang}
+                  targetLangName={activeConversation?.target_lang}
                   isChatActive={currentView === 'chat' && currentMode === 'chat'}
                   currentUser={currentUser}
                   onUpgradeClick={() => { setHighlightedPlan(null); setIsUpgradeModalOpen(true); }}

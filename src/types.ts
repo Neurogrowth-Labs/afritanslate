@@ -1,14 +1,14 @@
 
 import type React from 'react';
 
-export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber';
+export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber' | 'studio';
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
 // FIX: Added 'home' to the View type to represent the landing page's main view.
 export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding';
 
-export type MeetingMode = 'live' | 'upload';
+export type MeetingMode = 'live' | 'upload' | 'schedule';
 
 export interface GeolocationCoordinates {
   latitude: number;
@@ -26,12 +26,35 @@ export interface Tone {
   description: string;
 }
 
+export interface GlottologData {
+    family: string;
+    parent: string;
+    glottocode: string;
+    features: string;
+}
+
+export interface LinguisticAnalysis {
+  structural: {
+    tonality?: string;
+    nounClasses?: string;
+    phonetics?: string;
+    grammarNotes?: string;
+  };
+  sociolinguistic: {
+    intellectualization?: string; // e.g. usage of indigenous technical terms vs loanwords
+    translanguaging?: string; // e.g. code-switching notes
+    culturalContext?: string; // The "African Linguistic Gaze"
+  };
+  glottolog?: GlottologData;
+}
+
 export interface TranslationResult {
   directTranslation: string;
   culturallyAwareTranslation: string;
   explanation: string;
   pronunciation?: string;
   original?: string;
+  linguisticAnalysis?: LinguisticAnalysis;
 }
 
 export interface EmailLocalizationResult {
@@ -77,8 +100,8 @@ export interface Conversation {
   user_id: string;
   title: string;
   messages: ChatMessage[];
-  sourceLang: string;
-  targetLang: string;
+  source_lang: string;
+  target_lang: string;
   tone: string;
   created_at: string;
 }
@@ -120,10 +143,20 @@ export interface User {
   goals?: string;
   onboarding_completed?: boolean;
   team_members?: string[];
+  trial_start_date?: string; // ISO string for trial start
+}
+
+export interface ScheduledMeeting {
+    id: number;
+    user_id: string;
+    title: string;
+    meeting_link?: string;
+    scheduled_at: string; // ISO timestamp
+    created_at: string;
 }
 
 // --- Script Translator AI Toolkit Types --- //
-export type AiAnalysisTool = 'synopsis' | 'characters' | 'cultural' | 'audience';
+export type AiAnalysisTool = 'synopsis' | 'characters' | 'cultural' | 'audience' | 'scene_breakdown' | 'casting_sheet' | 'dubbing_script' | 'storyboard';
 
 export interface Synopsis {
   logline: string;
@@ -153,6 +186,38 @@ export interface AudienceReception {
   keyStrengths: string[];
   potentialChallenges: string[];
   genreAppeal: string;
+}
+
+export interface SceneBreakdown {
+  sceneNumber: number;
+  slugline: string;
+  location: string;
+  time: string;
+  characters: string[];
+  estimatedDuration: string;
+}
+
+export interface CastingSide {
+  role: string;
+  ageRange: string;
+  gender: string;
+  ethnicity: string;
+  bio: string;
+  requirements: string[];
+}
+
+export interface DubbingLine {
+  original: string;
+  translated: string;
+  timecode: string;
+  lipSyncNote: string;
+}
+
+export interface StoryboardPanel {
+  sceneNumber: number;
+  description: string;
+  cameraAngle: string;
+  visualPrompt: string;
 }
 
 // --- Book Translator Types --- //

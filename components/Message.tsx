@@ -2,8 +2,8 @@
 import React, { useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import type { ChatMessage, GroundingSource } from '../types';
-import { AttachmentIcon, VolumeUpIcon, GlobeIcon, MicrophoneIcon, PronunciationIcon, EditIcon } from './Icons';
+import type { ChatMessage, GroundingSource, LinguisticAnalysis } from '../types';
+import { AttachmentIcon, VolumeUpIcon, GlobeIcon, MicrophoneIcon, PronunciationIcon, EditIcon, ThinkingIcon } from './Icons';
 
 interface MessageProps {
   message: ChatMessage;
@@ -56,6 +56,47 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
             className="prose"
             dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
+    );
+};
+
+const LinguisticInsights: React.FC<{ analysis: LinguisticAnalysis }> = ({ analysis }) => {
+    if (!analysis) return null;
+    return (
+        <details className="group/linguistics mt-3 pt-3 border-t border-border-default/50">
+            <summary className="text-xs font-semibold text-accent flex items-center gap-1.5 cursor-pointer hover:text-white list-none mb-2 transition-colors">
+                <ThinkingIcon className="w-4 h-4" /> 
+                <span>Deep Linguistic DNA</span>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3 h-3 transition-transform group-open/linguistics:rotate-90 ml-auto">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+            </summary>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 animate-fade-in bg-black/20 p-3 rounded-lg border border-white/5">
+                <div className="space-y-2">
+                    <h5 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest border-b border-white/5 pb-1">Structural Features</h5>
+                    {analysis.structural?.tonality && (
+                        <div className="text-[11px] text-text-primary"><span className="text-accent font-bold">Tonality:</span> {analysis.structural.tonality}</div>
+                    )}
+                    {analysis.structural?.nounClasses && (
+                        <div className="text-[11px] text-text-primary"><span className="text-accent font-bold">Class Systems:</span> {analysis.structural.nounClasses}</div>
+                    )}
+                    {analysis.structural?.phonetics && (
+                        <div className="text-[11px] text-text-primary"><span className="text-accent font-bold">Phonetics:</span> {analysis.structural.phonetics}</div>
+                    )}
+                </div>
+                <div className="space-y-2">
+                    <h5 className="text-[10px] font-bold text-text-secondary uppercase tracking-widest border-b border-white/5 pb-1">Sociolinguistic Context</h5>
+                    {analysis.sociolinguistic?.intellectualization && (
+                        <div className="text-[11px] text-text-primary"><span className="text-accent font-bold">Intellectualization:</span> {analysis.sociolinguistic.intellectualization}</div>
+                    )}
+                    {analysis.sociolinguistic?.translanguaging && (
+                        <div className="text-[11px] text-text-primary"><span className="text-accent font-bold">Translanguaging:</span> {analysis.sociolinguistic.translanguaging}</div>
+                    )}
+                    {analysis.sociolinguistic?.culturalContext && (
+                        <div className="text-[11px] text-text-primary"><span className="text-accent font-bold">Gaze:</span> {analysis.sociolinguistic.culturalContext}</div>
+                    )}
+                </div>
+            </div>
+        </details>
     );
 };
 
@@ -188,14 +229,20 @@ const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => 
                                     </div>
                                 )}
                             </div>
+                            
+                            {/* NEW: Linguistic Deep Dive */}
+                            {message.translation.linguisticAnalysis && (
+                                <LinguisticInsights analysis={message.translation.linguisticAnalysis} />
+                            )}
+
                             <details className="group/details">
-                                <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-white list-none flex items-center">
+                                <summary className="text-xs font-medium text-text-secondary cursor-pointer hover:text-white list-none flex items-center mt-3 pt-3 border-t border-border-default/50">
                                     View Translation Details
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4 ml-1.5 transition-transform group-open/details:rotate-90">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                                     </svg>
                                 </summary>
-                                <div className="mt-3 pt-3 border-t border-border-default space-y-3 animate-fade-in">
+                                <div className="mt-3 space-y-3 animate-fade-in">
                                     <div>
                                         <h4 className="text-sm font-semibold text-text-primary mb-1">Direct Translation</h4>
                                         <div className="text-sm text-text-secondary italic">

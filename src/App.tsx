@@ -1,10 +1,9 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from './supabaseClient';
+import { supabase } from '../supabaseClient';
 
 // --- MAIN APPLICATION IMPORTS --- //
-import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage } from './types';
+import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
 
 // Import all components needed for the app
 import { Auth } from './components/Auth';
@@ -23,6 +22,7 @@ import BookTranslator from './components/BookTranslator';
 import MeetingSummarizer from './components/MeetingSummarizer';
 import UpgradeModal from './components/UpgradeModal';
 import Studio from './components/Studio';
+import Chat from './components/Chat'; // Import Chat component
 import AdminPortal from './components/AdminPortal';
 import LiveConversation from './components/LiveConversation';
 import AudioTranscriber from './components/AudioTranscriber';
@@ -35,7 +35,8 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon } from './components/Icons';
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon } from './components/Icons';
+import { getNuancedTranslation } from './services/geminiService'; // Import service
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
@@ -62,6 +63,9 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     
+    // Chat Configuration State (for new chats or creating context)
+    const [chatConfig, setChatConfig] = useState({ source: 'en', target: 'sw', tone: 'Friendly' });
+
     const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
     const [highlightedPlan, setHighlightedPlan] = useState<string | null>(null);
     const [selectedPlanForPayment, setSelectedPlanForPayment] = useState<string | null>(null);
@@ -134,7 +138,10 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
 
     const handleSetView = (view: View) => {
         setCurrentView(view);
-        if (view !== 'chat' && view !== 'profile') setCurrentMode('chat');
+        // Default to 'chat' mode (AI Assistant) when navigating to 'chat' view unless specified
+        if (view === 'chat' && currentMode !== 'chat' && currentMode !== 'studio') {
+             setCurrentMode('chat');
+        }
         setIsSidebarOpen(false);
     };
 
@@ -146,6 +153,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
 
     const handleNewChat = () => {
         setActiveConversation(null);
+        setChatConfig({ source: 'en', target: 'sw', tone: 'Friendly' });
         handleSetView('chat');
         setCurrentMode('chat');
     };
@@ -153,12 +161,137 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     const handleSelectConversation = async (id: number) => {
         setIsLoading(true);
         handleSetView('chat');
+        // Ensure we are in chat mode when selecting a conversation, usually conversations are chats
+        setCurrentMode('chat'); 
+        
         const { data: convoData } = await supabase.from('conversations').select('*').eq('id', id).single();
         if (convoData) {
             const { data: messagesData } = await supabase.from('chat_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
-            setActiveConversation({ ...convoData, messages: messagesData as ChatMessage[] });
+            const convo = { ...convoData, messages: messagesData as ChatMessage[] };
+            setActiveConversation(convo);
+            setChatConfig({
+                source: convo.source_lang,
+                target: convo.target_lang,
+                tone: convo.tone
+            });
         }
         setIsLoading(false);
+    };
+
+    const handleChatSendMessage = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
+        if (!currentUser) return;
+        setIsLoading(true);
+
+        try {
+            let conversationId = activeConversation?.id;
+            let currentConvo = activeConversation;
+
+            // 1. Create Conversation if needed
+            if (!conversationId) {
+                const { data, error } = await supabase.from('conversations').insert({
+                    user_id: currentUser.id,
+                    title: text.substring(0, 30) + (text.length > 30 ? '...' : ''),
+                    source_lang: chatConfig.source,
+                    target_lang: chatConfig.target,
+                    tone: chatConfig.tone
+                }).select().single();
+
+                if (error) throw error;
+                if (data) {
+                    conversationId = data.id;
+                    currentConvo = { ...data, messages: [] };
+                    setActiveConversation(currentConvo);
+                    setConversations(prev => [data, ...prev]);
+                }
+            }
+
+            if (!conversationId || !currentConvo) throw new Error("Failed to initialize conversation");
+
+            // 2. Add User Message Locally & DB
+            const userMsg: ChatMessage = {
+                id: Date.now(), // Temporary ID
+                conversation_id: conversationId,
+                role: 'user',
+                originalText: text,
+                created_at: new Date().toISOString(),
+                attachments: attachments.map(f => ({ name: f.name, type: f.type })),
+                originalAudioFileName: audioSourceFileName || undefined
+            };
+
+            // Optimistic update
+            const messagesWithUser = [...currentConvo.messages, userMsg];
+            setActiveConversation({ ...currentConvo, messages: messagesWithUser });
+
+            // Persist user message
+            // Note: In a real app, upload attachments to storage first. Skipping here for demo simplicity.
+            await supabase.from('chat_messages').insert({
+                conversation_id: conversationId,
+                role: 'user',
+                "originalText": text,
+                attachments: userMsg.attachments,
+                "originalAudioFileName": audioSourceFileName
+            });
+
+            // 3. Generate AI Response
+            const result = await getNuancedTranslation(text, chatConfig.source, chatConfig.target, chatConfig.tone, attachments);
+
+            const aiMsg: ChatMessage = {
+                id: Date.now() + 1,
+                conversation_id: conversationId,
+                role: 'ai',
+                originalText: result.culturallyAwareTranslation,
+                translation: result,
+                created_at: new Date().toISOString()
+            };
+
+            // 4. Update UI & DB with AI Response
+            setActiveConversation({ ...currentConvo, messages: [...messagesWithUser, aiMsg] });
+            
+            await supabase.from('chat_messages').insert({
+                conversation_id: conversationId,
+                role: 'ai',
+                "originalText": result.culturallyAwareTranslation,
+                translation: result
+            });
+
+        } catch (error) {
+            console.error("Chat error:", error);
+            // Optionally add an error message to the chat
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleRateMessage = async (id: number, rating: 'good' | 'bad') => {
+        // Optimistic update
+        if (activeConversation) {
+            const updatedMessages = activeConversation.messages.map(m => 
+                m.id === id ? { ...m, rating } : m
+            );
+            setActiveConversation({ ...activeConversation, messages: updatedMessages });
+        }
+    };
+
+    const handleAddItem = async (item: Omit<LibraryItem, 'id'>) => {
+        await supabase.from('library_items').insert(item);
+        fetchLibraryItems();
+    };
+
+    const handleUpdateItem = async (item: LibraryItem) => {
+        const { id, ...rest } = item;
+        await supabase.from('library_items').update(rest).eq('id', id);
+        fetchLibraryItems();
+    };
+
+    const handleDeleteItem = async (id: number) => {
+        await supabase.from('library_items').delete().eq('id', id);
+        fetchLibraryItems();
+    };
+
+    const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
+        await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+        const { data } = await supabase.from('profiles').select('*');
+        setAllUsers(data as User[] || []);
     };
 
     const renderContent = () => {
@@ -181,10 +314,24 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         switch(currentMode) {
             case 'script': return <ScriptTranslator />;
             case 'book': return <BookTranslator />;
-            case 'meetings': return <MeetingSummarizer />;
+            case 'meetings': return <MeetingSummarizer currentUser={currentUser} />;
             case 'email': return <EmailTranslator />;
             case 'transcriber': return <AudioTranscriber />;
+            case 'studio': return <Studio isOffline={isOffline} />;
             case 'chat':
+                return <Chat 
+                    isOffline={isOffline} 
+                    messages={activeConversation?.messages || []}
+                    onSendMessage={handleChatSendMessage}
+                    onRateMessage={handleRateMessage}
+                    sourceLang={chatConfig.source}
+                    targetLang={chatConfig.target}
+                    tone={chatConfig.tone}
+                    onSourceLangChange={(lang) => setChatConfig(prev => ({ ...prev, source: lang }))}
+                    onTargetLangChange={(lang) => setChatConfig(prev => ({ ...prev, target: lang }))}
+                    onToneChange={(tone) => setChatConfig(prev => ({ ...prev, tone }))}
+                    isLoading={isLoading}
+                />;
             default:
                 return <Studio isOffline={isOffline} />;
         }
@@ -193,11 +340,24 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     if (!currentUser) return null;
 
     if (currentUser.role === 'admin') {
-        return <AdminPortal currentLibrary={libraryItems} users={allUsers} onAddItem={() => fetchLibraryItems()} onUpdateItem={() => fetchLibraryItems()} onDeleteItem={() => fetchLibraryItems()} onLogout={handleLogout} currentUser={currentUser} />;
+        return <AdminPortal 
+            currentLibrary={libraryItems} 
+            users={allUsers} 
+            onAddItem={handleAddItem} 
+            onUpdateItem={handleUpdateItem} 
+            onDeleteItem={handleDeleteItem} 
+            onLogout={handleLogout} 
+            currentUser={currentUser} 
+            onUpdateUserRole={handleUpdateUserRole}
+        />;
     }
     
-    const viewsWithoutPadding: (View | TranslationMode)[] = ['live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding'];
-    const shouldHavePadding = !viewsWithoutPadding.includes(currentView) && !viewsWithoutPadding.includes(currentMode);
+    // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
+    // vs views that act like traditional web pages (Page-like behavior)
+    const fullHeightViews: (View | TranslationMode)[] = [
+        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image'
+    ];
+    const isFullHeightView = fullHeightViews.includes(currentView) || fullHeightViews.includes(currentMode);
 
     return (
       <div className="flex h-screen w-screen bg-bg-main font-sans text-text-primary overflow-hidden relative">
@@ -224,8 +384,8 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
           />
           <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden relative md:border-l border-border-default">
               <Header
-                  sourceLangName={activeConversation?.sourceLang}
-                  targetLangName={activeConversation?.targetLang}
+                  sourceLangName={activeConversation?.source_lang}
+                  targetLangName={activeConversation?.target_lang}
                   isChatActive={currentView === 'chat' && currentMode === 'chat'}
                   currentUser={currentUser}
                   onUpgradeClick={() => { setHighlightedPlan(null); setIsUpgradeModalOpen(true); }}
@@ -236,12 +396,14 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
                   onLogout={handleLogout}
               />
               <main className="flex-1 overflow-hidden bg-[#0d0d0d] relative min-h-0 flex flex-col">
-                  <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
-                    <div className={shouldHavePadding ? "p-4 sm:p-6 lg:p-8 h-full" : "h-full"}>
+                  <div className={`flex-1 min-h-0 ${isFullHeightView ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
+                    <div className={!isFullHeightView ? "p-4 sm:p-6 lg:p-8 min-h-full" : "h-full"}>
                         {renderContent()}
                     </div>
                   </div>
-                  <Footer onShowTerms={() => handleSetView('terms')} onShowPrivacy={() => handleSetView('privacy')} onShowLanding={onShowLanding} />
+                  {!isFullHeightView && (
+                      <Footer onShowTerms={() => handleSetView('terms')} onShowPrivacy={() => handleSetView('privacy')} onShowLanding={onShowLanding} />
+                  )}
               </main>
           </div>
           <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} highlightedPlan={highlightedPlan} onChoosePlan={(plan) => { setSelectedPlanForPayment(plan); setIsUpgradeModalOpen(false); setCurrentView('payment'); }} onContactSales={() => { setIsUpgradeModalOpen(false); setCurrentView('contact');}} />
@@ -262,43 +424,152 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
             default:
                 return (
                     <>
-                        <section className="py-20 md:py-32 text-center relative overflow-hidden">
-                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,163,0,0.04),transparent)]"></div>
-                            <div className="container mx-auto px-4 relative z-10">
-                                <h1 className="text-3xl sm:text-5xl md:text-6xl font-brand font-bold text-white tracking-tighter mb-4 animate-slide-in-up">
-                                    Beyond Words. <br />
-                                    <span className="text-accent">Pure Culture.</span>
+                        {/* HERO SECTION */}
+                        <section className="relative py-24 md:py-32 overflow-hidden flex flex-col items-center text-center">
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(244,163,0,0.08),transparent_70%)] pointer-events-none"></div>
+                            
+                            <div className="relative z-10 container mx-auto px-4 max-w-5xl">
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-8 animate-fade-in">
+                                    <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                                    The Enterprise Standard for African Localization
+                                </div>
+                                
+                                <h1 className="text-5xl md:text-7xl font-brand font-bold text-white tracking-tight mb-6 animate-slide-in-up leading-[1.1]">
+                                    Unlock the World's Next <br />
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-yellow-200">Global Growth Engine.</span>
                                 </h1>
-                                <p className="mt-4 max-w-lg mx-auto text-xs sm:text-sm text-text-secondary leading-relaxed mb-8 animate-slide-in-up">
-                                    World's most advanced cultural localization engine. We bridge heritage, idioms, and social nuances in real-time.
+                                
+                                <p className="mt-6 max-w-2xl mx-auto text-base md:text-lg text-text-secondary leading-relaxed animate-slide-in-up delay-100">
+                                    AfriTranslate Studio is the first AI infrastructure designed to bridge the gap between global business and African cultural reality. Scale operations, marketing, and support across 54 countries with culturally intelligent automation.
                                 </p>
-                                <button onClick={() => onStart('chat')} className="px-8 py-3 bg-accent text-bg-main text-[12px] font-black rounded-lg hover:scale-105 transition-all shadow-xl">
-                                    START LOCALIZING
-                                </button>
+                                
+                                <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-in-up delay-200">
+                                    <button onClick={() => onStart('chat')} className="px-8 py-4 bg-accent text-bg-main font-bold text-sm rounded-xl hover:scale-105 hover:shadow-[0_0_30px_rgba(244,163,0,0.4)] transition-all duration-300 w-full sm:w-auto">
+                                        LAUNCH STUDIO
+                                    </button>
+                                    <button onClick={() => { 
+                                        const demoEl = document.getElementById('demo-section'); 
+                                        demoEl?.scrollIntoView({ behavior: 'smooth' });
+                                    }} className="px-8 py-4 bg-white/5 border border-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/10 transition-all w-full sm:w-auto">
+                                        VIEW CAPABILITIES
+                                    </button>
+                                </div>
                             </div>
                         </section>
-                        <div id="demo-section" className="py-12 border-y border-border-default bg-bg-surface/30">
+
+                        {/* STATS STRIP */}
+                        <div className="border-y border-white/5 bg-black/20 backdrop-blur-sm py-8">
+                            <div className="container mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                                {[
+                                    { label: 'Countries', value: '54' },
+                                    { label: 'Dialects Supported', value: '2,000+' },
+                                    { label: 'Cultural Accuracy', value: '99.4%' },
+                                    { label: 'Latency (Voice)', value: '<200ms' }
+                                ].map((stat, i) => (
+                                    <div key={i} className="flex flex-col">
+                                        <span className="text-3xl font-black text-white">{stat.value}</span>
+                                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mt-1">{stat.label}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* INTERACTIVE DEMO */}
+                        <div id="demo-section" className="py-24 bg-bg-surface/30 border-b border-border-default relative">
+                            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent"></div>
                             <DemoSection isLandingSection={true} />
                         </div>
+
+                        {/* STRATEGIC ADVANTAGES (Value Props) */}
+                        <section className="py-24 container mx-auto px-4 max-w-6xl">
+                            <div className="text-center mb-16">
+                                <h2 className="text-3xl font-bold text-white mb-4">Strategic Advantages</h2>
+                                <p className="text-text-secondary max-w-2xl mx-auto">Why Fortune 500 companies and NGOs choose AfriTranslate for their African expansion strategies.</p>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-accent/30 transition-colors group">
+                                    <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition-transform">
+                                        <GlobeIcon className="w-6 h-6" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-3">Hyper-Localization at Scale</h3>
+                                    <p className="text-sm text-text-secondary leading-relaxed">
+                                        Move beyond generic translation. Our engine adapts content to regional dialects, ensuring your marketing resonates with Hausa speakers in Kano differently than Yoruba speakers in Lagos.
+                                    </p>
+                                </div>
+                                
+                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-accent/30 transition-colors group">
+                                    <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center mb-6 text-red-400 group-hover:scale-110 transition-transform">
+                                        <LockIcon className="w-6 h-6" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-3">Brand Safety & Nuance</h3>
+                                    <p className="text-sm text-text-secondary leading-relaxed">
+                                        Avoid costly cultural misunderstandings. Our system flags potential taboos and suggests culturally appropriate alternatives for sensitive topics in real-time.
+                                    </p>
+                                </div>
+                                
+                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-accent/30 transition-colors group">
+                                    <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6 text-accent group-hover:scale-110 transition-transform">
+                                        <BoltIcon className="w-6 h-6" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-3">Seamless Integration</h3>
+                                    <p className="text-sm text-text-secondary leading-relaxed">
+                                        Connect AfriTranslate directly into your CMS, CRM, or support platform via our robust API. Designed for developers, optimized for enterprise scale.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* TRUSTED BY / SOCIAL PROOF */}
+                        <div className="py-16 border-y border-white/5 bg-black/20">
+                            <div className="container mx-auto px-4 text-center">
+                                <p className="text-xs font-bold text-text-secondary uppercase tracking-widest mb-8">Trusted by Industry Leaders & Institutions</p>
+                                <div className="flex flex-wrap justify-center items-center gap-12 opacity-50 grayscale hover:grayscale-0 transition-all duration-500">
+                                    {/* Placeholder Logos - using text representation for simplicity but styled as logos */}
+                                    <span className="text-xl font-black text-white tracking-tighter">NETFLIX</span>
+                                    <span className="text-xl font-bold text-white">Google</span>
+                                    <span className="text-xl font-bold text-white italic">Standard Bank</span>
+                                    <span className="text-xl font-bold text-white">MTN</span>
+                                    <span className="text-xl font-bold text-white tracking-widest">UCT</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* FINAL CTA */}
+                        <section className="py-24 text-center px-4">
+                            <div className="max-w-3xl mx-auto bg-gradient-to-b from-bg-surface to-bg-main border border-white/10 rounded-3xl p-12 relative overflow-hidden">
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-accent/5 blur-3xl rounded-full -z-10"></div>
+                                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to expand your reach?</h2>
+                                <p className="text-text-secondary mb-8">Join 10,000+ creators, businesses, and NGOs using AfriTranslate to connect authentically with the African continent.</p>
+                                <button onClick={() => onStart('chat')} className="px-10 py-4 bg-accent text-bg-main font-bold rounded-xl hover:bg-white hover:text-accent transition-all shadow-xl text-sm uppercase tracking-wide">
+                                    Get Started for Free
+                                </button>
+                                <p className="mt-4 text-[10px] text-text-secondary uppercase tracking-widest">No credit card required • 14-day Pro trial included</p>
+                            </div>
+                        </section>
                     </>
                 );
         }
     };
 
     return (
-        <div className="bg-bg-main min-h-screen text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
-            <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-14 flex-shrink-0">
-                <div className="container mx-auto px-4 h-full flex items-center justify-between">
-                    <button onClick={() => setCurrentView('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-                        <LogoIcon />
-                        <span className="text-sm sm:text-base font-brand font-bold text-white tracking-tighter">AfriTranslate AI</span>
+        <div className="bg-bg-main h-full w-full text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
+            <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-16 flex-shrink-0 transition-all">
+                <div className="container mx-auto px-6 h-full flex items-center justify-between">
+                    <button onClick={() => setCurrentView('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center text-bg-main shadow-lg group-hover:shadow-accent/20 transition-all">
+                            <LogoIcon className="w-5 h-5" />
+                        </div>
+                        <span className="text-lg font-brand font-bold text-white tracking-tight">AfriTranslate AI</span>
                     </button>
-                    <nav className="hidden lg:flex items-center gap-6">
-                        <button onClick={() => setCurrentView('about')} className={`text-[11px] font-semibold transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>About</button>
-                        <button onClick={() => setCurrentView('useCases')} className={`text-[11px] font-semibold transition-colors ${currentView === 'useCases' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Use Cases</button>
-                        <button onClick={() => setCurrentView('testimonials')} className={`text-[11px] font-semibold transition-colors ${currentView === 'testimonials' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Users</button>
+                    <nav className="hidden lg:flex items-center gap-8">
+                        <button onClick={() => setCurrentView('about')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Mission</button>
+                        <button onClick={() => setCurrentView('useCases')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'useCases' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Solutions</button>
+                        <button onClick={() => setCurrentView('testimonials')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'testimonials' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Stories</button>
                     </nav>
-                    <button onClick={() => onStart('chat')} className="px-4 py-1.5 bg-accent text-bg-main font-bold text-[11px] rounded hover:scale-105 transition-all">Launch Studio</button>
+                    <button onClick={() => onStart('chat')} className="px-5 py-2 bg-white/5 border border-white/10 text-white font-bold text-xs rounded-lg hover:bg-white/10 hover:border-accent/30 hover:text-accent transition-all">
+                        Log In
+                    </button>
                 </div>
             </header>
             <main className="flex-1">
