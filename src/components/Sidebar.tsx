@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, Fragment } from 'react';
 import type { Conversation, User, TranslationMode, View } from '../types';
 import { ADD_ONS, FOOTER_LINKS } from '../constants';

@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { startVideoGeneration, pollVideoOperation } from '../services/geminiService';
-import { DownloadIcon, CloseIcon, ImageIcon, ThinkingIcon, EditIcon } from './Icons';
+import { DownloadIcon, CloseIcon, ImageIcon, ThinkingIcon, EditIcon, FilmStripIcon } from './Icons';
 import { LANGUAGE_REGIONS, MOTION_DURATIONS, MOTION_CONTEXTS, TONES } from '../constants';
 import ToneSelector from './ToneSelector';
 
@@ -218,6 +218,9 @@ const VideoGenerator: React.FC = () => {
     return (
         <div className="flex flex-col h-full animate-fade-in max-w-6xl mx-auto py-4 px-4 overflow-y-auto custom-scrollbar">
             <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-accent/20 shadow-[0_0_30px_-10px_rgba(244,163,0,0.3)]">
+                    <FilmStripIcon className="w-8 h-8 text-accent" />
+                </div>
                 <h1 className="text-2xl md:text-3xl font-bold text-text-primary tracking-tight">Motion Generator</h1>
                 <p className="text-xs text-text-secondary mt-1">
                     Bring African visuals to life with deep cultural awareness.

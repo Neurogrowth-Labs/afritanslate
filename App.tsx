@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
@@ -35,12 +34,16 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon } from './components/Icons';
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from './services/geminiService'; // Import service
+import { generateOperationalManual } from './services/pdfGenerator'; // Import PDF generator
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
     <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-3 overflow-hidden">
+        <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-4 border border-accent/20 shadow-[0_0_30px_-10px_rgba(244,163,0,0.3)]">
+            <ImageIcon className="w-8 h-8 text-accent" />
+        </div>
         <h1 className="text-xl sm:text-2xl font-extrabold text-white mb-1.5">Visual Translation Engine</h1>
         <p className="text-[12px] text-text-secondary mb-3 max-w-lg">Describe cultural concepts and materialize them into art.</p>
         <div className="w-full max-w-4xl flex-1 bg-bg-surface border border-border-default rounded-xl flex items-center justify-center text-text-secondary">
@@ -575,7 +578,21 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
             <main className="flex-1">
                 {renderContent()}
             </main>
-            <Footer onShowTerms={() => onStart('terms')} onShowPrivacy={() => onStart('privacy')} onShowLanding={() => setCurrentView('home')} />
+            <Footer 
+                onShowTerms={() => onStart('terms')} 
+                onShowPrivacy={() => onStart('privacy')} 
+                onShowLanding={() => setCurrentView('home')} 
+            />
+            {/* Download Manual section in Footer area */}
+            <div className="bg-black/30 border-t border-white/5 py-2 text-center">
+                <button 
+                    onClick={generateOperationalManual} 
+                    className="text-[10px] text-text-secondary hover:text-white flex items-center justify-center gap-1.5 mx-auto transition-colors font-mono"
+                >
+                    <DownloadIcon className="w-3 h-3" />
+                    Download User Manual (PDF)
+                </button>
+            </div>
         </div>
     );
 };

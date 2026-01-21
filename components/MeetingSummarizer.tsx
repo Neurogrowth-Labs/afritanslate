@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { summarizeMeeting } from '../services/geminiService';
 import { MOCK_MEETING_TRANSCRIPT, LANGUAGES } from '../constants';
-import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon, MicrophoneIcon } from './Icons';
+import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon, MicrophoneIcon, MeetingIcon } from './Icons';
 import type { MeetingMode, User, ScheduledMeeting } from '../types';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
@@ -726,6 +726,9 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         return (
             <div className="flex flex-col items-center h-full animate-fade-in justify-center p-4">
                 <div className="text-center mb-6">
+                    <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-accent/20 shadow-[0_0_30px_-10px_rgba(244,163,0,0.3)]">
+                        <MeetingIcon className="w-8 h-8 text-accent" />
+                    </div>
                     <h1 className="text-3xl font-bold text-text-primary">AI Meeting Insights</h1>
                     <p className="text-sm text-text-secondary mt-1 max-w-lg mx-auto">
                         Automated summarization and action item extraction.
@@ -809,6 +812,9 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             <div className="flex-shrink-0 pb-3 mb-3 border-b border-border-default">
                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
+                        <div className="p-2 bg-accent/10 rounded-lg border border-accent/20">
+                            <MeetingIcon className="w-6 h-6 text-accent" />
+                        </div>
                         <h1 className="text-xl font-bold text-white">Meeting Insights</h1>
                         {fileName && <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-text-secondary border border-white/5 truncate max-w-[200px]">{fileName}</span>}
                     </div>

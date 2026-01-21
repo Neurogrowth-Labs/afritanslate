@@ -4,7 +4,7 @@ import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { LANGUAGES, TONES, LIVE_VOICES } from '../constants';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
-import { MicrophoneIcon, StopIcon, ZoomIcon } from './Icons';
+import { MicrophoneIcon, StopIcon, ZoomIcon, LiveIcon } from './Icons';
 import { parseZoomLink, authenticateZoom, connectBotToMeeting } from '../services/zoomService';
 
 interface MediaBlob {
@@ -262,7 +262,7 @@ const LiveConversation: React.FC = () => {
             const systemInstruction = `${modeInstruction} Respond using the specified voice: ${voice}. Responses must be in ${targetLangName} only.`;
 
             sessionPromiseRef.current = aiRef.current.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                model: 'gemini-2.5-flash-native-audio-preview-12-2025',
                 config: {
                     responseModalities: [Modality.AUDIO],
                     inputAudioTranscription: {},
@@ -349,6 +349,9 @@ const LiveConversation: React.FC = () => {
             <div className="flex items-center justify-center h-full animate-fade-in p-4 sm:p-6 bg-bg-main overflow-y-auto custom-scrollbar">
                 <div className="max-w-[420px] w-full bg-bg-surface p-6 sm:p-8 rounded-2xl border border-border-default space-y-6 shadow-2xl">
                     <div className="text-center">
+                        <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-accent/20 shadow-[0_0_30px_-10px_rgba(244,163,0,0.3)]">
+                            <LiveIcon className="w-8 h-8 text-accent" />
+                        </div>
                         <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">Voice Studio</h1>
                         <p className="text-[10px] text-text-secondary mt-1 uppercase tracking-[0.2em] font-bold">Real-time Cultural Relay</p>
                     </div>

@@ -121,6 +121,9 @@ const AudioTranscriber: React.FC = () => {
     if (!audioFile) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-4">
+                <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-4 border border-accent/20">
+                    <MicrophoneIcon className="w-8 h-8 text-accent" />
+                </div>
                 <h1 className="text-4xl font-bold text-text-primary">Audio Transcriber</h1>
                 <p className="text-lg text-text-secondary mt-2 max-w-2xl">Upload an audio file to get a highly accurate text transcription powered by AI.</p>
                 <div 
@@ -145,11 +148,16 @@ const AudioTranscriber: React.FC = () => {
         <div className="flex flex-col h-full animate-fade-in p-4">
             <div className="flex-shrink-0 pb-4 mb-4 border-b border-border-default">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-white">Audio Transcriber</h1>
-                        <p className="text-sm text-text-secondary truncate max-w-xs sm:max-w-md flex items-center gap-2">
-                           <MicrophoneIcon className="w-4 h-4" /> {audioFile.name}
-                        </p>
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-accent/10 rounded-lg border border-accent/20">
+                            <MicrophoneIcon className="w-6 h-6 text-accent" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-white">Audio Transcriber</h1>
+                            <p className="text-sm text-text-secondary truncate max-w-xs sm:max-w-md flex items-center gap-2">
+                               {audioFile.name}
+                            </p>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         {!transcript && (
