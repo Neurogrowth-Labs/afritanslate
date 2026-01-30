@@ -163,23 +163,57 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     };
 
     const handleSelectConversation = async (id: number) => {
-        setIsLoading(true);
-        handleSetView('chat');
-        // Ensure we are in chat mode when selecting a conversation, usually conversations are chats
-        setCurrentMode('chat'); 
-        
-        const { data: convoData } = await supabase.from('conversations').select('*').eq('id', id).single();
-        if (convoData) {
-            const { data: messagesData } = await supabase.from('chat_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
-            const convo = { ...convoData, messages: messagesData as ChatMessage[] };
-            setActiveConversation(convo);
-            setChatConfig({
-                source: convo.source_lang,
-                target: convo.target_lang,
-                tone: convo.tone
-            });
+        // Prevent unnecessary reload if the conversation is already active and not loading
+        if (activeConversation?.id === id && !isLoading) {
+            setIsSidebarOpen(false);
+            return;
         }
-        setIsLoading(false);
+
+        try {
+            setIsLoading(true);
+            // Clear current conversation to ensure UI updates and loading state is visible
+            setActiveConversation(null);
+            
+            // Switch to Chat view/mode
+            setCurrentView('chat');
+            setCurrentMode('chat'); 
+            
+            // Fetch Conversation Metadata using maybeSingle for safety
+            const { data: convoData, error: convoError } = await supabase
+                .from('conversations')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+            
+            if (convoError) throw convoError;
+            if (!convoData) throw new Error("Conversation not found");
+
+            if (convoData) {
+                // Fetch Messages
+                const { data: messagesData, error: msgError } = await supabase
+                    .from('chat_messages')
+                    .select('*')
+                    .eq('conversation_id', id)
+                    .order('created_at', { ascending: true });
+                
+                if (msgError) throw msgError;
+
+                const convo = { ...convoData, messages: messagesData as ChatMessage[] };
+                
+                // Update State
+                setActiveConversation(convo);
+                setChatConfig({
+                    source: convo.source_lang || 'en',
+                    target: convo.target_lang || 'sw',
+                    tone: convo.tone || 'Friendly'
+                });
+            }
+        } catch (err) {
+            console.error("Error loading conversation:", err);
+        } finally {
+            setIsLoading(false);
+            setIsSidebarOpen(false); 
+        }
     };
 
     const handleChatSendMessage = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
@@ -205,6 +239,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
                     conversationId = data.id;
                     currentConvo = { ...data, messages: [] };
                     setActiveConversation(currentConvo);
+                    // Add new conversation to the sidebar list immediately
                     setConversations(prev => [data, ...prev]);
                 }
             }
@@ -227,7 +262,6 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             setActiveConversation({ ...currentConvo, messages: messagesWithUser });
 
             // Persist user message
-            // Note: In a real app, upload attachments to storage first. Skipping here for demo simplicity.
             await supabase.from('chat_messages').insert({
                 conversation_id: conversationId,
                 role: 'user',
@@ -260,7 +294,6 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
 
         } catch (error) {
             console.error("Chat error:", error);
-            // Optionally add an error message to the chat
         } finally {
             setIsLoading(false);
         }
@@ -356,6 +389,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
                     onTargetLangChange={(lang) => setChatConfig(prev => ({ ...prev, target: lang }))}
                     onToneChange={(tone) => setChatConfig(prev => ({ ...prev, tone }))}
                     isLoading={isLoading}
+                    conversationId={activeConversation?.id}
                 />;
             default:
                 return <Studio isOffline={isOffline} />;
@@ -433,6 +467,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
           </div>
           <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} highlightedPlan={highlightedPlan} onChoosePlan={(plan) => { setSelectedPlanForPayment(plan); setIsUpgradeModalOpen(false); setCurrentView('payment'); }} onContactSales={() => { setIsUpgradeModalOpen(false); setCurrentView('contact');}} />
           
+          {/* Delete Confirmation Modal */}
           <ConfirmationModal 
               isOpen={isDeleteModalOpen}
               onClose={() => { setIsDeleteModalOpen(false); setDeletingConversationId(null); }}

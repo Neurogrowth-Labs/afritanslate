@@ -41,11 +41,12 @@ interface ChatProps {
     onTargetLangChange: (lang: string) => void;
     onToneChange: (tone: string) => void;
     isLoading: boolean;
+    conversationId?: number;
 }
 
 const Chat: React.FC<ChatProps> = ({ 
     isOffline, isVisualMode = false, messages, onSendMessage, onRateMessage,
-    sourceLang, targetLang, tone, onSourceLangChange, onTargetLangChange, onToneChange, isLoading
+    sourceLang, targetLang, tone, onSourceLangChange, onTargetLangChange, onToneChange, isLoading, conversationId
 }) => {
     const [inputText, setInputText] = useState('');
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -195,11 +196,21 @@ const Chat: React.FC<ChatProps> = ({
         </div>
     );
     
+    // Show welcome screen ONLY if we are NOT in visual mode, NOT loading, and NO conversation is currently selected.
+    // If a conversation IS selected but empty (messages.length === 0), we show the empty state below, not the Welcome Screen.
+    const showWelcome = messages.length === 0 && !isVisualMode && !isLoading && !conversationId;
+
     return (
         <div className="flex flex-col h-full w-full overflow-hidden bg-transparent relative">
             <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 custom-scrollbar pb-32">
-                {messages.length === 0 && !isVisualMode && !isLoading ? <WelcomeScreen /> : (
+                {showWelcome ? <WelcomeScreen /> : (
                     <div className="max-w-4xl mx-auto space-y-8">
+                        {messages.length === 0 && conversationId && (
+                            <div className="text-center text-text-secondary text-sm mt-10 animate-fade-in">
+                                <p className="opacity-70">This conversation is empty.</p>
+                                <p className="text-xs mt-1">Type a message below to start.</p>
+                            </div>
+                        )}
                         {messages.map((msg) => (
                             <Message 
                                 key={msg.id} 
