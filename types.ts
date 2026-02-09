@@ -155,6 +155,24 @@ export interface ScheduledMeeting {
     created_at: string;
 }
 
+// --- Meeting Insights Types --- //
+export interface ActionItem {
+    task: string;
+    owner: string;
+    deadline: string;
+    priority: 'High' | 'Medium' | 'Low';
+}
+
+export interface MeetingAnalysisResult {
+    summary: string;
+    keyPoints: string[];
+    decisions: string[];
+    actionItems: ActionItem[];
+    culturalInsights: string; // Cultural Context/Etiquette observed
+    sentiment: 'Positive' | 'Neutral' | 'Negative' | 'Tensile';
+    sentimentScore: number; // 0 to 100
+}
+
 // --- Script Translator AI Toolkit Types --- //
 export type AiAnalysisTool = 'synopsis' | 'characters' | 'cultural' | 'audience' | 'scene_breakdown' | 'casting_sheet' | 'dubbing_script' | 'storyboard';
 

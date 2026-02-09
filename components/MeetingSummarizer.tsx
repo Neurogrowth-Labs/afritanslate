@@ -3,10 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { summarizeMeeting } from '../services/geminiService';
 import { MOCK_MEETING_TRANSCRIPT, LANGUAGES } from '../constants';
-import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon, MicrophoneIcon, MeetingIcon } from './Icons';
-import type { MeetingMode, User, ScheduledMeeting } from '../types';
+import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon, MicrophoneIcon, MeetingIcon, CheckIcon, DownloadIcon, SearchIcon, ThinkingIcon, UsersIcon } from './Icons';
+import type { MeetingMode, User, ScheduledMeeting, MeetingAnalysisResult, ActionItem } from '../types';
 import LanguageSelector from './LanguageSelector';
-import ToneSelector from './ToneSelector';
 import { supabase } from '../supabaseClient';
 
 interface MeetingSummarizerProps {
@@ -64,17 +63,19 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
     const [mode, setMode] = useState<MeetingMode | 'schedule'>('live');
     const [transcript, setTranscript] = useState('');
     const [meetingLink, setMeetingLink] = useState('');
-    const [summary, setSummary] = useState('');
-    const [editedSummary, setEditedSummary] = useState('');
+    
+    // Structured Analysis State
+    const [analysisResult, setAnalysisResult] = useState<MeetingAnalysisResult | null>(null);
+    const [activeTab, setActiveTab] = useState<'transcript' | 'notes' | 'analytics'>('transcript');
+    
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [fileName, setFileName] = useState('');
-    const [isEditing, setIsEditing] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // States for Live Transcription
     const [isTranscribing, setIsTranscribing] = useState(false);
     const [liveTranscript, setLiveTranscript] = useState('');
-    const [transcriptionLang, setTranscriptionLang] = useState('en');
     const [summaryLang, setSummaryLang] = useState('en');
     const [isConnecting, setIsConnecting] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState<string>('');
@@ -92,14 +93,11 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
     // Refs for Audio Processing
     const transcriptEndRef = useRef<HTMLDivElement>(null);
     const aiRef = useRef<GoogleGenAI | null>(null);
-    const sessionRef = useRef<any>(null); // LiveSession type is inferred
+    const sessionRef = useRef<any>(null); 
     const audioContextRef = useRef<AudioContext | null>(null);
     const workletNodeRef = useRef<AudioWorkletNode | null>(null);
     const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
     const workletUrlRef = useRef<string | null>(null);
-
-    const isZoomLink = meetingLink.includes('zoom.us');
-    const isMeetingLinkValid = isZoomLink || meetingLink.includes('meet.google.com') || meetingLink.includes('teams.microsoft.com');
 
     // Initialize Gemini Client
     useEffect(() => {
@@ -126,7 +124,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             .from('scheduled_meetings')
             .select('*')
             .eq('user_id', currentUser.id)
-            .gte('scheduled_at', new Date().toISOString()) // Only future or current meetings
+            .gte('scheduled_at', new Date().toISOString()) 
             .order('scheduled_at', { ascending: true });
         
         if (error) {
@@ -158,7 +156,6 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
 
             if (error) throw error;
 
-            // Reset form and refresh list
             setNewMeetingTitle('');
             setNewMeetingDate('');
             setNewMeetingTime('');
@@ -205,29 +202,27 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         }
         setIsLoading(true);
         setError(null);
-        setSummary('');
+        setAnalysisResult(null);
+        
         try {
             const summaryLangName = LANGUAGES.find(l => l.code === summaryLang)?.name || 'English';
+            // Call structured summarizer
             const result = await summarizeMeeting(transcriptToUse, meetingLink, summaryLangName);
-            setSummary(result);
-            setEditedSummary(result);
+            setAnalysisResult(result);
+            setActiveTab('notes');
 
             // Store meeting activity in Supabase
             if (currentUser) {
-                const { error: dbError } = await supabase.from('meeting_summaries').insert({
+                await supabase.from('meeting_summaries').insert({
                     user_id: currentUser.id,
                     meeting_link: meetingLink,
                     file_name: fileName || (mode === 'live' ? 'Live Session' : 'Uploaded File'),
                     transcript: transcriptToUse,
-                    summary: result,
+                    summary: result.summary, // Store string summary
                     language: summaryLang,
                     mode: mode,
                     created_at: new Date().toISOString()
                 });
-
-                if (dbError) {
-                    console.error("Failed to save meeting summary:", dbError.message || JSON.stringify(dbError));
-                }
             }
 
         } catch (err) {
@@ -249,7 +244,6 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             audioContextRef.current = null;
         }
         if (sessionRef.current) {
-            // Check if there is a close method, depends on SDK version, otherwise just nullify
             sessionRef.current = null;
         }
         if (workletUrlRef.current) {
@@ -270,11 +264,8 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         setLiveTranscript('');
 
         try {
-            // 1. Capture System Audio (e.g., from Zoom/Teams tab/window)
-            // video: true is required for getDisplayMedia to capture audio, but we ignore the video track.
             const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
             
-            // Check if user shared audio
             if (stream.getAudioTracks().length === 0) {
                 stream.getTracks().forEach(t => t.stop());
                 throw new Error("No audio track detected. Please make sure to check 'Share audio' when selecting the window/tab.");
@@ -283,7 +274,6 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             setCaptureStream(stream);
             setConnectionStatus('Connecting to Gemini Live...');
 
-            // 2. Setup Audio Context & Worklet
             const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
             audioContextRef.current = audioContext;
 
@@ -300,15 +290,13 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             workletNodeRef.current = worklet;
 
             source.connect(worklet);
-            // We do NOT connect to destination to avoid feedback loop (hearing yourself/meeting twice)
 
-            // 3. Connect to Gemini Live
             const sessionPromise = aiRef.current.live.connect({
                 model: 'gemini-2.5-flash-native-audio-preview-12-2025',
                 config: {
-                    responseModalities: [Modality.AUDIO], // We need audio to keep connection alive, but we ignore it
-                    inputAudioTranscription: { model: "google-speech-v1" }, // Request transcription of input
-                    systemInstruction: "You are a passive meeting scribe. Your only task is to listen and transcribe. Do not speak. Do not answer questions.",
+                    responseModalities: [Modality.AUDIO],
+                    inputAudioTranscription: { model: "google-speech-v1" },
+                    systemInstruction: "You are a passive meeting scribe. Your only task is to listen and transcribe. Do not speak.",
                 },
                 callbacks: {
                     onopen: () => {
@@ -316,14 +304,12 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                         setIsTranscribing(true);
                         setConnectionStatus('Connected & Listening...');
                         
-                        // Start piping audio data
                         worklet.port.onmessage = (event) => {
                             const pcmBlob = createBlob(event.data);
                             sessionPromise.then(session => session.sendRealtimeInput({ media: pcmBlob }));
                         };
                     },
                     onmessage: (msg: LiveServerMessage) => {
-                        // Capture transcription of the INPUT audio (the meeting)
                         if (msg.serverContent?.inputTranscription) {
                             const text = msg.serverContent.inputTranscription.text;
                             if (text) {
@@ -332,11 +318,9 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                         }
                     },
                     onclose: () => {
-                        console.log("Session closed");
                         handleStopLiveTranscription();
                     },
                     onerror: (err) => {
-                        console.error("Session error:", err);
                         setError("Connection lost. Please restart.");
                         handleStopLiveTranscription();
                     }
@@ -345,13 +329,11 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             
             sessionRef.current = sessionPromise;
 
-            // Handle stream stop (user clicks "Stop sharing" in browser UI)
             stream.getVideoTracks()[0].onended = () => {
                 handleStopLiveTranscription();
             };
 
         } catch (err: any) {
-            console.error("Transcription start error:", err);
             cleanupAudio();
             setIsConnecting(false);
             setError(err.message || "Failed to start transcription.");
@@ -363,7 +345,6 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         setIsTranscribing(false);
         setIsConnecting(false);
         
-        // Auto-generate summary if we have content
         if (liveTranscript.trim().length > 0) {
             const finalTranscript = liveTranscript;
             setTranscript(finalTranscript);
@@ -372,151 +353,48 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         }
     };
 
-    const renderSummaryHtml = (markdown: string): string => {
-        let html = '';
-        let inList = false;
-        const lines = markdown.split('\n');
-        lines.forEach(line => {
-            const trimmedLine = line.trim();
-            if (trimmedLine.startsWith('**') && trimmedLine.endsWith('**')) {
-                if (inList) {
-                    html += '</ul>';
-                    inList = false;
-                }
-                html += `<h2>${trimmedLine.substring(2, trimmedLine.length - 2)}</h2>`;
-            } else if (trimmedLine.startsWith('* ') || trimmedLine.startsWith('- ')) {
-                if (!inList) {
-                    html += '<ul>';
-                    inList = true;
-                }
-                html += `<li>${trimmedLine.substring(2)}</li>`;
-            } else {
-                if (inList) {
-                    html += '</ul>';
-                    inList = false;
-                }
-                if (trimmedLine) {
-                    html += `<p>${trimmedLine}</p>`;
-                }
-            }
-        });
+    const handleExport = (format: 'txt' | 'doc') => {
+        if (!analysisResult) return;
+        
+        let content = '';
+        const title = `Meeting Summary - ${new Date().toLocaleDateString()}`;
+        
+        content += `${title}\n\n`;
+        content += `SUMMARY\n${analysisResult.summary}\n\n`;
+        
+        content += `DECISIONS\n`;
+        analysisResult.decisions.forEach(d => content += `- ${d}\n`);
+        content += `\n`;
+        
+        content += `ACTION ITEMS\n`;
+        analysisResult.actionItems.forEach(item => content += `[ ] ${item.task} (Owner: ${item.owner}, By: ${item.deadline})\n`);
+        content += `\n`;
+        
+        content += `CULTURAL INSIGHTS\n${analysisResult.culturalInsights}\n`;
 
-        if (inList) {
-            html += '</ul>';
-        }
-        return html;
-    }
-
-    const handleExportWord = () => {
-        const htmlSummary = renderSummaryHtml(editedSummary);
-        const content = `
-            <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-            <head><meta charset='utf-8'><title>Meeting Summary</title></head>
-            <body>
-                <h1>Meeting Summary</h1>
-                ${fileName ? `<p><strong>File:</strong> ${fileName}</p>` : ''}
-                ${meetingLink ? `<p><strong>Meeting Link:</strong> ${meetingLink}</p>` : ''}
-                ${htmlSummary}
-            </body>
-            </html>
-        `;
-        const blob = new Blob([content], { type: 'application/msword' });
+        const mimeType = format === 'doc' ? 'application/msword' : 'text/plain';
+        const blob = new Blob([content], { type: mimeType });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `summary-${fileName || 'meeting'}.doc`;
+        link.download = `meeting_notes.${format}`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleExportPDF = () => {
-        const printWindow = window.open('', '_blank', 'height=800,width=600');
-        if (printWindow) {
-            printWindow.document.write('<html><head><title>Meeting Summary</title>');
-            printWindow.document.write(`
-                <style>
-                    body { 
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-                        line-height: 1.6; 
-                        color: #111827; 
-                        margin: 2rem;
-                    }
-                    h1 {
-                        font-size: 1.5rem;
-                        font-weight: 600;
-                        color: #000;
-                        border-bottom: 2px solid #e5e7eb;
-                        padding-bottom: 0.5rem;
-                        margin-bottom: 1.5rem;
-                    }
-                    h2 { 
-                        font-size: 1.25rem;
-                        font-weight: 600;
-                        color: #D97706; /* Accent color */
-                        margin-top: 2rem;
-                        margin-bottom: 1rem;
-                    } 
-                    ul { 
-                        padding-left: 1.5rem; 
-                        margin-top: 0.5rem;
-                        margin-bottom: 1rem;
-                    } 
-                    li { 
-                        margin-bottom: 0.5rem; 
-                    }
-                    p {
-                        margin-bottom: 1rem;
-                    }
-                    strong {
-                        font-weight: 600;
-                    }
-                     a {
-                        color: #0284c7;
-                        text-decoration: none;
-                    }
-                </style>
-            `);
-            printWindow.document.write('</head><body>');
-
-            const htmlSummary = renderSummaryHtml(editedSummary);
-
-            let htmlContent = `<h1>Meeting Summary</h1>`;
-            if (fileName) {
-                htmlContent += `<p><strong>File:</strong> ${fileName}</p>`;
-            }
-            if (meetingLink) {
-                 htmlContent += `<p><strong>Meeting Link:</strong> <a href="${meetingLink}">${meetingLink}</a></p>`;
-            }
-            htmlContent += htmlSummary;
-
-            printWindow.document.write(htmlContent);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.focus();
-            printWindow.print();
-            printWindow.close();
-        }
     };
     
     const handleReset = () => {
         setMode('live');
         setTranscript('');
         setMeetingLink('');
-        setSummary('');
-        setEditedSummary('');
+        setAnalysisResult(null);
         setIsLoading(false);
         setError(null);
         setFileName('');
-        setIsEditing(false);
         setIsTranscribing(false);
         setLiveTranscript('');
         setConnectionStatus('');
-        setNewMeetingTitle('');
-        setNewMeetingDate('');
-        setNewMeetingTime('');
-        setNewMeetingLink('');
+        setActiveTab('transcript');
         cleanupAudio();
     };
 
@@ -528,13 +406,42 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
         setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1));
     };
 
+    const renderActionItem = (item: ActionItem, index: number) => (
+        <div key={index} className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-accent/30 transition-colors">
+            <div className={`mt-1 w-2 h-2 rounded-full ${item.priority === 'High' ? 'bg-red-500' : item.priority === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
+            <div className="flex-1">
+                <p className="text-sm text-white font-medium">{item.task}</p>
+                <p className="text-xs text-text-secondary mt-1 flex justify-between">
+                    <span>Owner: <strong className="text-white">{item.owner}</strong></span>
+                    <span>Due: {item.deadline}</span>
+                </p>
+            </div>
+            <button className="text-text-secondary hover:text-green-400">
+                <div className="w-5 h-5 border-2 border-current rounded-md"></div>
+            </button>
+        </div>
+    );
+
+    const getFilteredTranscript = () => {
+        if (!searchTerm) return transcript;
+        // Simple highlight logic
+        const parts = transcript.split(new RegExp(`(${searchTerm})`, 'gi'));
+        return (
+            <span>
+                {parts.map((part, i) => 
+                    part.toLowerCase() === searchTerm.toLowerCase() ? <span key={i} className="bg-yellow-500/30 text-yellow-200 font-bold px-1 rounded">{part}</span> : part
+                )}
+            </span>
+        );
+    };
+
     if (isTranscribing || isConnecting) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-4">
                  {isConnecting ? (
                      <>
                         <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mb-4"></div>
-                        <h2 className="text-xl font-bold text-text-primary">Establishing Link...</h2>
+                        <h2 className="text-xl font-bold text-text-primary">Establishing Secure Link...</h2>
                         <p className="text-sm text-text-secondary mt-2">{connectionStatus}</p>
                         <button onClick={handleStopLiveTranscription} className="mt-6 text-xs text-red-400 hover:text-red-300">Cancel</button>
                      </>
@@ -557,7 +464,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                         </div>
                         <button onClick={handleStopLiveTranscription} className="mt-6 px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors shadow-lg flex items-center gap-2 text-sm">
                             <div className="w-2.5 h-2.5 bg-white rounded-sm"></div>
-                            Stop & Summarize
+                            Stop & Analyze
                         </button>
                     </>
                  )}
@@ -731,7 +638,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                     </div>
                     <h1 className="text-3xl font-bold text-text-primary">AI Meeting Insights</h1>
                     <p className="text-sm text-text-secondary mt-1 max-w-lg mx-auto">
-                        Automated summarization and action item extraction.
+                        Automated summarization, action item extraction, and cultural intelligence analysis.
                     </p>
                 </div>
 
@@ -815,66 +722,147 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                         <div className="p-2 bg-accent/10 rounded-lg border border-accent/20">
                             <MeetingIcon className="w-6 h-6 text-accent" />
                         </div>
-                        <h1 className="text-xl font-bold text-white">Meeting Insights</h1>
-                        {fileName && <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-text-secondary border border-white/5 truncate max-w-[200px]">{fileName}</span>}
+                        <div>
+                            <h1 className="text-xl font-bold text-white">Meeting Insights</h1>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                {fileName && <span className="text-[10px] bg-white/10 px-2 py-0.5 rounded text-text-secondary border border-white/5 truncate max-w-[200px]">{fileName}</span>}
+                                {analysisResult && <span className="text-[10px] text-green-400 font-bold bg-green-900/20 px-2 py-0.5 rounded border border-green-500/20">Analyzed</span>}
+                            </div>
+                        </div>
                     </div>
                      <div className="flex items-center gap-2 flex-wrap">
-                        <button onClick={() => setIsEditing(!isEditing)} className="px-3 py-1.5 text-[10px] font-bold bg-bg-surface border border-border-default text-text-secondary hover:text-white rounded-md transition-colors uppercase tracking-wider">
-                            {isEditing ? 'View' : 'Edit'}
+                        <button onClick={() => handleExport('doc')} className="px-3 py-1.5 text-[10px] font-bold bg-bg-surface border border-border-default text-text-secondary hover:text-white rounded-md transition-colors uppercase tracking-wider flex items-center gap-1.5">
+                            <DownloadIcon className="w-3.5 h-3.5" /> Export
                         </button>
-                        <button onClick={handleExportPDF} className="px-3 py-1.5 text-[10px] font-bold bg-bg-surface border border-border-default text-text-secondary hover:text-white rounded-md transition-colors uppercase tracking-wider">PDF</button>
-                        <button onClick={handleExportWord} className="px-3 py-1.5 text-[10px] font-bold bg-bg-surface border border-border-default text-text-secondary hover:text-white rounded-md transition-colors uppercase tracking-wider">Word</button>
                         <button onClick={handleReset} className="px-3 py-1.5 text-[10px] font-bold bg-bg-surface border border-border-default text-text-secondary hover:text-white rounded-md transition-colors uppercase tracking-wider">New</button>
                     </div>
                 </div>
                  
-                <div className="mt-3 flex items-end gap-3">
-                    <div className="flex-grow max-w-xs">
-                        <LanguageSelector label="Summary Language" languages={LANGUAGES} value={summaryLang} onChange={setSummaryLang} />
-                    </div>
-                    <button onClick={() => handleGenerate()} disabled={isLoading} className="px-4 py-2 bg-accent text-bg-main text-xs font-bold rounded-md hover:bg-white hover:text-accent disabled:opacity-50 transition-colors uppercase tracking-wide">
-                        {isLoading ? 'Processing...' : (summary ? 'Regenerate' : 'Generate')}
+                <div className="mt-4 flex gap-4 border-b border-border-default">
+                    <button 
+                        onClick={() => setActiveTab('transcript')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'transcript' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                    >
+                        Transcript
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('notes')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'notes' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                    >
+                        Smart Notes
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('analytics')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'analytics' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                    >
+                        Analytics
                     </button>
                 </div>
                 {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
             </div>
 
-            <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-4 overflow-hidden">
-                <div className="flex-1 flex flex-col min-h-0 bg-bg-surface rounded-lg border border-border-default overflow-hidden">
-                    <div className="p-2 border-b border-border-default bg-bg-main/50">
-                        <h2 className="text-xs font-bold text-text-secondary uppercase tracking-widest">Transcript</h2>
+            <div className="flex-1 min-h-0 overflow-hidden">
+                {activeTab === 'transcript' && (
+                    <div className="h-full flex flex-col bg-bg-surface rounded-lg border border-border-default overflow-hidden">
+                        <div className="p-2 border-b border-border-default bg-bg-main/50 flex items-center gap-2">
+                            <SearchIcon className="w-4 h-4 text-text-secondary" />
+                            <input 
+                                type="text" 
+                                placeholder="Search transcript..." 
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="bg-transparent border-none text-xs text-white focus:ring-0 w-full outline-none"
+                            />
+                        </div>
+                        <div className="flex-1 p-4 overflow-y-auto custom-scrollbar whitespace-pre-wrap text-sm text-text-primary font-mono leading-relaxed">
+                            {searchTerm ? getFilteredTranscript() : transcript}
+                        </div>
                     </div>
-                    <textarea readOnly value={transcript} className="flex-1 w-full p-4 bg-transparent resize-none text-xs leading-relaxed text-text-primary focus:outline-none custom-scrollbar font-mono" />
-                </div>
-                 <div className="flex-1 flex flex-col min-h-0 bg-bg-surface rounded-lg border border-border-default overflow-hidden relative">
-                    <div className="p-2 border-b border-border-default bg-bg-main/50">
-                        <h2 className="text-xs font-bold text-accent uppercase tracking-widest">AI Summary</h2>
+                )}
+
+                {activeTab === 'notes' && (
+                    <div className="h-full overflow-y-auto custom-scrollbar space-y-6 pb-10">
+                        {isLoading && !analysisResult ? (
+                            <div className="flex flex-col items-center justify-center h-48 gap-3">
+                                <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-xs text-accent font-bold uppercase tracking-widest animate-pulse">Structuring Notes...</span>
+                            </div>
+                        ) : analysisResult ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Summary Card */}
+                                <div className="md:col-span-2 bg-bg-surface p-5 rounded-xl border border-border-default shadow-sm">
+                                    <h3 className="text-xs font-bold text-accent uppercase tracking-widest mb-3 border-b border-white/5 pb-2">Executive Summary</h3>
+                                    <p className="text-sm text-text-primary leading-relaxed">{analysisResult.summary}</p>
+                                </div>
+
+                                {/* Action Items */}
+                                <div className="bg-bg-surface p-5 rounded-xl border border-border-default shadow-sm">
+                                    <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <CheckIcon className="w-4 h-4 text-accent" /> Action Items
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {analysisResult.actionItems.map(renderActionItem)}
+                                    </div>
+                                </div>
+
+                                {/* Key Decisions */}
+                                <div className="bg-bg-surface p-5 rounded-xl border border-border-default shadow-sm">
+                                    <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                                        <ThinkingIcon className="w-4 h-4 text-blue-400" /> Key Decisions
+                                    </h3>
+                                    <ul className="space-y-2">
+                                        {analysisResult.decisions.map((decision, i) => (
+                                            <li key={i} className="flex gap-2 text-sm text-text-secondary">
+                                                <span className="text-blue-400 font-bold">•</span>
+                                                {decision}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
-                    {isLoading && !summary ? (
-                         <div className="absolute inset-0 bg-bg-surface/80 flex items-center justify-center z-10">
-                            <div className="flex items-center space-x-1.5">
-                                <span className="h-2 w-2 bg-accent rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                <span className="h-2 w-2 bg-accent rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                <span className="h-2 w-2 bg-accent rounded-full animate-bounce"></span>
+                )}
+
+                {activeTab === 'analytics' && analysisResult && (
+                    <div className="h-full overflow-y-auto custom-scrollbar p-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Cultural Insights */}
+                            <div className="bg-gradient-to-br from-purple-900/20 to-bg-surface p-6 rounded-xl border border-purple-500/20">
+                                <h3 className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3">Cultural Intelligence</h3>
+                                <p className="text-sm text-text-primary italic leading-relaxed">
+                                    "{analysisResult.culturalInsights}"
+                                </p>
+                            </div>
+
+                            {/* Sentiment Analysis */}
+                            <div className="bg-bg-surface p-6 rounded-xl border border-border-default">
+                                <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Meeting Sentiment</h3>
+                                <div className="flex items-center gap-4 mb-4">
+                                    <div className={`text-2xl font-bold ${
+                                        analysisResult.sentiment === 'Positive' ? 'text-green-400' : 
+                                        analysisResult.sentiment === 'Negative' ? 'text-red-400' : 'text-yellow-400'
+                                    }`}>
+                                        {analysisResult.sentiment}
+                                    </div>
+                                    <div className="flex-1 h-3 bg-bg-main rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-1000 ${
+                                                analysisResult.sentiment === 'Positive' ? 'bg-green-500' : 
+                                                analysisResult.sentiment === 'Negative' ? 'bg-red-500' : 'bg-yellow-500'
+                                            }`} 
+                                            style={{ width: `${analysisResult.sentimentScore}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className="text-xs font-mono text-text-secondary">{analysisResult.sentimentScore}/100</span>
+                                </div>
+                                <p className="text-xs text-text-secondary">
+                                    Based on tonal analysis of speaker interactions and vocabulary choice.
+                                </p>
                             </div>
                         </div>
-                    ) : (
-                        <>
-                            {isEditing ? (
-                                <textarea
-                                    value={editedSummary}
-                                    onChange={(e) => setEditedSummary(e.target.value)}
-                                    className="flex-1 w-full p-4 bg-transparent resize-none text-sm leading-relaxed text-text-primary focus:outline-none custom-scrollbar"
-                                />
-                            ) : (
-                                <div 
-                                    className="flex-1 w-full p-4 overflow-y-auto custom-scrollbar prose prose-invert prose-sm max-w-none prose-headings:text-sm prose-headings:font-bold prose-headings:text-white prose-p:text-xs prose-li:text-xs prose-li:marker:text-accent"
-                                    dangerouslySetInnerHTML={{ __html: renderSummaryHtml(summary) }}
-                                ></div>
-                            )}
-                        </>
-                    )}
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );

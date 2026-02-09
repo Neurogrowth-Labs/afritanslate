@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
-import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics, SceneBreakdown, CastingSide, DubbingLine, StoryboardPanel } from '../types';
+import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics, SceneBreakdown, CastingSide, DubbingLine, StoryboardPanel, MeetingAnalysisResult } from '../types';
 import { GLOTTOLOG_METADATA } from '../constants';
 
 function handleApiError(error: unknown, context: string): Error {
@@ -68,6 +68,37 @@ const emailLocalizationSchema = {
     },
   },
   required: ["subject", "body", "culturalTips"]
+};
+
+const bookTranslationSchema = {
+  type: Type.OBJECT,
+  properties: {
+    translation: { type: Type.STRING },
+    notes: { type: Type.STRING },
+    annotations: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          originalPhrase: { type: Type.STRING },
+          type: { type: Type.STRING, enum: ['idiom', 'cultural', 'proverb', 'entity'] },
+          explanation: { type: Type.STRING }
+        },
+        required: ["originalPhrase", "type", "explanation"]
+      }
+    },
+    metrics: {
+      type: Type.OBJECT,
+      properties: {
+        culturalAccuracy: { type: Type.NUMBER },
+        idiomPreservation: { type: Type.NUMBER },
+        readability: { type: Type.NUMBER },
+        localizationDepth: { type: Type.NUMBER }
+      },
+      required: ["culturalAccuracy", "idiomPreservation", "readability", "localizationDepth"]
+    }
+  },
+  required: ["translation"]
 };
 
 async function fileToGenerativePart(file: File) {
@@ -276,16 +307,21 @@ export async function translateBook(
                 config: {
                     systemInstruction: BOOK_TRANSLATOR_SYSTEM_INSTRUCTION,
                     responseMimeType: "application/json",
+                    responseSchema: bookTranslationSchema,
                     temperature: 0.4
                 }
             });
 
             const result = JSON.parse(response.text.trim());
-            previousContext = `Last 200 chars of prev chunk: "...${result.translation.slice(-200)}"`;
+            const translationText = result.translation || "";
+            
+            // Safety check for slice to prevent "cannot read properties of undefined" error
+            const sliceText = translationText.length > 200 ? translationText.slice(-200) : translationText;
+            previousContext = `Last 200 chars of prev chunk: "...${sliceText}"`;
 
             onProgress(
                 Math.round(((i + 1) / chunks.length) * 100), 
-                result.translation + '\n\n',
+                translationText + '\n\n',
                 result.notes ? `**Chunk ${i+1} Notes:**\n${result.notes}\n\n` : '',
                 result.annotations || [],
                 result.metrics || { culturalAccuracy: 0, idiomPreservation: 0, readability: 0, localizationDepth: 0 }
@@ -296,7 +332,7 @@ export async function translateBook(
             onProgress(
                 Math.round(((i + 1) / chunks.length) * 100), 
                 `[Error translating chunk ${i+1}. Original text retained.]\n${chunks[i]}\n\n`,
-                `Error: Failed to process chunk ${i+1} due to AI limits.`,
+                `Error: Failed to process chunk ${i+1} due to AI limits or network error.`,
                 [],
                 { culturalAccuracy: 0, idiomPreservation: 0, readability: 0, localizationDepth: 0 }
             );
@@ -304,13 +340,64 @@ export async function translateBook(
     }
 }
 
-// ... existing summarizeMeeting ...
-export async function summarizeMeeting(transcript: string, meetingLink?: string, summaryLangName: string = 'English'): Promise<string> {
+// --- STRUCTURED MEETING ANALYSIS ---
+export async function summarizeMeeting(transcript: string, meetingLink?: string, summaryLangName: string = 'English'): Promise<MeetingAnalysisResult> {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const prompt = `Summarize meeting transcript in ${summaryLangName}. Sections: Discussion, Decisions, Actions. Identify any technical terms discussed. Markdown. Transcript: ${transcript}`;
-    const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt });
-    return response.text;
+    
+    const prompt = `
+    You are a **Cultural Intelligence Meeting Assistant**.
+    Analyze the provided meeting transcript and return a structured JSON report.
+    
+    Context:
+    - Target Language for output: ${summaryLangName}
+    - The meeting may contain African context, dialects, or business hierarchy nuances.
+    
+    Tasks:
+    1. Summarize clearly.
+    2. Extract key points.
+    3. List decisions made.
+    4. List actionable tasks with owners and deadlines (if implied).
+    5. **Cultural Insights**: Identify if the tone was formal/informal, if hierarchy was respected, or if specific cultural idioms were used.
+    6. **Sentiment**: Analyze overall mood.
+    
+    Transcript:
+    "${transcript}"
+    `;
+
+    const response = await ai.models.generateContent({ 
+        model: "gemini-3-flash-preview", 
+        contents: prompt,
+        config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    summary: { type: Type.STRING },
+                    keyPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    decisions: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    actionItems: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                task: { type: Type.STRING },
+                                owner: { type: Type.STRING },
+                                deadline: { type: Type.STRING },
+                                priority: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] }
+                            }
+                        }
+                    },
+                    culturalInsights: { type: Type.STRING },
+                    sentiment: { type: Type.STRING, enum: ['Positive', 'Neutral', 'Negative', 'Tensile'] },
+                    sentimentScore: { type: Type.INTEGER, description: "0 to 100, where 100 is extremely positive" }
+                },
+                required: ["summary", "keyPoints", "decisions", "actionItems", "culturalInsights", "sentiment"]
+            }
+        } 
+    });
+    
+    return JSON.parse(response.text.trim()) as MeetingAnalysisResult;
   } catch (error) { throw handleApiError(error, "summarizing meeting"); }
 }
 
