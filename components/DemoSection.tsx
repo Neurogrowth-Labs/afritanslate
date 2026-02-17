@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import * as geminiService from '../services/geminiService';
 import type { TranslationResult } from '../types';
+import { LANGUAGES } from '../constants';
+import LanguageSelector from './LanguageSelector';
 
 interface DemoSectionProps {
     isLandingSection?: boolean;
@@ -54,13 +56,12 @@ const DemoSection: React.FC<DemoSectionProps> = ({ isLandingSection = false }) =
                             <textarea value={sourceText} onChange={e => setSourceText(e.target.value)} rows={3} className={`w-full p-3 ${surfaceBg} border border-${accentColor}/30 rounded-lg ${textPrimary} focus:ring-2 focus:ring-${accentColor} transition resize-none`}></textarea>
                         </div>
                         <div>
-                            <label className={`text-sm font-semibold ${textSecondary} mb-2 block`}>Translate To</label>
-                            <select value={targetLang} onChange={e => setTargetLang(e.target.value)} className={`w-full p-3 ${surfaceBg} border border-${accentColor}/30 rounded-lg ${textPrimary} focus:ring-2 focus:ring-${accentColor} transition appearance-none`}>
-                                <option value="sw">Swahili</option>
-                                <option value="yo">Yoruba</option>
-                                <option value="zu">Zulu</option>
-                                <option value="ha">Hausa</option>
-                            </select>
+                            <LanguageSelector 
+                                label="Translate To" 
+                                languages={LANGUAGES} 
+                                value={targetLang} 
+                                onChange={setTargetLang} 
+                            />
                         </div>
                     </div>
                     <div className="mt-6 text-center">

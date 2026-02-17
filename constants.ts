@@ -56,6 +56,24 @@ const generateCode = (name: string): string => {
     .replace(/^-|-$/g, '');     // Trim hyphens
 };
 
+// Generate and Sort the final LANGUAGES array with unique codes
+const generateUniqueLanguages = (): Language[] => {
+  const seenCodes = new Set<string>();
+  const uniqueLanguages: Language[] = [];
+  
+  for (const name of RAW_LANGUAGE_LIST) {
+    const code = generateCode(name);
+    
+    // Only add if we haven't seen this code before
+    if (!seenCodes.has(code)) {
+      seenCodes.add(code);
+      uniqueLanguages.push({ name, code });
+    }
+  }
+  
+  return uniqueLanguages.sort((a, b) => a.name.localeCompare(b.name));
+};
+
 // Full list from user input
 const RAW_LANGUAGE_LIST = [
   "’Auhelawa", "A-Pucikwar", "A’ou", "Aari", "Aasáx", "Abadi", "Abai Sungai", "Abanglekuo", "Abanyom", "Abau", "Abaza", "Abé", 
@@ -832,12 +850,7 @@ const RAW_LANGUAGE_LIST = [
 ];
 
 // Generate and Sort the final LANGUAGES array
-export const LANGUAGES: Language[] = RAW_LANGUAGE_LIST
-  .map(name => ({
-    name,
-    code: generateCode(name)
-  }))
-  .sort((a, b) => a.name.localeCompare(b.name));
+export const LANGUAGES: Language[] = generateUniqueLanguages();
 
 export const GLOTTOLOG_METADATA: Record<string, GlottologData> = {
   sw: { family: 'Atlantic-Congo', parent: 'Northeast Coastal Bantu', features: 'Agglutinative, 18 Noun Classes, SVO', glottocode: 'swah1253' },
