@@ -1,11 +1,14 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import type { User } from '../types';
-import { MenuIcon, LogoutIcon, BoltIcon, GlobeIcon, LogoIcon } from './Icons';
+import { MenuIcon, LogoutIcon, BoltIcon, LogoIcon } from './Icons';
+import LanguageSelector from '../src/components/LanguageSelector';
 
 interface HeaderProps {
-  sourceLangName?: string;
-  targetLangName?: string;
+  sourceLang?: string;
+  targetLang?: string;
+  onSourceLangChange?: (code: string) => void;
+  onTargetLangChange?: (code: string) => void;
   isChatActive: boolean;
   currentUser: User | null;
   onUpgradeClick: () => void;
@@ -16,7 +19,20 @@ interface HeaderProps {
   onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ sourceLangName, targetLangName, isChatActive, currentUser, onUpgradeClick, onProfileClick, tone, onToggleSidebar, isOffline, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  sourceLang, 
+  targetLang, 
+  onSourceLangChange, 
+  onTargetLangChange, 
+  isChatActive, 
+  currentUser, 
+  onUpgradeClick, 
+  onProfileClick, 
+  tone, 
+  onToggleSidebar, 
+  isOffline, 
+  onLogout 
+}) => {
   return (
     <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-bg-surface/50 backdrop-blur-md flex-shrink-0 z-40 sticky top-0">
       <div className="flex items-center gap-4">
@@ -40,14 +56,30 @@ const Header: React.FC<HeaderProps> = ({ sourceLangName, targetLangName, isChatA
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Breadcrumb-like status for chat */}
-        {isChatActive && sourceLangName && targetLangName && (
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-black/20 border border-white/5 rounded-full text-[11px] font-medium text-text-secondary shadow-inner">
-                <span className="text-white/80">{sourceLangName}</span>
-                <svg className="w-3 h-3 text-text-secondary/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-                <span className="text-white/80">{targetLangName}</span>
-                <span className="mx-2 h-3 w-px bg-white/10"></span>
-                <span className="text-accent">{tone}</span>
+        {/* Language Selectors for chat */}
+        {isChatActive && sourceLang && targetLang && onSourceLangChange && onTargetLangChange && (
+            <div className="hidden lg:flex items-center gap-3">
+                <LanguageSelector
+                    value={sourceLang}
+                    onChange={onSourceLangChange}
+                    label=""
+                    className="w-40"
+                />
+                <svg className="w-4 h-4 text-text-secondary/50 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+                <LanguageSelector
+                    value={targetLang}
+                    onChange={onTargetLangChange}
+                    label=""
+                    className="w-40"
+                />
+                {tone && (
+                    <>
+                        <span className="mx-2 h-4 w-px bg-white/10"></span>
+                        <span className="text-[11px] font-medium text-accent">{tone}</span>
+                    </>
+                )}
             </div>
         )}
 
@@ -67,10 +99,10 @@ const Header: React.FC<HeaderProps> = ({ sourceLangName, targetLangName, isChatA
                     className="flex items-center gap-2 group cursor-pointer hover:opacity-80 transition-opacity"
                 >
                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-accent to-yellow-600 flex items-center justify-center font-bold text-black text-[12px] shadow-md border-2 border-transparent group-hover:border-white/10 transition-all">
-                        {currentUser.name.charAt(0).toUpperCase()}
+                        {(currentUser.name?.charAt(0) || currentUser.email?.charAt(0) || 'U').toUpperCase()}
                     </div>
                     <div className="hidden sm:block text-left">
-                        <p className="text-[12px] font-bold text-white leading-none">{currentUser.name}</p>
+                        <p className="text-[12px] font-bold text-white leading-none">{currentUser.name || currentUser.email || 'User'}</p>
                     </div>
                 </button>
                 <button 

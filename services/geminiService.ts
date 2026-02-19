@@ -2,6 +2,17 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics, SceneBreakdown, CastingSide, DubbingLine, StoryboardPanel, MeetingAnalysisResult } from '../types';
 import { GLOTTOLOG_METADATA } from '../constants';
+import { saveCulturalInsight, checkGlossaryCompliance } from '../src/services/culturalService';
+import { getLanguageName } from '../src/utils/languageMapping';
+
+// Helper function to get API key from environment
+function getApiKey(): string {
+    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+    if (!apiKey) {
+        throw new Error('VITE_GOOGLE_API_KEY is not set in .env file');
+    }
+    return apiKey;
+}
 
 function handleApiError(error: unknown, context: string): Error {
     console.error(`Error during ${context}:`, error);
@@ -119,7 +130,7 @@ export async function getNuancedTranslation(
     targetRegion?: string
 ): Promise<TranslationResult> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     
     // ENHANCED PROMPT FOR TECHNICAL ACCURACY + REGIONAL CULTURAL NUANCE
     const regionInstruction = targetRegion && targetRegion !== 'General' 
@@ -185,7 +196,7 @@ export async function getNuancedTranslation(
 
 export async function localizeEmail(subject: string, body: string, targetLang: string, tone: string, context: string, targetRegion?: string): Promise<EmailLocalizationResult> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const regionContext = targetRegion ? `Target Region: ${targetRegion}.` : '';
     
     const prompt = `
@@ -219,7 +230,7 @@ export async function localizeEmail(subject: string, body: string, targetLang: s
 // ... existing textToSpeech, transcribeAudio ... 
 export async function textToSpeech(text: string, voiceName: string = 'Kore'): Promise<string> {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash-preview-tts",
             contents: [{ parts: [{ text }] }],
@@ -234,7 +245,7 @@ export async function textToSpeech(text: string, voiceName: string = 'Kore'): Pr
 
 export async function transcribeAudio(audioFile: File, style: TranscriptionStyle = 'normal'): Promise<string> {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         const audioPart = await fileToGenerativePart(audioFile);
         const prompt = `Transcribe audio. Style: ${style}. If technical terms (medical, legal, tech) appear, spell them correctly.`;
         const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: { parts: [audioPart, { text: prompt }] } });
@@ -244,7 +255,7 @@ export async function transcribeAudio(audioFile: File, style: TranscriptionStyle
 
 export async function translateScript(scriptText: string, sourceLang: string, targetLang: string, tone: string, targetRegion?: string): Promise<string> {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         const regionPrompt = targetRegion ? `Localize strictly for ${targetRegion}.` : '';
         const prompt = `Translate script from ${sourceLang} to ${targetLang} (${tone}). ${regionPrompt} Keep formatting. Adapt for specific cultural resonance of the region but preserve technical plot points. Text: ${scriptText}`;
         const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { temperature: 0.5 } });
@@ -272,7 +283,7 @@ export async function translateBook(
     config: BookTranslationConfig,
     onProgress: (progress: number, chunk: string, notes: string, annotations: BookAnnotation[], metrics: TranslationMetrics) => void
 ): Promise<void> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const chunkSize = 4000;
     const chunks = [];
     for (let i = 0; i < bookText.length; i += chunkSize) {
@@ -343,7 +354,7 @@ export async function translateBook(
 // --- STRUCTURED MEETING ANALYSIS ---
 export async function summarizeMeeting(transcript: string, meetingLink?: string, summaryLangName: string = 'English'): Promise<MeetingAnalysisResult> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     
     const prompt = `
     You are a **Cultural Intelligence Meeting Assistant**.
@@ -414,7 +425,7 @@ export async function startVideoGeneration(
         isDeepLocalized?: boolean
     }
 ) {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     let imagePart = undefined;
     if (imageFile) {
         const part = await fileToGenerativePart(imageFile);
@@ -446,34 +457,34 @@ export async function startVideoGeneration(
 
 // ... existing pollVideoOperation ...
 export async function pollVideoOperation(operation: any) {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     return await ai.operations.getVideosOperation({ operation });
 }
 
 // ... existing analysis functions (generateSynopsis, etc) ...
 export async function generateSynopsis(scriptText: string, targetLang: string): Promise<Synopsis> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const prompt = `Generate logline and synopsis for: ${scriptText} in ${targetLang}. JSON.`;
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { logline: { type: Type.STRING }, synopsis: { type: Type.STRING } }, required: ["logline", "synopsis"] } } });
     return JSON.parse(response.text) as Synopsis;
 }
 
 export async function analyzeCharacters(scriptText: string, targetLang: string): Promise<CharacterProfile[]> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const prompt = `Analyze up to 3 characters in: ${scriptText} for ${targetLang} audience. JSON array.`;
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { name: { type: Type.STRING }, description: { type: Type.STRING }, motivation: { type: Type.STRING }, emotionalArc: { type: Type.STRING } }, required: ["name", "description", "motivation", "emotionalArc"] } } } });
     return JSON.parse(response.text) as CharacterProfile[];
 }
 
 export async function generateCulturalReport(original: string, translated: string, sourceLang: string, targetLang: string): Promise<CulturalReport> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const prompt = `Compare scripts. Identify cultural adaptations (idioms, jokes, norms). JSON. Original: ${original}. Translated: ${translated}`;
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { summary: { type: Type.STRING }, adaptations: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { original: { type: Type.STRING }, adapted: { type: Type.STRING }, reason: { type: Type.STRING } }, required: ["original", "adapted", "reason"] } } }, required: ["summary", "adaptations"] } } });
     return JSON.parse(response.text) as CulturalReport;
 }
 
 export async function analyzeAudienceReception(scriptText: string, targetLang: string): Promise<AudienceReception> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const prompt = `Analyze audience reception for: ${scriptText} in ${targetLang} region. JSON.`;
     const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { targetDemographic: { type: Type.STRING }, keyStrengths: { type: Type.ARRAY, items: { type: Type.STRING } }, potentialChallenges: { type: Type.ARRAY, items: { type: Type.STRING } }, genreAppeal: { type: Type.STRING } }, required: ["targetDemographic", "keyStrengths", "potentialChallenges", "genreAppeal"] } } });
     return JSON.parse(response.text) as AudienceReception;
@@ -481,7 +492,7 @@ export async function analyzeAudienceReception(scriptText: string, targetLang: s
 
 export async function analyzeSceneBreakdown(scriptText: string): Promise<SceneBreakdown[]> {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         const prompt = `Analyze the script text and extract scene breakdown details. Identify Scene Numbers, Sluglines, Locations (INT/EXT), Time of Day, List of Characters in scene, and Estimated Duration (assuming 1 page = 1 minute). Return JSON array. Script: ${scriptText.slice(0, 30000)}`; 
         
         const response = await ai.models.generateContent({
@@ -512,7 +523,7 @@ export async function analyzeSceneBreakdown(scriptText: string): Promise<SceneBr
 
 export async function generateCastingSide(scriptText: string): Promise<CastingSide[]> {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         const prompt = `Analyze the script and generate detailed casting sides/profiles for main characters. Include African cultural nuance in requirements where applicable. JSON array. Script: ${scriptText.slice(0, 30000)}`;
         
         const response = await ai.models.generateContent({
@@ -543,7 +554,7 @@ export async function generateCastingSide(scriptText: string): Promise<CastingSi
 
 export async function generateDubbingGuide(scriptText: string, targetLang: string): Promise<DubbingLine[]> {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         const prompt = `Translate key dialogue lines to ${targetLang} formatted for dubbing. Include timecode approximations (00:00:00) and lip-sync notes (e.g. 'open vowel', 'rapid pace'). JSON array. Script: ${scriptText.slice(0, 10000)}`;
         
         const response = await ai.models.generateContent({
@@ -572,7 +583,7 @@ export async function generateDubbingGuide(scriptText: string, targetLang: strin
 
 export async function generateStoryboardPrompts(scriptText: string): Promise<StoryboardPanel[]> {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
         const prompt = `Analyze key scenes and generate detailed visual prompts suitable for an AI image generator (like Midjourney). Include camera angles and lighting. JSON array. Script: ${scriptText.slice(0, 15000)}`;
         
         const response = await ai.models.generateContent({
@@ -608,7 +619,7 @@ export async function getBatchTranslations(
   targetRegion?: string
 ): Promise<TranslationResult[]> {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const regionInstruction = targetRegion ? `Target Region: ${targetRegion}.` : '';
     
     // Inject Glottolog Data
@@ -657,5 +668,149 @@ export async function getBatchTranslations(
     return JSON.parse(response.text.trim()) as TranslationResult[];
   } catch (error) {
     throw handleApiError(error, "batch translating");
+  }
+}
+
+export interface TranslationOptions {
+  targetLang: string;
+  sourceLang?: string;
+  dialect?: string;
+  tone?: 'Marketing' | 'Legal' | 'Street' | 'Religious' | 'Corporate' | 'Neutral';
+  formality?: 'High' | 'Medium' | 'Low';
+  includeCulturalNotes?: boolean;
+}
+
+export interface CulturalTranslationResult {
+  translation: string;
+  cultural_notes: string[];
+  risk_flags: Array<{ phrase: string; reason: string; severity: 'low' | 'medium' | 'high' }>;
+  tone_analysis: string;
+  risk_score: number;
+}
+
+export async function translateWithCulture(
+  text: string, 
+  options: TranslationOptions
+): Promise<CulturalTranslationResult> {
+  
+  // Step 1: Check for glossary violations BEFORE translating
+  const glossaryViolations = await checkGlossaryCompliance(text);
+  
+  // Step 2: Get full language names from codes
+  const sourceLanguageName = getLanguageName(options.sourceLang || 'en');
+  const targetLanguageName = getLanguageName(options.targetLang);
+  
+  // Step 3: Build the cultural intelligence prompt
+  const prompt = `
+You are an expert African linguist and cultural consultant for AfriTranslate.
+
+Task: Translate the following text from ${sourceLanguageName} into ${targetLanguageName}.
+
+CRITICAL: The output MUST be in ${targetLanguageName}, not any other language.
+
+Translation Parameters:
+- Source Language: ${sourceLanguageName}
+- Target Language: ${targetLanguageName}
+- Dialect: ${options.dialect || 'Standard'}
+- Tone: ${options.tone || 'Neutral'}
+- Formality Level: ${options.formality || 'Medium'}
+
+Special Instructions:
+1. Adapt all idioms to be culturally natural for ${options.dialect || targetLanguageName}.
+2. Flag any phrases that may be culturally risky or offensive.
+3. Provide context notes explaining important cultural adaptations.
+4. Rate the overall cultural risk on a scale of 0-100.
+
+Output Format (STRICT JSON):
+{
+  "translation": "the translated text here",
+  "cultural_notes": ["note 1", "note 2"],
+  "risk_flags": [
+    {"phrase": "problematic phrase", "reason": "why it's risky", "severity": "low/medium/high"}
+  ],
+  "tone_analysis": "brief analysis of tone appropriateness",
+  "risk_score": 0-100
+}
+
+Source Text: "${text}"
+`;
+
+  // Debug logging
+  console.log('=== TRANSLATION REQUEST ===');
+  console.log('Source Language Code:', options.sourceLang || 'auto-detect');
+  console.log('Source Language Name:', sourceLanguageName);
+  console.log('Target Language Code:', options.targetLang);
+  console.log('Target Language Name:', targetLanguageName);
+  console.log('Full Prompt:', prompt);
+  console.log('===========================');
+  
+  try {
+    // Step 4: Call Gemini API
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            translation: { type: Type.STRING },
+            cultural_notes: { type: Type.ARRAY, items: { type: Type.STRING } },
+            risk_flags: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  phrase: { type: Type.STRING },
+                  reason: { type: Type.STRING },
+                  severity: { type: Type.STRING, enum: ['low', 'medium', 'high'] }
+                },
+                required: ["phrase", "reason", "severity"]
+              }
+            },
+            tone_analysis: { type: Type.STRING },
+            risk_score: { type: Type.INTEGER }
+          },
+          required: ["translation", "cultural_notes", "risk_flags", "tone_analysis", "risk_score"]
+        },
+        temperature: 0.4
+      }
+    });
+    
+    const parsedResult: CulturalTranslationResult = JSON.parse(response.text.trim());
+    
+    // Step 5: Add glossary violations to risk flags
+    if (glossaryViolations.length > 0) {
+      parsedResult.risk_flags.push(...glossaryViolations.map(v => ({
+        phrase: v.forbidden,
+        reason: `Forbidden term for "${v.term}" according to your brand glossary`,
+        severity: 'high' as const
+      })));
+      parsedResult.risk_score = Math.min(100, parsedResult.risk_score + 20);
+    }
+    
+    return parsedResult;
+    
+  } catch (error) {
+    console.error('Cultural translation error:', error);
+    // Fallback to basic translation
+    const basicTranslation = await getNuancedTranslation(
+      text, 
+      options.sourceLang || 'auto', 
+      options.targetLang, 
+      options.tone || 'Neutral'
+    );
+    return {
+      translation: basicTranslation.culturallyAwareTranslation || basicTranslation.directTranslation,
+      cultural_notes: [],
+      risk_flags: glossaryViolations.map(v => ({
+        phrase: v.forbidden,
+        reason: `Glossary violation: ${v.term}`,
+        severity: 'high' as const
+      })),
+      tone_analysis: 'Basic translation (cultural analysis unavailable)',
+      risk_score: glossaryViolations.length > 0 ? 30 : 0
+    };
   }
 }

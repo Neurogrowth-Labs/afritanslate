@@ -1,42 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from './supabaseClient';
+import { supabase } from '../supabaseClient';
 
 // --- MAIN APPLICATION IMPORTS --- //
 import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
 
 // Import all components needed for the app
-import { Auth } from './components/Auth';
+import { Auth } from '../components/Auth';
 import Sidebar from './components/Sidebar';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import Library from './components/Library';
-import Pricing from './components/Pricing';
-import Payment from './components/Payment';
-import PaymentSuccess from './components/PaymentSuccess';
-import TermsOfService from './components/TermsOfService';
-import PrivacyPolicy from './components/PrivacyPolicy';
-import ContactForm from './components/ContactForm';
-import ScriptTranslator from './components/ScriptTranslator';
-import BookTranslator from './components/BookTranslator';
-import MeetingSummarizer from './components/MeetingSummarizer';
-import UpgradeModal from './components/UpgradeModal';
-import Studio from './components/Studio';
-import Chat from './components/Chat'; // Import Chat component
-import AdminPortal from './components/AdminPortal';
-import LiveConversation from './components/LiveConversation';
-import AudioTranscriber from './components/AudioTranscriber';
-import DemoSection from './components/DemoSection';
-import AboutPage from './components/AboutPage';
-import UseCasesPage from './components/UseCasesPage';
-import TestimonialsPage from './components/TestimonialsPage';
-import VideoGenerator from './components/VideoGenerator';
-import ConfirmationModal from './components/ConfirmationModal';
-import ProfileDashboard from './components/ProfileDashboard';
-import OnboardingAgent from './components/OnboardingAgent';
-import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
-import { getNuancedTranslation } from './services/geminiService'; // Import service
-import { generateOperationalManual } from './services/pdfGenerator'; // Import PDF generator
+import Header from '../components/Header';
+import Footer from '../components/Footer';
+import Library from '../components/Library';
+import Pricing from '../components/Pricing';
+import Payment from '../components/Payment';
+import PaymentSuccess from '../components/PaymentSuccess';
+import TermsOfService from '../components/TermsOfService';
+import PrivacyPolicy from '../components/PrivacyPolicy';
+import ContactForm from '../components/ContactForm';
+import ScriptTranslator from '../components/ScriptTranslator';
+import BookTranslator from '../components/BookTranslator';
+import MeetingSummarizer from '../components/MeetingSummarizer';
+import UpgradeModal from '../components/UpgradeModal';
+import Studio from '../components/Studio';
+import TranslationStudio from './components/TranslationStudio';
+import Chat from '../components/Chat'; // Import Chat component
+import AdminPortal from '../components/AdminPortal';
+import LiveConversation from '../components/LiveConversation';
+import AudioTranscriber from '../components/AudioTranscriber';
+import DemoSection from '../components/DemoSection';
+import AboutPage from '../components/AboutPage';
+import UseCasesPage from '../components/UseCasesPage';
+import TestimonialsPage from '../components/TestimonialsPage';
+import VideoGenerator from '../components/VideoGenerator';
+import ConfirmationModal from '../components/ConfirmationModal';
+import ProfileDashboard from '../components/ProfileDashboard';
+import OnboardingAgent from '../components/OnboardingAgent';
+import EmailTranslator from '../components/EmailTranslator';
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from '../components/Icons';
+import { getNuancedTranslation } from '../services/geminiService'; // Import service
+import { generateOperationalManual } from '../services/pdfGenerator'; // Import PDF generator
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
@@ -341,7 +342,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             case 'meetings': return <MeetingSummarizer currentUser={currentUser} />;
             case 'email': return <EmailTranslator />;
             case 'transcriber': return <AudioTranscriber />;
-            case 'studio': return <Studio isOffline={isOffline} />;
+            case 'studio': return <TranslationStudio />;
             case 'chat':
                 return <Chat 
                     isOffline={isOffline} 
@@ -357,7 +358,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
                     isLoading={isLoading}
                 />;
             default:
-                return <Studio isOffline={isOffline} />;
+                return <TranslationStudio />;
         }
     };
     

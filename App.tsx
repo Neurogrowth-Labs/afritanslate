@@ -162,6 +162,34 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         setCurrentMode('chat');
     };
 
+    const handleSourceLangChange = async (code: string) => {
+        setChatConfig(prev => ({ ...prev, source: code }));
+        
+        // Update active conversation if exists
+        if (activeConversation?.id) {
+            await supabase
+                .from('conversations')
+                .update({ source_lang: code })
+                .eq('id', activeConversation.id);
+            
+            setActiveConversation(prev => prev ? { ...prev, source_lang: code } : null);
+        }
+    };
+
+    const handleTargetLangChange = async (code: string) => {
+        setChatConfig(prev => ({ ...prev, target: code }));
+        
+        // Update active conversation if exists
+        if (activeConversation?.id) {
+            await supabase
+                .from('conversations')
+                .update({ target_lang: code })
+                .eq('id', activeConversation.id);
+            
+            setActiveConversation(prev => prev ? { ...prev, target_lang: code } : null);
+        }
+    };
+
     const handleSelectConversation = async (id: number) => {
         // Prevent unnecessary reload if the conversation is already active and not loading
         if (activeConversation?.id === id && !isLoading) {
@@ -443,8 +471,10 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
           />
           <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden relative md:border-l border-border-default">
               <Header
-                  sourceLangName={activeConversation?.source_lang}
-                  targetLangName={activeConversation?.target_lang}
+                  sourceLang={activeConversation?.source_lang || chatConfig.source}
+                  targetLang={activeConversation?.target_lang || chatConfig.target}
+                  onSourceLangChange={handleSourceLangChange}
+                  onTargetLangChange={handleTargetLangChange}
                   isChatActive={currentView === 'chat' && currentMode === 'chat'}
                   currentUser={currentUser}
                   onUpgradeClick={() => { setHighlightedPlan(null); setIsUpgradeModalOpen(true); }}

@@ -4,6 +4,7 @@ import type { LibraryItem, User, LibraryItemType, UserPlan, UserRole } from '../
 import { LANGUAGES, TONES } from '../constants';
 import { SearchIcon, LogoutIcon, TrashIcon, DashboardIcon, LibraryIcon, UsersIcon, EditIcon, CloseIcon, CheckIcon } from './Icons';
 import ToneSelector from './ToneSelector';
+import LanguageSelector from './LanguageSelector';
 
 type AdminView = 'dashboard' | 'library' | 'users';
 const ITEMS_PER_PAGE = 10;
@@ -387,16 +388,20 @@ const LibraryForm: React.FC<{ item: LibraryItem | Omit<LibraryItem, 'id'>, onSav
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label>Source Lang</label>
-                                <select name="source" value={formData.source} onChange={handleChange} className="w-full mt-1 p-2 bg-bg-main border border-border-default rounded-md">
-                                    {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-                                </select>
+                                <LanguageSelector 
+                                    label="Source Lang" 
+                                    languages={LANGUAGES} 
+                                    value={formData.source} 
+                                    onChange={(v) => setFormData(p => ({...p, source: v}))} 
+                                />
                             </div>
                             <div>
-                                <label>Target Lang</label>
-                                <select name="target" value={formData.target} onChange={handleChange} className="w-full mt-1 p-2 bg-bg-main border border-border-default rounded-md">
-                                    {LANGUAGES.map(l => <option key={l.code} value={l.code}>{l.name}</option>)}
-                                </select>
+                                <LanguageSelector 
+                                    label="Target Lang" 
+                                    languages={LANGUAGES} 
+                                    value={formData.target} 
+                                    onChange={(v) => setFormData(p => ({...p, target: v}))} 
+                                />
                             </div>
                         </div>
                          <div>
