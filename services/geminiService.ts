@@ -26,6 +26,227 @@ function handleApiError(error: unknown, context: string): Error {
     return new Error(message);
 }
 
+export async function getAIAssistantResponse(prompt: string): Promise<string> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const systemPrompt = `You are an expert African cultural consultant and localization specialist. 
+            You help businesses and individuals communicate effectively across African markets.
+            
+            Your expertise includes:
+            - Cultural etiquette and business norms across 54 African countries
+            - Language localization and dialect adaptation
+            - Marketing and campaign localization
+            - Cross-border communication strategies
+            - Youth culture and slang across African markets
+            - Government and diplomatic communication
+            - Religious and traditional sensitivities
+            
+            Provide practical, actionable advice. Be concise but thorough.
+            Always consider regional variations and cultural nuances.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: `${systemPrompt}\n\nUser Request: ${prompt}`,
+            config: { temperature: 0.7 }
+        });
+        return response.text;
+    } catch (error) {
+        throw handleApiError(error, 'AI Assistant response generation');
+    }
+}
+
+export async function detectCulturalRisks(text: string, targetLang: string, dialect: string): Promise<Array<{phrase: string; severity: 'high' | 'medium' | 'low'; reason: string; suggestion: string}>> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const prompt = `Analyze the following text for cultural risks when translating to ${targetLang} (${dialect} dialect).
+        
+        Text: "${text}"
+        
+        Identify phrases, idioms, or concepts that could:
+        - Offend cultural or religious sensibilities
+        - Be misunderstood due to cultural differences
+        - Violate social taboos or etiquette
+        - Use inappropriate formality levels
+        - Reference concepts unfamiliar to the target culture
+        
+        For each risk, provide the problematic phrase, severity level, reason, and a culturally appropriate alternative.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        risks: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    phrase: { type: Type.STRING },
+                                    severity: { type: Type.STRING },
+                                    reason: { type: Type.STRING },
+                                    suggestion: { type: Type.STRING }
+                                },
+                                required: ['phrase', 'severity', 'reason', 'suggestion']
+                            }
+                        }
+                    },
+                    required: ['risks']
+                }
+            }
+        });
+        const parsed = JSON.parse(response.text);
+        return parsed.risks || [];
+    } catch (error) {
+        console.error('Cultural risk detection error:', error);
+        return [];
+    }
+}
+
+export async function getCulturalInsights(targetLang: string, dialect: string, context: string): Promise<Array<{category: string; insight: string; relevance: string}>> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const contextInfo = context ? `\nContext: ${context}` : '';
+        const prompt = `Provide cultural intelligence insights for communicating in ${targetLang} (${dialect} dialect).${contextInfo}
+        
+        Include insights about:
+        - Greeting customs and etiquette
+        - Communication style preferences (direct vs indirect)
+        - Business etiquette and formality expectations
+        - Common idioms and expressions
+        - Topics to avoid or handle sensitively
+        - Regional variations and preferences
+        
+        Provide 3-5 actionable insights with categories and relevance explanations.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        insights: {
+                            type: Type.ARRAY,
+                            items: {
+                                type: Type.OBJECT,
+                                properties: {
+                                    category: { type: Type.STRING },
+                                    insight: { type: Type.STRING },
+                                    relevance: { type: Type.STRING }
+                                },
+                                required: ['category', 'insight', 'relevance']
+                            }
+                        }
+                    },
+                    required: ['insights']
+                }
+            }
+        });
+        const parsed = JSON.parse(response.text);
+        return parsed.insights || [];
+    } catch (error) {
+        console.error('Cultural insights error:', error);
+        return [];
+    }
+}
+
+export async function naturalizeTranslation(translation: string, targetLang: string, dialect: string): Promise<string> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        const prompt = `Make this ${targetLang} (${dialect} dialect) translation sound more natural and idiomatic.
+        
+        Current translation: "${translation}"
+        
+        Rewrite it to:
+        - Use natural, everyday expressions
+        - Apply local idioms and colloquialisms
+        - Match the rhythm and flow of native speech
+        - Remove any awkward literal translations
+        - Maintain the original meaning
+        
+        Return only the naturalized translation, nothing else.`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: { temperature: 0.6 }
+        });
+        return response.text.trim();
+    } catch (error) {
+        throw handleApiError(error, 'translation naturalization');
+    }
+}
+
+export async function getEnhancedTranslation(
+    text: string,
+    sourceLang: string,
+    targetLang: string,
+    tone: string,
+    dialect: string,
+    useGlossary: boolean
+): Promise<TranslationResult> {
+    try {
+        const ai = new GoogleGenAI({ apiKey: getApiKey() });
+        
+        const dialectInstruction = dialect && dialect !== 'standard' 
+            ? `CRITICAL: Use the ${dialect} dialect/variant of ${targetLang}. Apply region-specific vocabulary, idioms, and expressions.`
+            : '';
+        
+        const glossaryInstruction = useGlossary 
+            ? 'Check for brand-specific terminology and enforce glossary compliance.'
+            : '';
+
+        const glottologInfo = GLOTTOLOG_METADATA[targetLang];
+        const glottologPrompt = glottologInfo 
+            ? `[GLOTTOLOG] Family: ${glottologInfo.family} > ${glottologInfo.parent} | Code: ${glottologInfo.glottocode} | Features: ${glottologInfo.features}`
+            : '';
+
+        const prompt = `Translate with MAXIMUM cultural intelligence and linguistic precision.
+        
+        ${glottologPrompt}
+        ${dialectInstruction}
+        ${glossaryInstruction}
+        
+        Source Language: ${sourceLang}
+        Target Language: ${targetLang}
+        Tone: ${tone}
+        
+        Text to translate: "${text}"
+        
+        Provide:
+        1. Direct literal translation
+        2. Culturally-aware, natural translation optimized for the target audience
+        3. Detailed explanation of cultural adaptations made
+        4. Pronunciation guide (if applicable)
+        5. Comprehensive linguistic analysis`;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: translationSchema
+            }
+        });
+        const translation = JSON.parse(response.text);
+        
+        return {
+            directTranslation: translation.directTranslation,
+            culturallyAwareTranslation: translation.culturallyAwareTranslation,
+            explanation: translation.explanation,
+            pronunciation: translation.pronunciation,
+            original: text,
+            linguisticAnalysis: translation.linguisticAnalysis
+        };
+    } catch (error) {
+        throw handleApiError(error, 'enhanced translation');
+    }
+}
+
 const translationSchema = {
   type: Type.OBJECT,
   properties: {

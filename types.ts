@@ -1,12 +1,11 @@
 
 import type React from 'react';
 
-export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber' | 'studio';
+export type TranslationMode = 'chat' | 'script' | 'book' | 'literary' | 'meetings' | 'email' | 'transcriber' | 'studio';
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
-// FIX: Added 'home' to the View type to represent the landing page's main view.
-export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding';
+export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding' | 'glossary';
 
 export type MeetingMode = 'live' | 'upload' | 'schedule';
 

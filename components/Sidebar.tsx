@@ -6,7 +6,7 @@ import {
     SearchIcon, LibraryIcon, PriceTagIcon, ScriptIcon, BookIcon, 
     MeetingIcon, LiveIcon, ImageIcon, LockIcon, OfflineIcon, 
     CheckIcon, DownloadIcon, EmailIcon, MicrophoneIcon, TranslateIcon,
-    CloseIcon, UserIcon, ThinkingIcon, LogoIcon, TrashIcon
+    CloseIcon, UserIcon, ThinkingIcon, LogoIcon, TrashIcon, ShieldIcon, PaletteIcon
 } from './Icons';
 
 
@@ -95,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     const currentLevel = planLevels[userPlan] || 0;
     const hasAccess = (minLevel: number) => currentLevel >= minLevel;
 
-    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1 };
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, literary: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -167,7 +167,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Creative</h4>
                     <div className="space-y-0.5">
                         <NavButton label="Motion Generator" icon={<PlayIcon />} isActive={currentView === 'motion'} onClick={() => handleFeatureClick(() => onSetView('motion'), FEATURE_LEVELS.motion)} isLocked={!hasAccess(FEATURE_LEVELS.motion)} disabled={isOffline} />
-                        <NavButton label="Visual Arts" icon={<ImageIcon className="w-4 h-4" />} isActive={currentView === 'image'} onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} isLocked={!hasAccess(FEATURE_LEVELS.image)} disabled={isOffline} />
+                        <NavButton label="Visual Arts Generator" icon={<PaletteIcon className="w-4 h-4" />} isActive={currentView === 'image'} onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} isLocked={!hasAccess(FEATURE_LEVELS.image)} disabled={isOffline} />
                     </div>
                 </div>
 
@@ -175,8 +175,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Professional</h4>
                     <div className="space-y-0.5">
                         <NavButton label="Script Translator" icon={<ScriptIcon className="w-4 h-4" />} isActive={currentMode === 'script'} onClick={() => handleFeatureClick(() => onSetMode('script'), FEATURE_LEVELS.script)} isLocked={!hasAccess(FEATURE_LEVELS.script)} disabled={isOffline} />
-                        <NavButton label="Literary Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'book'} onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} isLocked={!hasAccess(FEATURE_LEVELS.book)} disabled={isOffline} />
+                        <NavButton label="Book Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'book'} onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} isLocked={!hasAccess(FEATURE_LEVELS.book)} disabled={isOffline} />
+                        <NavButton label="Literary Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'literary'} onClick={() => handleFeatureClick(() => onSetMode('literary'), FEATURE_LEVELS.literary)} isLocked={!hasAccess(FEATURE_LEVELS.literary)} disabled={isOffline} />
                         <NavButton label="Email Localization" icon={<EmailIcon className="w-4 h-4" />} isActive={currentMode === 'email'} onClick={() => handleFeatureClick(() => onSetMode('email'), FEATURE_LEVELS.email)} isLocked={!hasAccess(FEATURE_LEVELS.email)} disabled={isOffline} />
+                        <NavButton label="Glossary Vault" icon={<ShieldIcon className="w-4 h-4" />} isActive={currentView === 'glossary'} onClick={() => handleFeatureClick(() => onSetView('glossary'), FEATURE_LEVELS.glossary)} isLocked={!hasAccess(FEATURE_LEVELS.glossary)} />
                         <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={!hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
                     </div>
                 </div>

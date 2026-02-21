@@ -35,6 +35,11 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
+import EnhancedStudio from './components/EnhancedStudio';
+import AIAssistant from './components/AIAssistant';
+import VisualArtsGenerator from './components/VisualArtsGenerator';
+import LiteraryTranslator from './components/LiteraryTranslator';
+import GlossaryVault from './components/GlossaryVault';
 import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from './services/geminiService'; // Import service
 import { generateOperationalManual } from './services/pdfGenerator'; // Import PDF generator
@@ -81,6 +86,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         return savedPacks ? JSON.parse(savedPacks) : [];
     });
     const [isOffline, setIsOffline] = useState(!navigator.onLine);
+    const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
 
     useEffect(() => {
         const handleOnline = () => setIsOffline(false);
@@ -391,19 +397,21 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         if (currentView === 'privacy') return <PrivacyPolicy />;
         if (currentView === 'contact') return <ContactForm />;
         if (currentView === 'live') return <LiveConversation />;
-        if (currentView === 'image') return <ImageGenerator />;
+        if (currentView === 'image') return <VisualArtsGenerator isOffline={isOffline} />;
         if (currentView === 'motion') return <VideoGenerator />;
         if (currentView === 'about') return <AboutPage />;
         if (currentView === 'useCases') return <UseCasesPage />;
         if (currentView === 'testimonials') return <TestimonialsPage />;
+        if (currentView === 'glossary') return <GlossaryVault userId={currentUser?.id} />;
         
         switch(currentMode) {
             case 'script': return <ScriptTranslator />;
             case 'book': return <BookTranslator />;
+            case 'literary': return <LiteraryTranslator isOffline={isOffline} />;
             case 'meetings': return <MeetingSummarizer currentUser={currentUser} />;
             case 'email': return <EmailTranslator />;
             case 'transcriber': return <AudioTranscriber />;
-            case 'studio': return <Studio isOffline={isOffline} />;
+            case 'studio': return <EnhancedStudio isOffline={isOffline} />;
             case 'chat':
                 return <Chat 
                     isOffline={isOffline} 
@@ -442,7 +450,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
     // vs views that act like traditional web pages (Page-like behavior)
     const fullHeightViews: (View | TranslationMode)[] = [
-        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image'
+        'live', 'chat', 'script', 'book', 'literary', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image', 'glossary'
     ];
     const isFullHeightView = fullHeightViews.includes(currentView) || fullHeightViews.includes(currentMode);
 
@@ -505,6 +513,24 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
               title="Delete Conversation?"
               message="This action cannot be undone. This conversation will be permanently removed from your history."
           />
+          
+          <AIAssistant 
+              isOpen={isAIAssistantOpen}
+              onClose={() => setIsAIAssistantOpen(false)}
+              contextText={''}
+              sourceLang={chatConfig.source}
+              targetLang={chatConfig.target}
+          />
+          
+          {!isAIAssistantOpen && (
+              <button
+                  onClick={() => setIsAIAssistantOpen(true)}
+                  className="fixed bottom-6 right-6 w-14 h-14 bg-accent text-bg-main rounded-full shadow-2xl shadow-accent/30 hover:scale-110 transition-all flex items-center justify-center z-40"
+                  title="Open AI Cultural Copilot"
+              >
+                  <span className="text-2xl">✨</span>
+              </button>
+          )}
       </div>
     );
 };
