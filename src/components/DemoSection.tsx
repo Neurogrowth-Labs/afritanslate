@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
-import * as geminiService from '../services/geminiService';
+import * as geminiService from '../../services/geminiService';
 import type { TranslationResult } from '../types';
-import { LANGUAGES } from '../constants';
+import { LANGUAGES } from '../../constants';
 import LanguageSelector from './LanguageSelector';
 
 interface DemoSectionProps {

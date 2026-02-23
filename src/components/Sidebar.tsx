@@ -1,19 +1,13 @@
 import React, { useState, useMemo, Fragment } from 'react';
 import type { Conversation, User, TranslationMode, View } from '../types';
-import { ADD_ONS, FOOTER_LINKS } from '../constants';
+import { ADD_ONS, FOOTER_LINKS } from '../../constants';
 import { 
     SearchIcon, LibraryIcon, PriceTagIcon, ScriptIcon, BookIcon, 
     MeetingIcon, LiveIcon, ImageIcon, LockIcon, OfflineIcon, 
     CheckIcon, DownloadIcon, EmailIcon, MicrophoneIcon, TranslateIcon,
-    CloseIcon, UserIcon, ThinkingIcon, LogoIcon, TrashIcon
+    CloseIcon, UserIcon, ThinkingIcon, LogoIcon, TrashIcon, PlusIcon
 } from './Icons';
 
-
-const PlusIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-);
 
 const PlayIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
@@ -92,9 +86,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
     const userPlan = currentUser?.plan || 'Free';
     const currentLevel = planLevels[userPlan] || 0;
-    const hasAccess = (minLevel: number) => currentLevel >= minLevel;
+    
+    const hasAccess = (minLevel: number) => {
+        if (currentLevel >= 2) return true; // Premium and above have full access
+        return currentLevel >= minLevel;
+    };
 
-    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1 };
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -157,26 +155,27 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <div className="space-y-0.5">
                         <NavButton label="Translation Studio" icon={<TranslateIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'studio'} onClick={() => { onSetView('chat'); onSetMode('studio'); setIsOpen(false); }} />
                         <NavButton label="AI Assistant" icon={<ThinkingIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'chat'} onClick={() => { onSetView('chat'); onSetMode('chat'); setIsOpen(false); }} />
-                        <NavButton label="Live Conversation" icon={<LiveIcon className="w-4 h-4" />} isActive={currentView === 'live'} onClick={() => handleFeatureClick(() => onSetView('live'), FEATURE_LEVELS.live)} isLocked={!hasAccess(FEATURE_LEVELS.live)} disabled={isOffline} />
-                        <NavButton label="Audio Transcriber" icon={<MicrophoneIcon className="w-4 h-4" />} isActive={currentMode === 'transcriber'} onClick={() => handleFeatureClick(() => onSetMode('transcriber'), FEATURE_LEVELS.transcriber)} isLocked={!hasAccess(FEATURE_LEVELS.transcriber)} disabled={isOffline} />
+                        <NavButton label="Live Conversation" icon={<LiveIcon className="w-4 h-4" />} isActive={currentView === 'live'} onClick={() => handleFeatureClick(() => onSetView('live'), FEATURE_LEVELS.live)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.live)} disabled={isOffline} />
+                        <NavButton label="Audio Transcriber" icon={<MicrophoneIcon className="w-4 h-4" />} isActive={currentMode === 'transcriber'} onClick={() => handleFeatureClick(() => onSetMode('transcriber'), FEATURE_LEVELS.transcriber)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.transcriber)} disabled={isOffline} />
                     </div>
                 </div>
 
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Creative</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Motion Generator" icon={<PlayIcon />} isActive={currentView === 'motion'} onClick={() => handleFeatureClick(() => onSetView('motion'), FEATURE_LEVELS.motion)} isLocked={!hasAccess(FEATURE_LEVELS.motion)} disabled={isOffline} />
-                        <NavButton label="Visual Arts" icon={<ImageIcon className="w-4 h-4" />} isActive={currentView === 'image'} onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} isLocked={!hasAccess(FEATURE_LEVELS.image)} disabled={isOffline} />
+                        <NavButton label="Motion Generator" icon={<PlayIcon />} isActive={currentView === 'motion'} onClick={() => handleFeatureClick(() => onSetView('motion'), FEATURE_LEVELS.motion)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.motion)} disabled={isOffline} />
+                        <NavButton label="Visual Arts" icon={<ImageIcon className="w-4 h-4" />} isActive={currentView === 'image'} onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.image)} disabled={isOffline} />
                     </div>
                 </div>
 
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Professional</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Script Translator" icon={<ScriptIcon className="w-4 h-4" />} isActive={currentMode === 'script'} onClick={() => handleFeatureClick(() => onSetMode('script'), FEATURE_LEVELS.script)} isLocked={!hasAccess(FEATURE_LEVELS.script)} disabled={isOffline} />
-                        <NavButton label="Literary Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'book'} onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} isLocked={!hasAccess(FEATURE_LEVELS.book)} disabled={isOffline} />
-                        <NavButton label="Email Localization" icon={<EmailIcon className="w-4 h-4" />} isActive={currentMode === 'email'} onClick={() => handleFeatureClick(() => onSetMode('email'), FEATURE_LEVELS.email)} isLocked={!hasAccess(FEATURE_LEVELS.email)} disabled={isOffline} />
-                        <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={!hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
+                        <NavButton label="Script Translator" icon={<ScriptIcon className="w-4 h-4" />} isActive={currentMode === 'script'} onClick={() => handleFeatureClick(() => onSetMode('script'), FEATURE_LEVELS.script)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.script)} disabled={isOffline} />
+                        <NavButton label="Literary Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'book'} onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.book)} disabled={isOffline} />
+                        <NavButton label="Email Localization" icon={<EmailIcon className="w-4 h-4" />} isActive={currentMode === 'email'} onClick={() => handleFeatureClick(() => onSetMode('email'), FEATURE_LEVELS.email)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.email)} disabled={isOffline} />
+                        <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
+                        <NavButton label="Glossary Vault" icon={<BookIcon className="w-4 h-4" />} isActive={currentView === 'glossary'} onClick={() => handleFeatureClick(() => onSetView('glossary'), FEATURE_LEVELS.glossary)} isLocked={userPlan === 'Free' && !hasAccess(FEATURE_LEVELS.glossary)} disabled={isOffline} />
                     </div>
                 </div>
 

@@ -2,7 +2,7 @@
 import React from 'react';
 import type { User } from '../types';
 import { MenuIcon, LogoutIcon, BoltIcon, LogoIcon } from './Icons';
-import LanguageSelector from '../src/components/LanguageSelector';
+import LanguageSelector from './LanguageSelector';
 
 interface HeaderProps {
   sourceLang?: string;
@@ -56,33 +56,6 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center gap-4">
-        {/* Language Selectors for chat */}
-        {isChatActive && sourceLang && targetLang && onSourceLangChange && onTargetLangChange && (
-            <div className="hidden lg:flex items-center gap-3">
-                <LanguageSelector
-                    value={sourceLang}
-                    onChange={onSourceLangChange}
-                    label=""
-                    className="w-40"
-                />
-                <svg className="w-4 h-4 text-text-secondary/50 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-                <LanguageSelector
-                    value={targetLang}
-                    onChange={onTargetLangChange}
-                    label=""
-                    className="w-40"
-                />
-                {tone && (
-                    <>
-                        <span className="mx-2 h-4 w-px bg-white/10"></span>
-                        <span className="text-[11px] font-medium text-accent">{tone}</span>
-                    </>
-                )}
-            </div>
-        )}
-
         {currentUser && (
             <div className="flex items-center gap-3 pl-4 border-l border-white/5 h-8">
                 {(currentUser.plan !== 'Entreprise') && (

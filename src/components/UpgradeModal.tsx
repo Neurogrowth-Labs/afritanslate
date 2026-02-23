@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AFRITRANSLATE_MODELS, ADD_ONS } from '../constants';
+import { AFRITRANSLATE_MODELS, ADD_ONS } from '../../constants';
 import { CheckIcon, CloseIcon } from './Icons';
 
 interface UpgradeModalProps {

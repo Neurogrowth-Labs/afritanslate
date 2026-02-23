@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
-import { summarizeMeeting } from '../services/geminiService';
-import { MOCK_MEETING_TRANSCRIPT, LANGUAGES } from '../constants';
+import { summarizeMeeting } from '../../services/geminiService';
+import { MOCK_MEETING_TRANSCRIPT, LANGUAGES } from '../../constants';
 import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon, MicrophoneIcon, MeetingIcon, CheckIcon, DownloadIcon, SearchIcon, ThinkingIcon, UsersIcon } from './Icons';
 import type { MeetingMode, User, ScheduledMeeting, MeetingAnalysisResult, ActionItem } from '../types';
 import LanguageSelector from './LanguageSelector';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../supabaseClient';
 
 interface MeetingSummarizerProps {
     currentUser: User;
@@ -66,7 +66,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
     
     // Structured Analysis State
     const [analysisResult, setAnalysisResult] = useState<MeetingAnalysisResult | null>(null);
-    const [activeTab, setActiveTab] = useState<'transcript' | 'notes' | 'analytics'>('transcript');
+    const [activeTab, setActiveTab] = useState<'transcript' | 'summary' | 'actions' | 'decisions' | 'sentiment' | 'risks'>('transcript');
     
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -209,7 +209,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
             // Call structured summarizer
             const result = await summarizeMeeting(transcriptToUse, meetingLink, summaryLangName);
             setAnalysisResult(result);
-            setActiveTab('notes');
+            setActiveTab('summary');
 
             // Store meeting activity in Supabase
             if (currentUser) {
@@ -407,18 +407,60 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
     };
 
     const renderActionItem = (item: ActionItem, index: number) => (
-        <div key={index} className="flex items-start gap-3 p-3 bg-white/5 rounded-lg border border-white/5 hover:border-accent/30 transition-colors">
-            <div className={`mt-1 w-2 h-2 rounded-full ${item.priority === 'High' ? 'bg-red-500' : item.priority === 'Medium' ? 'bg-yellow-500' : 'bg-green-500'}`}></div>
-            <div className="flex-1">
+        <div key={index} className="flex items-start gap-3 p-3 bg-bg-main border border-border-default rounded-lg hover:border-accent/30 transition-all group">
+            <input type="checkbox" className="mt-1 accent-accent" />
+            <div className="min-w-0 flex-1">
                 <p className="text-sm text-white font-medium">{item.task}</p>
-                <p className="text-xs text-text-secondary mt-1 flex justify-between">
-                    <span>Owner: <strong className="text-white">{item.owner}</strong></span>
-                    <span>Due: {item.deadline}</span>
-                </p>
+                <div className="flex items-center gap-3 mt-1">
+                    {item.owner && <span className="text-[10px] text-text-secondary flex items-center gap-1"><UsersIcon className="w-3 h-3" /> {item.owner}</span>}
+                    {item.deadline && <span className="text-[10px] text-text-secondary flex items-center gap-1"><ClockIcon className="w-3 h-3" /> {item.deadline}</span>}
+                </div>
             </div>
-            <button className="text-text-secondary hover:text-green-400">
-                <div className="w-5 h-5 border-2 border-current rounded-md"></div>
-            </button>
+        </div>
+    );
+
+    const StatsRow = ({ result }: { result: MeetingAnalysisResult }) => (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 animate-fade-in">
+            <div className="bg-bg-surface p-4 rounded-xl border border-border-default shadow-sm">
+                <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1">📋 Decisions</p>
+                <p className="text-xl font-bold text-white">{result.key_decisions.length}</p>
+            </div>
+            <div className="bg-bg-surface p-4 rounded-xl border border-border-default shadow-sm">
+                <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1">✅ Action Items</p>
+                <p className="text-xl font-bold text-white">{result.action_items.length}</p>
+            </div>
+            <div className="bg-bg-surface p-4 rounded-xl border border-border-default shadow-sm">
+                <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1">⚠️ Risk Phrases</p>
+                <p className="text-xl font-bold text-white">{result.risk_phrases.length}</p>
+            </div>
+            <div className="bg-bg-surface p-4 rounded-xl border border-border-default shadow-sm">
+                <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1">🌍 Languages</p>
+                <p className="text-xs font-bold text-accent truncate">{result.languages_detected.join(', ')}</p>
+            </div>
+        </div>
+    );
+
+    const SentimentHeatmap = ({ timeline }: { timeline: SentimentSection[] }) => (
+        <div className="mt-6">
+            <div className="flex gap-1 h-8 w-full">
+                {timeline.map((section, i) => (
+                    <div 
+                        key={i}
+                        className={`flex-1 rounded-sm relative group cursor-help ${
+                            section.sentiment === 'positive' ? 'bg-green-500' :
+                            section.sentiment === 'negative' ? 'bg-red-500' : 'bg-gray-500'
+                        }`}
+                    >
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-bg-surface border border-white/10 text-[10px] text-white rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none">
+                            Section {section.section}: {section.sentiment} ({section.score})
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="flex justify-between mt-2 text-[10px] text-text-secondary font-bold uppercase tracking-widest">
+                <span>Beginning</span>
+                <span>End of Meeting</span>
+            </div>
         </div>
     );
 
@@ -738,131 +780,147 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
                     </div>
                 </div>
                  
-                <div className="mt-4 flex gap-4 border-b border-border-default">
+                <div className="mt-4 flex gap-4 border-b border-border-default overflow-x-auto no-scrollbar">
                     <button 
                         onClick={() => setActiveTab('transcript')}
-                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'transcript' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors flex-shrink-0 ${activeTab === 'transcript' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
                     >
                         Transcript
                     </button>
                     <button 
-                        onClick={() => setActiveTab('notes')}
-                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'notes' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                        onClick={() => setActiveTab('summary')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors flex-shrink-0 ${activeTab === 'summary' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
                     >
-                        Smart Notes
+                        📋 Summary
                     </button>
                     <button 
-                        onClick={() => setActiveTab('analytics')}
-                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'analytics' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                        onClick={() => setActiveTab('actions')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors flex-shrink-0 ${activeTab === 'actions' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
                     >
-                        Analytics
+                        ✅ Actions
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('decisions')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors flex-shrink-0 ${activeTab === 'decisions' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                    >
+                        💡 Decisions
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('sentiment')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors flex-shrink-0 ${activeTab === 'sentiment' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                    >
+                        🌡️ Sentiment
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('risks')}
+                        className={`pb-2 text-xs font-bold uppercase tracking-wider transition-colors flex-shrink-0 ${activeTab === 'risks' ? 'text-accent border-b-2 border-accent' : 'text-text-secondary hover:text-white'}`}
+                    >
+                        ⚠️ Risks
                     </button>
                 </div>
                 {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
             </div>
 
-            <div className="flex-1 min-h-0 overflow-hidden">
-                {activeTab === 'transcript' && (
-                    <div className="h-full flex flex-col bg-bg-surface rounded-lg border border-border-default overflow-hidden">
-                        <div className="p-2 border-b border-border-default bg-bg-main/50 flex items-center gap-2">
-                            <SearchIcon className="w-4 h-4 text-text-secondary" />
-                            <input 
-                                type="text" 
-                                placeholder="Search transcript..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="bg-transparent border-none text-xs text-white focus:ring-0 w-full outline-none"
-                            />
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                {analysisResult && <StatsRow result={analysisResult} />}
+
+                <div className="flex-1 min-h-0 overflow-hidden">
+                    {activeTab === 'transcript' && (
+                        <div className="h-full flex flex-col bg-bg-surface rounded-lg border border-border-default overflow-hidden">
+                            <div className="p-2 border-b border-border-default bg-bg-main/50 flex items-center gap-2">
+                                <SearchIcon className="w-4 h-4 text-text-secondary" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Search transcript..." 
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="bg-transparent border-none text-xs text-white focus:ring-0 w-full outline-none"
+                                />
+                            </div>
+                            <div className="flex-1 p-4 overflow-y-auto custom-scrollbar whitespace-pre-wrap text-sm text-text-primary font-mono leading-relaxed">
+                                {searchTerm ? getFilteredTranscript() : transcript}
+                            </div>
                         </div>
-                        <div className="flex-1 p-4 overflow-y-auto custom-scrollbar whitespace-pre-wrap text-sm text-text-primary font-mono leading-relaxed">
-                            {searchTerm ? getFilteredTranscript() : transcript}
+                    )}
+
+                    {activeTab === 'summary' && analysisResult && (
+                        <div className="h-full overflow-y-auto custom-scrollbar animate-fade-in">
+                            <div className="bg-bg-surface p-6 rounded-xl border border-border-default shadow-sm">
+                                <h3 className="text-xs font-bold text-accent uppercase tracking-widest mb-4 border-b border-white/5 pb-2">Executive Summary</h3>
+                                <p className="text-sm text-text-primary leading-relaxed whitespace-pre-wrap">{analysisResult.summary}</p>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {activeTab === 'notes' && (
-                    <div className="h-full overflow-y-auto custom-scrollbar space-y-6 pb-10">
-                        {isLoading && !analysisResult ? (
-                            <div className="flex flex-col items-center justify-center h-48 gap-3">
-                                <div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div>
-                                <span className="text-xs text-accent font-bold uppercase tracking-widest animate-pulse">Structuring Notes...</span>
+                    {activeTab === 'actions' && analysisResult && (
+                        <div className="h-full overflow-y-auto custom-scrollbar animate-fade-in space-y-4">
+                            <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-2">
+                                <CheckIcon className="w-4 h-4 text-accent" /> Action Items
+                            </h3>
+                            <div className="space-y-3">
+                                {analysisResult.action_items.map(renderActionItem)}
+                                {analysisResult.action_items.length === 0 && (
+                                    <p className="text-center text-text-secondary text-sm py-10 opacity-50">No action items detected.</p>
+                                )}
                             </div>
-                        ) : analysisResult ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Summary Card */}
-                                <div className="md:col-span-2 bg-bg-surface p-5 rounded-xl border border-border-default shadow-sm">
-                                    <h3 className="text-xs font-bold text-accent uppercase tracking-widest mb-3 border-b border-white/5 pb-2">Executive Summary</h3>
-                                    <p className="text-sm text-text-primary leading-relaxed">{analysisResult.summary}</p>
-                                </div>
+                        </div>
+                    )}
 
-                                {/* Action Items */}
-                                <div className="bg-bg-surface p-5 rounded-xl border border-border-default shadow-sm">
-                                    <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <CheckIcon className="w-4 h-4 text-accent" /> Action Items
-                                    </h3>
-                                    <div className="space-y-2">
-                                        {analysisResult.actionItems.map(renderActionItem)}
-                                    </div>
-                                </div>
+                    {activeTab === 'decisions' && analysisResult && (
+                        <div className="h-full overflow-y-auto custom-scrollbar animate-fade-in space-y-4">
+                            <h3 className="text-xs font-bold text-white uppercase tracking-widest flex items-center gap-2 mb-2">
+                                <ThinkingIcon className="w-4 h-4 text-blue-400" /> Key Decisions
+                            </h3>
+                            <ul className="space-y-3">
+                                {analysisResult.key_decisions.map((decision, i) => (
+                                    <li key={i} className="flex gap-3 text-sm text-text-primary bg-bg-surface p-4 rounded-xl border border-border-default">
+                                        <span className="text-blue-400 font-bold"># {i+1}</span>
+                                        {decision}
+                                    </li>
+                                ))}
+                                {analysisResult.key_decisions.length === 0 && (
+                                    <p className="text-center text-text-secondary text-sm py-10 opacity-50">No key decisions identified.</p>
+                                )}
+                            </ul>
+                        </div>
+                    )}
 
-                                {/* Key Decisions */}
-                                <div className="bg-bg-surface p-5 rounded-xl border border-border-default shadow-sm">
-                                    <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                                        <ThinkingIcon className="w-4 h-4 text-blue-400" /> Key Decisions
-                                    </h3>
-                                    <ul className="space-y-2">
-                                        {analysisResult.decisions.map((decision, i) => (
-                                            <li key={i} className="flex gap-2 text-sm text-text-secondary">
-                                                <span className="text-blue-400 font-bold">•</span>
-                                                {decision}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        ) : null}
-                    </div>
-                )}
-
-                {activeTab === 'analytics' && analysisResult && (
-                    <div className="h-full overflow-y-auto custom-scrollbar p-2">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Cultural Insights */}
-                            <div className="bg-gradient-to-br from-purple-900/20 to-bg-surface p-6 rounded-xl border border-purple-500/20">
-                                <h3 className="text-xs font-bold text-purple-400 uppercase tracking-widest mb-3">Cultural Intelligence</h3>
-                                <p className="text-sm text-text-primary italic leading-relaxed">
-                                    "{analysisResult.culturalInsights}"
-                                </p>
-                            </div>
-
-                            {/* Sentiment Analysis */}
+                    {activeTab === 'sentiment' && analysisResult && (
+                        <div className="h-full overflow-y-auto custom-scrollbar animate-fade-in space-y-6">
                             <div className="bg-bg-surface p-6 rounded-xl border border-border-default">
-                                <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Meeting Sentiment</h3>
+                                <h3 className="text-xs font-bold text-white uppercase tracking-widest mb-4">Overall Meeting Sentiment</h3>
                                 <div className="flex items-center gap-4 mb-4">
-                                    <div className={`text-2xl font-bold ${
-                                        analysisResult.sentiment === 'Positive' ? 'text-green-400' : 
-                                        analysisResult.sentiment === 'Negative' ? 'text-red-400' : 'text-yellow-400'
-                                    }`}>
-                                        {analysisResult.sentiment}
+                                    <div className="text-2xl font-bold text-accent">
+                                        {analysisResult.overall_sentiment}
                                     </div>
-                                    <div className="flex-1 h-3 bg-bg-main rounded-full overflow-hidden">
-                                        <div 
-                                            className={`h-full rounded-full transition-all duration-1000 ${
-                                                analysisResult.sentiment === 'Positive' ? 'bg-green-500' : 
-                                                analysisResult.sentiment === 'Negative' ? 'bg-red-500' : 'bg-yellow-500'
-                                            }`} 
-                                            style={{ width: `${analysisResult.sentimentScore}%` }}
-                                        ></div>
-                                    </div>
-                                    <span className="text-xs font-mono text-text-secondary">{analysisResult.sentimentScore}/100</span>
                                 </div>
-                                <p className="text-xs text-text-secondary">
-                                    Based on tonal analysis of speaker interactions and vocabulary choice.
-                                </p>
+                                <SentimentHeatmap timeline={analysisResult.sentiment_timeline} />
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+
+                    {activeTab === 'risks' && analysisResult && (
+                        <div className="h-full overflow-y-auto custom-scrollbar animate-fade-in space-y-4">
+                            <h3 className="text-xs font-bold text-red-400 uppercase tracking-widest flex items-center gap-2 mb-2">
+                                ⚠️ Detected Risks
+                            </h3>
+                            <div className="space-y-3">
+                                {analysisResult.risk_phrases.map((risk, i) => (
+                                    <div key={i} className="p-4 bg-red-900/10 border border-red-500/20 rounded-xl">
+                                        <p className="text-sm font-bold text-red-300 mb-1">"{risk.phrase}"</p>
+                                        <p className="text-xs text-text-secondary mb-2"><span className="font-bold text-red-400/80">Risk:</span> {risk.risk}</p>
+                                        <div className="p-2 bg-red-500/10 rounded-lg text-xs text-white">
+                                            <span className="font-bold">💡 Suggestion:</span> {risk.suggestion}
+                                        </div>
+                                    </div>
+                                ))}
+                                {analysisResult.risk_phrases.length === 0 && (
+                                    <p className="text-center text-text-secondary text-sm py-10 opacity-50">No significant risks detected.</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

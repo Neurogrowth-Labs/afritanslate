@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import type { LibraryItem, User, LibraryItemType, UserPlan, UserRole } from '../types';
-import { LANGUAGES, TONES } from '../constants';
+import { LANGUAGES, TONES } from '../../constants';
 import { SearchIcon, LogoutIcon, TrashIcon, DashboardIcon, LibraryIcon, UsersIcon, EditIcon, CloseIcon, CheckIcon } from './Icons';
 import ToneSelector from './ToneSelector';
 import LanguageSelector from './LanguageSelector';

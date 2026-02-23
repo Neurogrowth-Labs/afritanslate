@@ -1,7 +1,7 @@
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { translateBook } from '../services/geminiService';
-import { LANGUAGES, TONES } from '../constants';
+import { translateBook } from '../../services/geminiService';
+import { LANGUAGES, TONES } from '../../constants';
 import LanguageSelector from './LanguageSelector';
 import type { BookGenre, BookTranslationStyle, BookDialect, BookAnnotation, TranslationMetrics } from '../types';
 import { BookIcon, InfoIcon, DownloadIcon, ThinkingIcon, CloseIcon } from './Icons';

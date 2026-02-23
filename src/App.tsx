@@ -5,37 +5,38 @@ import { supabase } from '../supabaseClient';
 import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
 
 // Import all components needed for the app
-import { Auth } from '../components/Auth';
+import { Auth } from './components/Auth';
 import Sidebar from './components/Sidebar';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import Library from '../components/Library';
-import Pricing from '../components/Pricing';
-import Payment from '../components/Payment';
-import PaymentSuccess from '../components/PaymentSuccess';
-import TermsOfService from '../components/TermsOfService';
-import PrivacyPolicy from '../components/PrivacyPolicy';
-import ContactForm from '../components/ContactForm';
-import ScriptTranslator from '../components/ScriptTranslator';
-import BookTranslator from '../components/BookTranslator';
-import MeetingSummarizer from '../components/MeetingSummarizer';
-import UpgradeModal from '../components/UpgradeModal';
-import Studio from '../components/Studio';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import Library from './components/Library';
+import Pricing from './components/Pricing';
+import Payment from './components/Payment';
+import PaymentSuccess from './components/PaymentSuccess';
+import TermsOfService from './components/TermsOfService';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import ContactForm from './components/ContactForm';
+import ScriptTranslator from './components/ScriptTranslator';
+import BookTranslator from './components/BookTranslator';
+import MeetingSummarizer from './components/MeetingSummarizer';
+import UpgradeModal from './components/UpgradeModal';
+import Studio from './components/Studio';
 import TranslationStudio from './components/TranslationStudio';
-import Chat from '../components/Chat'; // Import Chat component
-import AdminPortal from '../components/AdminPortal';
-import LiveConversation from '../components/LiveConversation';
-import AudioTranscriber from '../components/AudioTranscriber';
-import DemoSection from '../components/DemoSection';
-import AboutPage from '../components/AboutPage';
-import UseCasesPage from '../components/UseCasesPage';
-import TestimonialsPage from '../components/TestimonialsPage';
-import VideoGenerator from '../components/VideoGenerator';
-import ConfirmationModal from '../components/ConfirmationModal';
-import ProfileDashboard from '../components/ProfileDashboard';
-import OnboardingAgent from '../components/OnboardingAgent';
-import EmailTranslator from '../components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from '../components/Icons';
+import GlossaryVault from './components/GlossaryVault';
+import Chat from './components/Chat'; // Import Chat component
+import AdminPortal from './components/AdminPortal';
+import LiveConversation from './components/LiveConversation';
+import AudioTranscriber from './components/AudioTranscriber';
+import DemoSection from './components/DemoSection';
+import AboutPage from './components/AboutPage';
+import UseCasesPage from './components/UseCasesPage';
+import TestimonialsPage from './components/TestimonialsPage';
+import VideoGenerator from './components/VideoGenerator';
+import ConfirmationModal from './components/ConfirmationModal';
+import ProfileDashboard from './components/ProfileDashboard';
+import OnboardingAgent from './components/OnboardingAgent';
+import EmailTranslator from './components/EmailTranslator';
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from '../services/geminiService'; // Import service
 import { generateOperationalManual } from '../services/pdfGenerator'; // Import PDF generator
 
@@ -335,6 +336,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         if (currentView === 'about') return <AboutPage />;
         if (currentView === 'useCases') return <UseCasesPage />;
         if (currentView === 'testimonials') return <TestimonialsPage />;
+        if (currentView === 'glossary') return <GlossaryVault />;
         
         switch(currentMode) {
             case 'script': return <ScriptTranslator />;
@@ -380,7 +382,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
     // vs views that act like traditional web pages (Page-like behavior)
     const fullHeightViews: (View | TranslationMode)[] = [
-        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image'
+        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image', 'glossary'
     ];
     const isFullHeightView = fullHeightViews.includes(currentView) || fullHeightViews.includes(currentMode);
 

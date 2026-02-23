@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { AFRITRANSLATE_MODELS, ADD_ONS } from '../constants';
+import { AFRITRANSLATE_MODELS, ADD_ONS } from '../../constants';
 import { PayPalIcon, BankIcon, VisaIcon, MastercardIcon, AmexIcon, StripeIcon } from './Icons';
 
 interface PaymentProps {

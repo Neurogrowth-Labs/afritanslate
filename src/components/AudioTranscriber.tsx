@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback } from 'react';
-import { transcribeAudio } from '../services/geminiService';
+import { transcribeAudio } from '../../services/geminiService';
 import { CheckIcon, MicrophoneIcon, WordIcon, PdfIcon } from './Icons';
 import type { TranscriptionStyle } from '../types';
 

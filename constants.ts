@@ -1,7 +1,7 @@
 
 import React from 'react';
 import type { Language, AfriTranslateModel, AddOn, LibraryItem, Tone, GlottologData } from './types';
-import { VoiceIcon, OfflineIcon, IndustryIcon } from './components/Icons';
+import { VoiceIcon, OfflineIcon, IndustryIcon } from './src/components/Icons';
 
 // Helper to map major languages to their legacy ISO codes for backward compatibility
 const LEGACY_CODE_MAP: Record<string, string> = {

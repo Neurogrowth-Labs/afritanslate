@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LANGUAGES } from '../../constants';
 
 interface Language {
   code: string;
@@ -13,32 +14,6 @@ interface LanguageSelectorProps {
   className?: string;
 }
 
-const LANGUAGES: Language[] = [
-  { code: 'en', name: 'English', native: 'English' },
-  { code: 'sw', name: 'Swahili', native: 'Kiswahili' },
-  { code: 'zu', name: 'Zulu', native: 'isiZulu' },
-  { code: 'xh', name: 'Xhosa', native: 'isiXhosa' },
-  { code: 'af', name: 'Afrikaans', native: 'Afrikaans' },
-  { code: 'yo', name: 'Yoruba', native: 'Yorùbá' },
-  { code: 'ig', name: 'Igbo', native: 'Asụsụ Igbo' },
-  { code: 'ha', name: 'Hausa', native: 'Hausa' },
-  { code: 'am', name: 'Amharic', native: 'አማርኛ' },
-  { code: 'om', name: 'Oromo', native: 'Afaan Oromoo' },
-  { code: 'so', name: 'Somali', native: 'Soomaali' },
-  { code: 'rw', name: 'Kinyarwanda', native: 'Ikinyarwanda' },
-  { code: 'sn', name: 'Shona', native: 'chiShona' },
-  { code: 'st', name: 'Sesotho', native: 'Sesotho' },
-  { code: 'tn', name: 'Setswana', native: 'Setswana' },
-  { code: 'ts', name: 'Tsonga', native: 'Xitsonga' },
-  { code: 'wo', name: 'Wolof', native: 'Wolof' },
-  { code: 'fr', name: 'French', native: 'Français' },
-  { code: 'pt', name: 'Portuguese', native: 'Português' },
-  { code: 'ar', name: 'Arabic', native: 'العربية' },
-  { code: 'ss', name: 'Swati', native: 'siSwati' },
-  { code: 'nr', name: 'Ndebele', native: 'isiNdebele' },
-  { code: 've', name: 'Venda', native: 'Tshivenḓa' },
-];
-
 const LanguageSelector: React.FC<LanguageSelectorProps> = ({ 
   value, 
   onChange, 
@@ -48,11 +23,11 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
 
-  const selectedLang = LANGUAGES.find(l => l.code === value);
+  const selectedLang = (LANGUAGES as any[]).find(l => l.code === value);
   
-  const filteredLanguages = LANGUAGES.filter(lang =>
+  const filteredLanguages = (LANGUAGES as any[]).filter(lang =>
     lang.name.toLowerCase().includes(search.toLowerCase()) ||
-    lang.native?.toLowerCase().includes(search.toLowerCase()) ||
+    (lang.native && lang.native.toLowerCase().includes(search.toLowerCase())) ||
     lang.code.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -139,10 +114,6 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
 
             {/* Language List */}
             <div className="overflow-y-auto flex-1">
-              {(() => {
-                console.log('Filtered languages:', filteredLanguages);
-                return null;
-              })()}
               {filteredLanguages.length > 0 ? (
                 <div className="p-2">
                   {filteredLanguages.map((lang) => (
@@ -157,7 +128,7 @@ const LanguageSelector: React.FC<LanguageSelectorProps> = ({
                     >
                       <span className="font-medium">{lang.name}</span>
                       <span className={`text-sm ${lang.code === value ? 'text-black opacity-70' : 'text-gray-400'}`}>
-                        {lang.native}
+                        {lang.native || lang.code}
                       </span>
                     </button>
                   ))}
