@@ -994,6 +994,76 @@ export const LIVE_VOICES = [
 export const FOOTER_LINKS: { [key: string]: { name: string; href: string }[] } = {};
 
 
+export const DIALECTS: Record<string, Array<{code: string; name: string}>> = {
+    'sw': [
+        { code: 'standard', name: 'Standard' },
+        { code: 'kenya', name: 'Kenya (Kiswahili)' },
+        { code: 'tanzania', name: 'Tanzania (Kiswahili)' },
+        { code: 'congo', name: 'Congo (Kingwana)' },
+        { code: 'uganda', name: 'Uganda' }
+    ],
+    'ar': [
+        { code: 'standard', name: 'Standard Arabic' },
+        { code: 'egyptian', name: 'Egyptian' },
+        { code: 'moroccan', name: 'Moroccan' },
+        { code: 'sudanese', name: 'Sudanese' },
+        { code: 'tunisian', name: 'Tunisian' }
+    ],
+    'ha': [
+        { code: 'standard', name: 'Standard' },
+        { code: 'nigeria', name: 'Nigeria (Kano)' },
+        { code: 'niger', name: 'Niger' },
+        { code: 'ghana', name: 'Ghana' }
+    ],
+    'yo': [
+        { code: 'standard', name: 'Standard' },
+        { code: 'lagos', name: 'Lagos' },
+        { code: 'ibadan', name: 'Ibadan' },
+        { code: 'benin', name: 'Benin' }
+    ],
+    'ig': [
+        { code: 'standard', name: 'Standard' },
+        { code: 'central', name: 'Central' },
+        { code: 'northern', name: 'Northern' },
+        { code: 'southern', name: 'Southern' }
+    ],
+    'zu': [
+        { code: 'standard', name: 'Standard' },
+        { code: 'kwazulu', name: 'KwaZulu-Natal' },
+        { code: 'gauteng', name: 'Gauteng' }
+    ],
+    'xh': [
+        { code: 'standard', name: 'Standard' },
+        { code: 'eastern-cape', name: 'Eastern Cape' },
+        { code: 'western-cape', name: 'Western Cape' }
+    ],
+    'am': [
+        { code: 'standard', name: 'Standard' },
+        { code: 'addis', name: 'Addis Ababa' },
+        { code: 'gondar', name: 'Gondar' }
+    ],
+    'fr': [
+        { code: 'standard', name: 'Standard French' },
+        { code: 'senegal', name: 'Senegal' },
+        { code: 'ivory-coast', name: 'Côte d\'Ivoire' },
+        { code: 'cameroon', name: 'Cameroon' },
+        { code: 'drc', name: 'DRC' }
+    ],
+    'pt': [
+        { code: 'standard', name: 'Standard Portuguese' },
+        { code: 'angola', name: 'Angola' },
+        { code: 'mozambique', name: 'Mozambique' },
+        { code: 'cape-verde', name: 'Cape Verde' }
+    ]
+};
+
+export const FORMALITY_LEVELS = [
+    { value: 0, label: 'Street', description: 'Casual, slang, youth-oriented' },
+    { value: 25, label: 'Corporate', description: 'Professional business communication' },
+    { value: 50, label: 'Diplomatic', description: 'Formal, respectful, government-level' },
+    { value: 75, label: 'Legal', description: 'Highly formal, legal/official documents' }
+];
+
 export const MOCK_MEETING_TRANSCRIPT = `
 Amara: Good morning, everyone. Thanks for joining. Let's kick off with the Q3 marketing campaign updates. Femi, how are we looking?
 
