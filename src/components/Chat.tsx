@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import type { ChatMessage } from '../types';
-import { LANGUAGES, TONES, LIVE_VOICES, LANGUAGE_REGIONS } from '../constants';
-import * as geminiService from '../services/geminiService';
+import { LANGUAGES, TONES, LIVE_VOICES, LANGUAGE_REGIONS } from '../../constants';
+import * as geminiService from '../../services/geminiService';
 import { Message } from './Message';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
@@ -44,6 +44,14 @@ interface ChatProps {
     conversationId?: number;
 }
 
+const QUICK_ACTIONS = [
+  { label: '🔄 Rewrite', prefix: 'Rewrite this more naturally: ' },
+  { label: '📝 Simplify', prefix: 'Simplify this for a general audience: ' },
+  { label: '🌍 Localize', prefix: 'Localize this for African audiences: ' },
+  { label: '👔 Formalize', prefix: 'Make this more formal and professional: ' },
+  { label: '🌐 Translate', prefix: 'Translate this to ' },
+];
+
 const Chat: React.FC<ChatProps> = ({ 
     isOffline, isVisualMode = false, messages, onSendMessage, onRateMessage,
     sourceLang, targetLang, tone, onSourceLangChange, onTargetLangChange, onToneChange, isLoading, conversationId
@@ -52,6 +60,21 @@ const Chat: React.FC<ChatProps> = ({
     const [attachments, setAttachments] = useState<File[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isRecording, setIsRecording] = useState(false);
+    
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const handleQuickAction = (prefix: string) => {
+        if (!inputText.trim()) {
+            setInputText(prefix);
+        } else {
+            setInputText(prefix + inputText);
+        }
+        textareaRef.current?.focus();
+    };
+
+    const handleFollowUp = (suggestion: string) => {
+        onSendMessage(suggestion, [], null);
+    };
     
     // New Region State
     const [targetRegion, setTargetRegion] = useState('');
@@ -211,18 +234,32 @@ const Chat: React.FC<ChatProps> = ({
                                 <p className="text-xs mt-1">Type a message below to start.</p>
                             </div>
                         )}
-                        {messages.map((msg) => (
-                            <Message 
-                                key={msg.id} 
-                                message={msg}
-                                isEditing={editingMessageId === msg.id}
-                                onSetEditing={setEditingMessageId}
-                                onSaveEdit={() => {}}
-                                onRegenerate={() => {}}
-                                onRate={onRateMessage}
-                                onPlayTTS={handlePlayTTS}
-                                isOffline={isOffline}
-                            />
+                        {messages.map((msg, index) => (
+                            <React.Fragment key={msg.id || index}>
+                                <Message 
+                                    message={msg}
+                                    isEditing={editingMessageId === msg.id}
+                                    onSetEditing={setEditingMessageId}
+                                    onSaveEdit={() => {}}
+                                    onRegenerate={() => {}}
+                                    onRate={onRateMessage}
+                                    onPlayTTS={handlePlayTTS}
+                                    isOffline={isOffline}
+                                />
+                                {msg.role === 'ai' && !isLoading && index === messages.length - 1 && (
+                                    <div className="flex flex-wrap gap-2 mt-2 animate-fade-in">
+                                        {['Make it more formal', 'Adapt for youth', 'Check cultural risks'].map(suggestion => (
+                                            <button
+                                                key={suggestion}
+                                                onClick={() => handleFollowUp(suggestion)}
+                                                className="px-3 py-1.5 rounded-full border border-white/10 text-[10px] text-text-secondary hover:text-white hover:bg-white/5 transition-all"
+                                            >
+                                                {suggestion}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </React.Fragment>
                         ))}
                         {isLoading && <Message message={{id:0, conversation_id: 0, role:'ai', originalText:'', created_at: ''}} isLoading={true} />}
                         <div ref={messagesEndRef} className="h-4" />
@@ -233,6 +270,19 @@ const Chat: React.FC<ChatProps> = ({
             {/* Floating Input Area */}
             <div className="flex-shrink-0 absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-bg-main via-bg-main to-transparent z-20 pointer-events-none">
                 <div className="max-w-4xl mx-auto pointer-events-auto">
+                    {/* Quick Action Buttons */}
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1">
+                        {QUICK_ACTIONS.map(action => (
+                            <button
+                                key={action.label}
+                                onClick={() => handleQuickAction(action.prefix)}
+                                className="flex-shrink-0 px-3 py-1.5 rounded-full border border-white/10 bg-bg-surface/50 text-[10px] text-text-secondary hover:text-white hover:border-accent/50 transition-all"
+                            >
+                                {action.label}
+                            </button>
+                        ))}
+                    </div>
+                    
                     {/* Attachments preview */}
                     {attachments.length > 0 && (
                         <div className="flex flex-wrap gap-2 overflow-x-auto mb-2 px-2">
@@ -249,9 +299,9 @@ const Chat: React.FC<ChatProps> = ({
                         {/* Config Bar (Compact) */}
                         {!isVisualMode && (
                             <div className="flex items-center gap-2 px-2 pt-1 pb-2 border-b border-white/5 overflow-x-auto no-scrollbar">
-                                <div className="min-w-[100px]"><LanguageSelector label="From" languages={LANGUAGES} value={sourceLang} onChange={onSourceLangChange} /></div>
+                                <div className="min-w-[100px]"><LanguageSelector label="" value={sourceLang} onChange={onSourceLangChange} /></div>
                                 <div className="text-text-secondary/50">→</div>
-                                <div className="min-w-[100px]"><LanguageSelector label="To" languages={LANGUAGES} value={targetLang} onChange={onTargetLangChange} /></div>
+                                <div className="min-w-[100px]"><LanguageSelector label="" value={targetLang} onChange={onTargetLangChange} /></div>
                                 <div className="w-px h-4 bg-white/10 mx-1"></div>
                                 <div className="min-w-[100px]"><ToneSelector label="Tone" tones={TONES} value={tone} onChange={onToneChange} /></div>
                                 
@@ -318,6 +368,7 @@ const Chat: React.FC<ChatProps> = ({
                             )}
                             
                             <textarea
+                                ref={textareaRef}
                                 value={inputText}
                                 onChange={(e) => { setInputText(e.target.value); setError(null); }}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}

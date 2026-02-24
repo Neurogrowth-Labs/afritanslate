@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import type { User } from '../types';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../supabaseClient';
 import { CheckIcon, UserIcon, EmailIcon, BusinessIcon, GlobeIcon, BoltIcon, LockIcon, CloseIcon, UsersIcon, TrashIcon } from './Icons';
 
 // --- Local Copy Icon for Share Link --- //

@@ -3,8 +3,8 @@ import React, { useState, useCallback } from 'react';
 import { 
     translateScript, generateSynopsis, analyzeCharacters, generateCulturalReport, analyzeAudienceReception,
     analyzeSceneBreakdown, generateCastingSide, generateDubbingGuide, generateStoryboardPrompts
-} from '../services/geminiService';
-import { LANGUAGES, TONES } from '../constants';
+} from '../../services/geminiService';
+import { LANGUAGES, TONES } from '../../constants';
 import LanguageSelector from './LanguageSelector';
 import ToneSelector from './ToneSelector';
 import type { 

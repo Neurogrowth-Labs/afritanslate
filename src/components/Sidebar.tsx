@@ -1,19 +1,14 @@
 import React, { useState, useMemo, Fragment } from 'react';
 import type { Conversation, User, TranslationMode, View } from '../types';
-import { ADD_ONS, FOOTER_LINKS } from '../constants';
+import { ADD_ONS, FOOTER_LINKS } from '../../constants';
 import { 
     SearchIcon, LibraryIcon, PriceTagIcon, ScriptIcon, BookIcon, 
     MeetingIcon, LiveIcon, ImageIcon, LockIcon, OfflineIcon, 
     CheckIcon, DownloadIcon, EmailIcon, MicrophoneIcon, TranslateIcon,
-    CloseIcon, UserIcon, ThinkingIcon, LogoIcon, TrashIcon
+    CloseIcon, UserIcon, ThinkingIcon, LogoIcon, TrashIcon, PlusIcon
 } from './Icons';
+import { getTrialStatus } from '../utils/trialUtils';
 
-
-const PlusIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-    </svg>
-);
 
 const PlayIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
@@ -92,9 +87,18 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
     const userPlan = currentUser?.plan || 'Free';
     const currentLevel = planLevels[userPlan] || 0;
-    const hasAccess = (minLevel: number) => currentLevel >= minLevel;
 
-    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1 };
+    // Trial status computed from profile
+    const trialStatus = currentUser ? getTrialStatus({ plan: currentUser.plan, trial_start_date: (currentUser as any).trial_start_date || null }) : null;
+    const hasPremiumTrialAccess = trialStatus ? (trialStatus.isPremium || trialStatus.isOnTrial) : false;
+    
+    const hasAccess = (minLevel: number) => {
+        if (hasPremiumTrialAccess) return true; // Trial or Premium grants access
+        if (currentLevel >= 2) return true; // Paid Premium and above
+        return currentLevel >= minLevel; // Otherwise, compare plan level
+    };
+
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -177,6 +181,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <NavButton label="Literary Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'book'} onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} isLocked={!hasAccess(FEATURE_LEVELS.book)} disabled={isOffline} />
                         <NavButton label="Email Localization" icon={<EmailIcon className="w-4 h-4" />} isActive={currentMode === 'email'} onClick={() => handleFeatureClick(() => onSetMode('email'), FEATURE_LEVELS.email)} isLocked={!hasAccess(FEATURE_LEVELS.email)} disabled={isOffline} />
                         <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={!hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
+                        <NavButton label="Glossary Vault" icon={<BookIcon className="w-4 h-4" />} isActive={currentView === 'glossary'} onClick={() => handleFeatureClick(() => onSetView('glossary'), FEATURE_LEVELS.glossary)} isLocked={!hasAccess(FEATURE_LEVELS.glossary)} disabled={isOffline} />
                     </div>
                 </div>
 
@@ -229,6 +234,22 @@ const Sidebar: React.FC<SidebarProps> = ({
                         </button>
                     )}
                 </div>
+
+                {/* Trial Banner */}
+                {trialStatus && trialStatus.isOnTrial && (
+                    <div className="mt-3 p-3 rounded-lg border border-yellow-600 bg-gradient-to-br from-yellow-900 to-yellow-800 text-yellow-300">
+                        <div className="text-xs font-bold uppercase tracking-wider">⚡ Premium Trial</div>
+                        <div className="text-lg font-black">{trialStatus.daysRemaining} days remaining</div>
+                        <button onClick={onUpgrade} className="mt-2 px-3 py-1 text-[10px] font-bold border border-yellow-600 rounded text-yellow-300 hover:bg-yellow-700/20">Upgrade to keep Premium</button>
+                    </div>
+                )}
+                {trialStatus && trialStatus.trialExpired && (
+                    <div className="mt-3 p-3 rounded-lg border border-white/10 bg-gray-800 text-gray-400">
+                        <div className="text-xs font-bold uppercase tracking-wider">🔒 Trial Ended</div>
+                        <div className="text-sm">Upgrade to access Premium features</div>
+                        <button onClick={onUpgrade} className="mt-2 px-3 py-1 text-[10px] font-bold bg-accent text-black rounded hover:bg-white hover:text-accent transition-colors">Upgrade Now</button>
+                    </div>
+                )}
             </div>
         </aside>
     );

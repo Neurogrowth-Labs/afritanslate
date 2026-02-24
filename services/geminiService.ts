@@ -415,37 +415,63 @@ export async function getNuancedTranslation(
   } catch (error) { throw handleApiError(error, "getting translation"); }
 }
 
-export async function localizeEmail(subject: string, body: string, targetLang: string, tone: string, context: string, targetRegion?: string): Promise<EmailLocalizationResult> {
+export interface EmailAnalysisResult {
+  politeness_score: number;
+  tone_assessment: string;
+  cultural_warnings: Array<{ phrase: string; issue: string; suggestion: string }>;
+  greeting_recommendation: string;
+  signature_recommendation: string;
+  overall_recommendation: string;
+}
+
+export async function analyzeEmail(
+  body: string,
+  targetCulture: string
+): Promise<EmailAnalysisResult> {
   try {
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
-    const regionContext = targetRegion ? `Target Region: ${targetRegion}.` : '';
-    
-    const prompt = `
-    Role: Professional Executive Assistant & Cultural Liaison.
-    Task: Localize this email into ${targetLang} with a ${tone} tone.
-    Context: ${context}. ${regionContext}
-    
-    GUIDELINES:
-    1. **Business Protocol**: Ensure the greeting and sign-off perfectly match the social hierarchy defined in the context and the specific ${targetRegion || 'General'} culture.
-    2. **Deep Localization**: Use phrasing specific to ${targetRegion || targetLang}.
-    3. **Cultural Nuance**: Adjust the level of directness.
-    
-    Source Subject: "${subject}"
-    Source Body: "${body}"
-    
-    Return JSON: { subject, body, culturalTips (array of strings) }.`;
-    
+    const prompt = `Analyze this email for cultural appropriateness for ${targetCulture} business communication. Return JSON:
+{
+  "politeness_score": 0-100,
+  "tone_assessment": "string",
+  "cultural_warnings": [{"phrase": "string", "issue": "string", "suggestion": "string"}],
+  "greeting_recommendation": "string",
+  "signature_recommendation": "string",
+  "overall_recommendation": "string"
+}`;
+
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: { 
-        responseMimeType: "application/json", 
-        responseSchema: emailLocalizationSchema,
-        temperature: 0.5 
-      },
+      contents: [{ parts: [{ text: prompt }, { text: `Email Body: "${body}"` }] }],
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            politeness_score: { type: Type.INTEGER },
+            tone_assessment: { type: Type.STRING },
+            cultural_warnings: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  phrase: { type: Type.STRING },
+                  issue: { type: Type.STRING },
+                  suggestion: { type: Type.STRING }
+                },
+                required: ["phrase", "issue", "suggestion"]
+              }
+            },
+            greeting_recommendation: { type: Type.STRING },
+            signature_recommendation: { type: Type.STRING },
+            overall_recommendation: { type: Type.STRING }
+          },
+          required: ["politeness_score", "tone_assessment", "cultural_warnings", "greeting_recommendation", "signature_recommendation", "overall_recommendation"]
+        }
+      }
     });
-    return JSON.parse(response.text.trim()) as EmailLocalizationResult;
-  } catch (error) { throw handleApiError(error, "localizing email"); }
+    return JSON.parse(response.text.trim()) as EmailAnalysisResult;
+  } catch (error) { throw handleApiError(error, "analyzing email"); }
 }
 
 // ... existing textToSpeech, transcribeAudio ... 
@@ -482,6 +508,37 @@ export async function translateScript(scriptText: string, sourceLang: string, ta
         const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { temperature: 0.5 } });
         return response.text;
     } catch (error) { throw handleApiError(error, "translating script"); }
+}
+
+export async function localizeEmail(
+  subject: string,
+  body: string,
+  targetCulture: string
+): Promise<{ localizedSubject: string; localizedBody: string }> {
+  try {
+    const ai = new GoogleGenAI({ apiKey: getApiKey() });
+    const prompt = `Rewrite this email to be culturally appropriate for ${targetCulture} business communication. Preserve the core message but adjust the tone, greetings, and structural norms.
+Source Subject: "${subject}"
+Source Body: "${body}"
+Return JSON: { "localizedSubject": "string", "localizedBody": "string" }`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            localizedSubject: { type: Type.STRING },
+            localizedBody: { type: Type.STRING }
+          },
+          required: ["localizedSubject", "localizedBody"]
+        }
+      }
+    });
+    return JSON.parse(response.text.trim());
+  } catch (error) { throw handleApiError(error, "localizing email"); }
 }
 
 // ... existing translateBook ...
@@ -578,20 +635,16 @@ export async function summarizeMeeting(transcript: string, meetingLink?: string,
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
     
     const prompt = `
-    You are a **Cultural Intelligence Meeting Assistant**.
-    Analyze the provided meeting transcript and return a structured JSON report.
-    
-    Context:
-    - Target Language for output: ${summaryLangName}
-    - The meeting may contain African context, dialects, or business hierarchy nuances.
-    
-    Tasks:
-    1. Summarize clearly.
-    2. Extract key points.
-    3. List decisions made.
-    4. List actionable tasks with owners and deadlines (if implied).
-    5. **Cultural Insights**: Identify if the tone was formal/informal, if hierarchy was respected, or if specific cultural idioms were used.
-    6. **Sentiment**: Analyze overall mood.
+    Analyze this meeting transcript and return JSON:
+{
+  "summary": "string",
+  "action_items": [{"task": "string", "owner": "string", "deadline": "string"}],
+  "key_decisions": ["string"],
+  "risk_phrases": [{"phrase": "string", "risk": "string", "suggestion": "string"}],
+  "languages_detected": ["string"],
+  "sentiment_timeline": [{"section": 1, "sentiment": "positive", "score": 80}],
+  "overall_sentiment": "string"
+}
     
     Transcript:
     "${transcript}"
@@ -606,25 +659,47 @@ export async function summarizeMeeting(transcript: string, meetingLink?: string,
                 type: Type.OBJECT,
                 properties: {
                     summary: { type: Type.STRING },
-                    keyPoints: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    decisions: { type: Type.ARRAY, items: { type: Type.STRING } },
-                    actionItems: {
+                    action_items: {
                         type: Type.ARRAY,
                         items: {
                             type: Type.OBJECT,
                             properties: {
                                 task: { type: Type.STRING },
                                 owner: { type: Type.STRING },
-                                deadline: { type: Type.STRING },
-                                priority: { type: Type.STRING, enum: ['High', 'Medium', 'Low'] }
-                            }
+                                deadline: { type: Type.STRING }
+                            },
+                            required: ["task"]
                         }
                     },
-                    culturalInsights: { type: Type.STRING },
-                    sentiment: { type: Type.STRING, enum: ['Positive', 'Neutral', 'Negative', 'Tensile'] },
-                    sentimentScore: { type: Type.INTEGER, description: "0 to 100, where 100 is extremely positive" }
+                    key_decisions: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    risk_phrases: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                phrase: { type: Type.STRING },
+                                risk: { type: Type.STRING },
+                                suggestion: { type: Type.STRING }
+                            },
+                            required: ["phrase", "risk", "suggestion"]
+                        }
+                    },
+                    languages_detected: { type: Type.ARRAY, items: { type: Type.STRING } },
+                    sentiment_timeline: {
+                        type: Type.ARRAY,
+                        items: {
+                            type: Type.OBJECT,
+                            properties: {
+                                section: { type: Type.INTEGER },
+                                sentiment: { type: Type.STRING, enum: ['positive', 'neutral', 'negative'] },
+                                score: { type: Type.NUMBER }
+                            },
+                            required: ["section", "sentiment", "score"]
+                        }
+                    },
+                    overall_sentiment: { type: Type.STRING }
                 },
-                required: ["summary", "keyPoints", "decisions", "actionItems", "culturalInsights", "sentiment"]
+                required: ["summary", "action_items", "key_decisions", "risk_phrases", "languages_detected", "sentiment_timeline", "overall_sentiment"]
             }
         } 
     });
@@ -911,7 +986,8 @@ export interface CulturalTranslationResult {
 
 export async function translateWithCulture(
   text: string, 
-  options: TranslationOptions
+  options: TranslationOptions,
+  isNaturalize?: boolean
 ): Promise<CulturalTranslationResult> {
   
   // Step 1: Check for glossary violations BEFORE translating
@@ -922,7 +998,35 @@ export async function translateWithCulture(
   const targetLanguageName = getLanguageName(options.targetLang);
   
   // Step 3: Build the cultural intelligence prompt
-  const prompt = `
+  let prompt = '';
+  
+  if (isNaturalize) {
+    prompt = `
+You are an expert African linguist and cultural consultant for AfriTranslate.
+
+Task: Take this translation and rewrite it to sound completely natural, idiomatic and authentic to a native ${targetLanguageName} speaker. Remove any literal or awkward phrasing.
+
+CRITICAL: The output MUST be in ${targetLanguageName}, not any other language.
+
+Naturalization Parameters:
+- Target Language: ${targetLanguageName}
+- Dialect: ${options.dialect || 'Standard'}
+- Tone: ${options.tone || 'Neutral'}
+- Formality Level: ${options.formality || 'Medium'}
+
+Output Format (STRICT JSON):
+{
+  "translation": "the naturalized text here",
+  "cultural_notes": ["note explaining the idiomatic changes"],
+  "risk_flags": [],
+  "tone_analysis": "brief analysis of the naturalized tone",
+  "risk_score": 0
+}
+
+Text to Naturalize: "${text}"
+`;
+  } else {
+    prompt = `
 You are an expert African linguist and cultural consultant for AfriTranslate.
 
 Task: Translate the following text from ${sourceLanguageName} into ${targetLanguageName}.
@@ -955,6 +1059,7 @@ Output Format (STRICT JSON):
 
 Source Text: "${text}"
 `;
+  }
 
   // Debug logging
   console.log('=== TRANSLATION REQUEST ===');

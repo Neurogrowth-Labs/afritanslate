@@ -5,39 +5,41 @@ import { supabase } from '../supabaseClient';
 import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
 
 // Import all components needed for the app
-import { Auth } from '../components/Auth';
+import { Auth } from './components/Auth';
 import Sidebar from './components/Sidebar';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import Library from '../components/Library';
-import Pricing from '../components/Pricing';
-import Payment from '../components/Payment';
-import PaymentSuccess from '../components/PaymentSuccess';
-import TermsOfService from '../components/TermsOfService';
-import PrivacyPolicy from '../components/PrivacyPolicy';
-import ContactForm from '../components/ContactForm';
-import ScriptTranslator from '../components/ScriptTranslator';
-import BookTranslator from '../components/BookTranslator';
-import MeetingSummarizer from '../components/MeetingSummarizer';
-import UpgradeModal from '../components/UpgradeModal';
-import Studio from '../components/Studio';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import Library from './components/Library';
+import Pricing from './components/Pricing';
+import Payment from './components/Payment';
+import PaymentSuccess from './components/PaymentSuccess';
+import TermsOfService from './components/TermsOfService';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import ContactForm from './components/ContactForm';
+import ScriptTranslator from './components/ScriptTranslator';
+import BookTranslator from './components/BookTranslator';
+import MeetingSummarizer from './components/MeetingSummarizer';
+import UpgradeModal from './components/UpgradeModal';
+import Studio from './components/Studio';
 import TranslationStudio from './components/TranslationStudio';
-import Chat from '../components/Chat'; // Import Chat component
-import AdminPortal from '../components/AdminPortal';
-import LiveConversation from '../components/LiveConversation';
-import AudioTranscriber from '../components/AudioTranscriber';
-import DemoSection from '../components/DemoSection';
-import AboutPage from '../components/AboutPage';
-import UseCasesPage from '../components/UseCasesPage';
-import TestimonialsPage from '../components/TestimonialsPage';
-import VideoGenerator from '../components/VideoGenerator';
-import ConfirmationModal from '../components/ConfirmationModal';
-import ProfileDashboard from '../components/ProfileDashboard';
-import OnboardingAgent from '../components/OnboardingAgent';
-import EmailTranslator from '../components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from '../components/Icons';
+import GlossaryVault from './components/GlossaryVault';
+import Chat from './components/Chat'; // Import Chat component
+import AdminPortal from './components/AdminPortal';
+import LiveConversation from './components/LiveConversation';
+import AudioTranscriber from './components/AudioTranscriber';
+import DemoSection from './components/DemoSection';
+import AboutPage from './components/AboutPage';
+import UseCasesPage from './components/UseCasesPage';
+import TestimonialsPage from './components/TestimonialsPage';
+import VideoGenerator from './components/VideoGenerator';
+import ConfirmationModal from './components/ConfirmationModal';
+import ProfileDashboard from './components/ProfileDashboard';
+import OnboardingAgent from './components/OnboardingAgent';
+import EmailTranslator from './components/EmailTranslator';
+import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from '../services/geminiService'; // Import service
 import { generateOperationalManual } from '../services/pdfGenerator'; // Import PDF generator
+import { getTrialStatus, TrialStatus } from './utils/trialUtils';
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
@@ -57,6 +59,7 @@ const ImageGenerator: React.FC = () => (
 const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; wasSignup?: boolean }> = ({ onShowLanding, initialView = 'chat', wasSignup = false }) => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [allUsers, setAllUsers] = useState<User[]>([]);
+    const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
     
     const [conversations, setConversations] = useState<(Omit<Conversation, 'messages'>)[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
@@ -101,6 +104,21 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
                 if (data) {
                     const user = data as User;
                     setCurrentUser(user);
+
+                    // Compute trial status and auto-downgrade if expired
+                    const status = getTrialStatus({ plan: user.plan, trial_start_date: user.trial_start_date || null });
+                    setTrialStatus(status);
+
+                    if (status.trialExpired && user.plan === 'Premium') {
+                        await supabase
+                          .from('profiles')
+                          .update({ plan: 'Free' })
+                          .eq('id', session.user.id);
+                        setCurrentUser(prev => prev ? { ...prev, plan: 'Free' } as User : prev);
+                        console.log('Trial expired - downgraded to Free plan');
+                        setTrialStatus(getTrialStatus({ plan: 'Free', trial_start_date: user.trial_start_date || null }));
+                    }
+
                     if (wasSignup && !user.onboarding_completed) {
                         setCurrentView('onboarding');
                     }
@@ -335,6 +353,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         if (currentView === 'about') return <AboutPage />;
         if (currentView === 'useCases') return <UseCasesPage />;
         if (currentView === 'testimonials') return <TestimonialsPage />;
+        if (currentView === 'glossary') return <GlossaryVault />;
         
         switch(currentMode) {
             case 'script': return <ScriptTranslator />;
@@ -380,7 +399,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
     // vs views that act like traditional web pages (Page-like behavior)
     const fullHeightViews: (View | TranslationMode)[] = [
-        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image'
+        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image', 'glossary'
     ];
     const isFullHeightView = fullHeightViews.includes(currentView) || fullHeightViews.includes(currentMode);
 
@@ -656,7 +675,27 @@ const App: React.FC = () => {
     const handleSignUp = async (name: string, email: string, pass: string) => {
         wasJustSignedUpRef.current = true;
         const { error } = await supabase.auth.signUp({ email, password: pass, options: { data: { name } } });
-        return !error;
+        if (error) return false;
+
+        // Ensure a profile row exists with Premium plan and trial start date
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase
+                  .from('profiles')
+                  .upsert({
+                    id: user.id,
+                    email: user.email,
+                    name,
+                    plan: 'Premium',
+                    trial_start_date: new Date().toISOString(),
+                    onboarding_completed: false
+                  }, { onConflict: 'id' } as any);
+            }
+        } catch (e) {
+            console.warn('Profile upsert after signup failed (trigger should handle):', e);
+        }
+        return true;
     };
 
     const handleGoogleLogin = async () => {

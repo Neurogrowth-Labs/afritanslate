@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { startVideoGeneration, pollVideoOperation } from '../services/geminiService';
+import { startVideoGeneration, pollVideoOperation } from '../../services/geminiService';
 import { DownloadIcon, CloseIcon, ImageIcon, ThinkingIcon, EditIcon, FilmStripIcon } from './Icons';
-import { LANGUAGE_REGIONS, MOTION_DURATIONS, MOTION_CONTEXTS, TONES } from '../constants';
+import { LANGUAGE_REGIONS, MOTION_DURATIONS, MOTION_CONTEXTS, TONES } from '../../constants';
 import ToneSelector from './ToneSelector';
 
 const REASSURING_MESSAGES = [

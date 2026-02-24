@@ -1,12 +1,12 @@
 
 import type React from 'react';
 
-export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber' | 'studio';
+export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' | 'transcriber' | 'studio' | 'glossary';
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
 // FIX: Added 'home' to the View type to represent the landing page's main view.
-export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding';
+export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding' | 'glossary';
 
 export type MeetingMode = 'live' | 'upload' | 'schedule';
 
@@ -144,6 +144,34 @@ export interface User {
   onboarding_completed?: boolean;
   team_members?: string[];
   trial_start_date?: string; // ISO string for trial start
+}
+
+export interface ActionItem {
+  task: string;
+  owner: string;
+  deadline: string;
+}
+
+export interface RiskPhrase {
+  phrase: string;
+  risk: string;
+  suggestion: string;
+}
+
+export interface SentimentSection {
+  section: number;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  score: number;
+}
+
+export interface MeetingAnalysisResult {
+  summary: string;
+  action_items: ActionItem[];
+  key_decisions: string[];
+  risk_phrases: RiskPhrase[];
+  languages_detected: string[];
+  sentiment_timeline: SentimentSection[];
+  overall_sentiment: string;
 }
 
 export interface ScheduledMeeting {

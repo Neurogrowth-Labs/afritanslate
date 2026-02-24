@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { User } from '../types';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../../supabaseClient';
 import { GoogleGenAI } from "@google/genai";
 import { SendIcon, LogoIcon } from './Icons';
 

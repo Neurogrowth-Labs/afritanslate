@@ -13,6 +13,9 @@ export interface BrandGlossaryTerm {
   id?: number;
   user_id?: string;
   term: string;
+  brand_name?: string;
+  source_lang?: string;
+  target_lang?: string;
   preferred_translation: string;
   forbidden_terms: string[];
   context_note?: string;
@@ -42,14 +45,14 @@ export async function getCulturalInsights(translationId: number) {
   return data;
 }
 
-// Save a brand glossary term
+// Save or update a brand glossary term
 export async function saveBrandGlossaryTerm(term: BrandGlossaryTerm) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
   
   const { data, error } = await supabase
     .from('brand_glossaries')
-    .insert({ ...term, user_id: user.id })
+    .upsert({ ...term, user_id: user.id })
     .select()
     .single();
   
@@ -57,7 +60,14 @@ export async function saveBrandGlossaryTerm(term: BrandGlossaryTerm) {
   return data;
 }
 
-// Get all glossary terms for current user
+// Delete a glossary term
+export async function deleteGlossaryTerm(id: number) {
+  const { error } = await supabase
+    .from('brand_glossaries')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+}
 export async function getUserGlossary() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('User not authenticated');
