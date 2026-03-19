@@ -36,10 +36,14 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
+import AuthCallback from './components/AuthCallback';
 import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from '../services/geminiService'; // Import service
 import { generateOperationalManual } from '../services/pdfGenerator'; // Import PDF generator
 import { getTrialStatus, TrialStatus } from './utils/trialUtils';
+
+const AUTH_CALLBACK_PATH = '/auth/callback';
+const SIGN_IN_URL = '/?auth=signin';
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
@@ -54,6 +58,15 @@ const ImageGenerator: React.FC = () => (
         </div>
     </div>
 );
+
+const getInitialAppState = () => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const shouldShowAuth = searchParams.get('auth') === 'signin';
+
+    return shouldShowAuth
+        ? { show: true, initialView: 'chat' as View }
+        : { show: false };
+};
 
 // --- TRANSLATOR APP --- //
 const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; wasSignup?: boolean }> = ({ onShowLanding, initialView = 'chat', wasSignup = false }) => {
@@ -648,7 +661,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
 };
 
 const App: React.FC = () => {
-    const [appState, setAppState] = useState<{ show: boolean; initialView?: View; wasSignup?: boolean }>({ show: false });
+    const [appState, setAppState] = useState<{ show: boolean; initialView?: View; wasSignup?: boolean }>(() => getInitialAppState());
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const wasJustSignedUpRef = useRef(false);
@@ -659,8 +672,16 @@ const App: React.FC = () => {
             setLoading(false);
         });
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             setSession(session);
+
+            if (event === 'SIGNED_IN' && session && window.location.pathname !== '/') {
+                window.location.replace('/');
+            }
+
+            if (event === 'SIGNED_OUT' && `${window.location.pathname}${window.location.search}` !== SIGN_IN_URL) {
+                window.location.replace(SIGN_IN_URL);
+            }
         });
 
         return () => subscription.unsubscribe();
@@ -700,10 +721,19 @@ const App: React.FC = () => {
 
     const handleGoogleLogin = async () => {
         wasJustSignedUpRef.current = false;
-        await supabase.auth.signInWithOAuth({ provider: 'google' });
+        await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: `${window.location.origin}/auth/callback`
+            }
+        });
     };
 
     if (loading) return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;
+
+    if (window.location.pathname === AUTH_CALLBACK_PATH) {
+        return <AuthCallback />;
+    }
 
     // PUBLIC VIEWS - These don't require session unless the user wants to enter the 'Studio'
     const PUBLIC_INFO_VIEWS: View[] = ['about', 'useCases', 'testimonials'];
