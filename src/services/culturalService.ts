@@ -46,13 +46,10 @@ export async function getCulturalInsights(translationId: number) {
 }
 
 // Save or update a brand glossary term
-export async function saveBrandGlossaryTerm(term: BrandGlossaryTerm) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-  
+export async function saveBrandGlossaryTerm(userId: string, term: BrandGlossaryTerm) {
   const { data, error } = await supabase
     .from('brand_glossaries')
-    .upsert({ ...term, user_id: user.id })
+    .upsert({ ...term, user_id: userId })
     .select()
     .single();
   
@@ -68,22 +65,23 @@ export async function deleteGlossaryTerm(id: number) {
     .eq('id', id);
   if (error) throw error;
 }
-export async function getUserGlossary() {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('User not authenticated');
-  
+export async function getUserGlossary(userId: string) {
   const { data, error } = await supabase
     .from('brand_glossaries')
     .select('*')
-    .eq('user_id', user.id);
+    .eq('user_id', userId);
   
   if (error) throw error;
   return data || [];
 }
 
 // Check if text contains forbidden terms
-export async function checkGlossaryCompliance(text: string) {
-  const glossary = await getUserGlossary();
+export async function checkGlossaryCompliance(text: string, userId?: string) {
+  if (!userId) {
+    return [];
+  }
+
+  const glossary = await getUserGlossary(userId);
   const violations: Array<{ term: string; forbidden: string }> = [];
   
   glossary.forEach(entry => {

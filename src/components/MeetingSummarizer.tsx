@@ -171,7 +171,7 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
 
     const handleDeleteMeeting = async (id: number) => {
         try {
-            const { error } = await supabase.from('scheduled_meetings').delete().eq('id', id);
+            const { error } = await supabase.from('scheduled_meetings').delete().eq('id', id).eq('user_id', currentUser.id);
             if (error) throw error;
             fetchScheduledMeetings();
         } catch (err: any) {

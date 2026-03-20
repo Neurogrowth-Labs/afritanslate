@@ -4,7 +4,11 @@ import { getUserGlossary, saveBrandGlossaryTerm, deleteGlossaryTerm, BrandGlossa
 import LanguageSelector from './LanguageSelector';
 import { SearchIcon, TrashIcon, EditIcon, PlusIcon, CloseIcon, BookIcon } from './Icons';
 
-const GlossaryVault: React.FC = () => {
+interface GlossaryVaultProps {
+    userId: string;
+}
+
+const GlossaryVault: React.FC<GlossaryVaultProps> = ({ userId }) => {
     const [terms, setTerms] = useState<BrandGlossaryTerm[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -27,12 +31,12 @@ const GlossaryVault: React.FC = () => {
 
     useEffect(() => {
         loadGlossary();
-    }, []);
+    }, [userId]);
 
     const loadGlossary = async () => {
         setIsLoading(true);
         try {
-            const data = await getUserGlossary();
+            const data = await getUserGlossary(userId);
             setTerms(data as BrandGlossaryTerm[]);
         } catch (err) {
             console.error('Failed to load glossary:', err);
@@ -49,7 +53,7 @@ const GlossaryVault: React.FC = () => {
                 forbidden_terms: forbiddenInput.split(',').map(t => t.trim()).filter(t => t)
             } as BrandGlossaryTerm;
             
-            await saveBrandGlossaryTerm(termToSave);
+            await saveBrandGlossaryTerm(userId, termToSave);
             setIsModalOpen(false);
             resetForm();
             loadGlossary();

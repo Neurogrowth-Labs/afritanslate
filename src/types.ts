@@ -132,7 +132,7 @@ export type UserPlan = 'Free' | 'Basic' | 'Premium' | 'Training' | 'Entreprise';
 export type UserRole = 'user' | 'admin';
 
 export interface User {
-  id: string; // Supabase auth user id (UUID)
+  id: string; // Clerk user id, mirrored into Supabase ownership fields
   name: string;
   email: string;
   role: UserRole;

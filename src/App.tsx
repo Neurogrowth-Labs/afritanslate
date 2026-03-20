@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { SignIn, useClerk, useUser } from '@clerk/clerk-react';
 import { supabase } from '../supabaseClient';
 
 // --- MAIN APPLICATION IMPORTS --- //
 import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
 
 // Import all components needed for the app
-import { Auth } from './components/Auth';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -20,7 +20,6 @@ import ScriptTranslator from './components/ScriptTranslator';
 import BookTranslator from './components/BookTranslator';
 import MeetingSummarizer from './components/MeetingSummarizer';
 import UpgradeModal from './components/UpgradeModal';
-import Studio from './components/Studio';
 import TranslationStudio from './components/TranslationStudio';
 import GlossaryVault from './components/GlossaryVault';
 import Chat from './components/Chat'; // Import Chat component
@@ -36,14 +35,22 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import AuthCallback from './components/AuthCallback';
 import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from '../services/geminiService'; // Import service
 import { generateOperationalManual } from '../services/pdfGenerator'; // Import PDF generator
 import { getTrialStatus, TrialStatus } from './utils/trialUtils';
 
-const AUTH_CALLBACK_PATH = '/auth/callback';
-const SIGN_IN_URL = '/?auth=signin';
+const PUBLIC_INFO_VIEWS: View[] = ['about', 'useCases', 'testimonials'];
+
+const getPrimaryEmail = (user: ReturnType<typeof useUser>['user']) =>
+    user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress || '';
+
+const getDisplayName = (user: ReturnType<typeof useUser>['user']) => {
+    const email = getPrimaryEmail(user);
+    return user?.fullName || user?.firstName || user?.username || email.split('@')[0] || 'AfriTranslate User';
+};
+
+const isLegacyProfileId = (profileId: string) => !profileId.startsWith('user_');
 
 // --- PLACEHOLDER COMPONENTS --- //
 const ImageGenerator: React.FC = () => (
@@ -69,8 +76,14 @@ const getInitialAppState = () => {
 };
 
 // --- TRANSLATOR APP --- //
-const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; wasSignup?: boolean }> = ({ onShowLanding, initialView = 'chat', wasSignup = false }) => {
-    const [currentUser, setCurrentUser] = useState<User | null>(null);
+const TranslatorApp: React.FC<{
+    initialUser: User;
+    onLogout: () => Promise<void>;
+    onShowLanding: () => void;
+    initialView?: View;
+    wasSignup?: boolean;
+}> = ({ initialUser, onLogout, onShowLanding, initialView = 'chat', wasSignup = false }) => {
+    const [currentUser, setCurrentUser] = useState<User | null>(initialUser);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
     
@@ -110,36 +123,32 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     }, []);
 
     useEffect(() => {
-        const fetchUserData = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-                const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-                if (data) {
-                    const user = data as User;
-                    setCurrentUser(user);
+        setCurrentUser(initialUser);
+    }, [initialUser]);
 
-                    // Compute trial status and auto-downgrade if expired
-                    const status = getTrialStatus({ plan: user.plan, trial_start_date: user.trial_start_date || null });
-                    setTrialStatus(status);
+    useEffect(() => {
+        if (!currentUser) return;
 
-                    if (status.trialExpired && user.plan === 'Premium') {
-                        await supabase
-                          .from('profiles')
-                          .update({ plan: 'Free' })
-                          .eq('id', session.user.id);
-                        setCurrentUser(prev => prev ? { ...prev, plan: 'Free' } as User : prev);
-                        console.log('Trial expired - downgraded to Free plan');
-                        setTrialStatus(getTrialStatus({ plan: 'Free', trial_start_date: user.trial_start_date || null }));
-                    }
+        const syncCurrentUser = async () => {
+            const status = getTrialStatus({ plan: currentUser.plan, trial_start_date: currentUser.trial_start_date || null });
+            setTrialStatus(status);
 
-                    if (wasSignup && !user.onboarding_completed) {
-                        setCurrentView('onboarding');
-                    }
-                }
+            if (status.trialExpired && currentUser.plan === 'Premium') {
+                await supabase
+                    .from('profiles')
+                    .update({ plan: 'Free' })
+                    .eq('id', currentUser.id);
+                setCurrentUser(prev => prev ? { ...prev, plan: 'Free' } as User : prev);
+                setTrialStatus(getTrialStatus({ plan: 'Free', trial_start_date: currentUser.trial_start_date || null }));
+            }
+
+            if (wasSignup && !currentUser.onboarding_completed) {
+                setCurrentView('onboarding');
             }
         };
-        fetchUserData();
-    }, [wasSignup]);
+
+        syncCurrentUser();
+    }, [currentUser?.id, currentUser?.plan, currentUser?.trial_start_date, currentUser?.onboarding_completed, wasSignup]);
 
     const fetchLibraryItems = async () => {
         const { data } = await supabase.from('library_items').select('*').order('id', { ascending: false });
@@ -166,9 +175,8 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
     }, [currentUser]);
 
     const handleLogout = async () => {
-        await supabase.auth.signOut();
         setCurrentUser(null);
-        onShowLanding();
+        await onLogout();
     };
 
     const handleSetView = (view: View) => {
@@ -199,7 +207,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         // Ensure we are in chat mode when selecting a conversation, usually conversations are chats
         setCurrentMode('chat'); 
         
-        const { data: convoData } = await supabase.from('conversations').select('*').eq('id', id).single();
+        const { data: convoData } = await supabase.from('conversations').select('*').eq('id', id).eq('user_id', currentUser?.id).single();
         if (convoData) {
             const { data: messagesData } = await supabase.from('chat_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
             const convo = { ...convoData, messages: messagesData as ChatMessage[] };
@@ -336,7 +344,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             }
 
             // Perform DB deletion
-            await supabase.from('conversations').delete().eq('id', id);
+            await supabase.from('conversations').delete().eq('id', id).eq('user_id', currentUser?.id);
             
             // Close modal
             setIsDeleteModalOpen(false);
@@ -366,7 +374,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
         if (currentView === 'about') return <AboutPage />;
         if (currentView === 'useCases') return <UseCasesPage />;
         if (currentView === 'testimonials') return <TestimonialsPage />;
-        if (currentView === 'glossary') return <GlossaryVault />;
+        if (currentView === 'glossary' && currentUser) return <GlossaryVault userId={currentUser.id} />;
         
         switch(currentMode) {
             case 'script': return <ScriptTranslator />;
@@ -374,7 +382,7 @@ const TranslatorApp: React.FC<{ onShowLanding: () => void; initialView?: View; w
             case 'meetings': return <MeetingSummarizer currentUser={currentUser} />;
             case 'email': return <EmailTranslator />;
             case 'transcriber': return <AudioTranscriber />;
-            case 'studio': return <TranslationStudio />;
+            case 'studio': return <TranslationStudio userId={currentUser.id} />;
             case 'chat':
                 return <Chat 
                     isOffline={isOffline} 
@@ -662,101 +670,252 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
 
 const App: React.FC = () => {
     const [appState, setAppState] = useState<{ show: boolean; initialView?: View; wasSignup?: boolean }>(() => getInitialAppState());
-    const [session, setSession] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [isBootstrappingProfile, setIsBootstrappingProfile] = useState(false);
+    const [bootstrapError, setBootstrapError] = useState<string | null>(null);
     const wasJustSignedUpRef = useRef(false);
+    const { isLoaded, isSignedIn, user } = useUser();
+    const { signOut } = useClerk();
 
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setLoading(false);
-        });
+        if (!isLoaded) return;
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-            setSession(session);
-
-            if (event === 'SIGNED_IN' && session && window.location.pathname !== '/') {
-                window.location.replace('/');
-            }
-
-            if (event === 'SIGNED_OUT' && `${window.location.pathname}${window.location.search}` !== SIGN_IN_URL) {
-                window.location.replace(SIGN_IN_URL);
-            }
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-    const handleLogin = async (email: string, pass: string) => {
-        wasJustSignedUpRef.current = false;
-        const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-        return !error;
-    };
-
-    const handleSignUp = async (name: string, email: string, pass: string) => {
-        wasJustSignedUpRef.current = true;
-        const { error } = await supabase.auth.signUp({ email, password: pass, options: { data: { name } } });
-        if (error) return false;
-
-        // Ensure a profile row exists with Premium plan and trial start date
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                await supabase
-                  .from('profiles')
-                  .upsert({
-                    id: user.id,
-                    email: user.email,
-                    name,
-                    plan: 'Premium',
-                    trial_start_date: new Date().toISOString(),
-                    onboarding_completed: false
-                  }, { onConflict: 'id' } as any);
-            }
-        } catch (e) {
-            console.warn('Profile upsert after signup failed (trigger should handle):', e);
+        if (!isSignedIn || !user) {
+            setCurrentUser(null);
+            setIsBootstrappingProfile(false);
+            setBootstrapError(null);
+            wasJustSignedUpRef.current = false;
+            return;
         }
-        return true;
-    };
 
-    const handleGoogleLogin = async () => {
-        wasJustSignedUpRef.current = false;
-        await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-                redirectTo: `${window.location.origin}/auth/callback`
+        let isCancelled = false;
+
+        const bootstrapProfile = async () => {
+            setIsBootstrappingProfile(true);
+            setBootstrapError(null);
+
+            try {
+                const primaryEmail = getPrimaryEmail(user);
+                if (!primaryEmail) {
+                    throw new Error('Your Clerk account is missing a primary email address.');
+                }
+
+                const clerkUserId = user.id;
+                const displayName = getDisplayName(user);
+                let matchedExistingUser = false;
+
+                const { data: existingProfile, error: existingProfileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('email', primaryEmail)
+                    .maybeSingle();
+
+                if (existingProfileError) {
+                    console.error('Profile bootstrap existing profile lookup failed:', existingProfileError);
+                    throw existingProfileError;
+                }
+
+                if (existingProfile) {
+                    matchedExistingUser = true;
+
+                    if (existingProfile.id === clerkUserId) {
+                        const { error: refreshProfileError } = await supabase
+                            .from('profiles')
+                            .update({
+                                email: primaryEmail,
+                                name: existingProfile.name || displayName
+                            })
+                            .eq('id', clerkUserId);
+
+                        if (refreshProfileError) {
+                            console.error('Profile bootstrap refresh failed:', refreshProfileError);
+                            throw refreshProfileError;
+                        }
+                    } else if (isLegacyProfileId(existingProfile.id)) {
+                        const legacyProfileId = existingProfile.id;
+
+                        const { error: profileMigrationError } = await supabase
+                            .from('profiles')
+                            .update({
+                                id: clerkUserId,
+                                email: primaryEmail,
+                                name: existingProfile.name || displayName
+                            })
+                            .eq('id', legacyProfileId);
+
+                        if (profileMigrationError) {
+                            console.error('Profile bootstrap legacy profile migration failed:', profileMigrationError);
+                            throw profileMigrationError;
+                        }
+
+                        const ownershipTables = [
+                            'conversations',
+                            'scheduled_meetings',
+                            'meeting_summaries',
+                            'brand_glossaries'
+                        ] as const;
+
+                        for (const tableName of ownershipTables) {
+                            const { error: ownershipError } = await supabase
+                                .from(tableName)
+                                .update({ user_id: clerkUserId })
+                                .eq('user_id', legacyProfileId);
+
+                            if (ownershipError) {
+                                console.error(`Profile bootstrap ownership migration failed for ${tableName}:`, ownershipError);
+                                throw ownershipError;
+                            }
+                        }
+                    } else {
+                        throw new Error(`A profile already exists for ${primaryEmail}, but it is linked to a different Clerk user.`);
+                    }
+                } else {
+                    const { error: insertProfileError } = await supabase
+                        .from('profiles')
+                        .insert({
+                            id: clerkUserId,
+                            email: primaryEmail,
+                            name: displayName,
+                            role: 'user',
+                            plan: 'Premium',
+                            trial_start_date: new Date().toISOString(),
+                            onboarding_completed: false
+                        });
+
+                    if (insertProfileError) {
+                        console.error('Profile bootstrap insert failed:', insertProfileError);
+                        throw insertProfileError;
+                    }
+
+                    wasJustSignedUpRef.current = true;
+                }
+
+                if (matchedExistingUser) {
+                    wasJustSignedUpRef.current = false;
+                }
+
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', clerkUserId)
+                    .single();
+
+                if (profileError) {
+                    console.error('Profile bootstrap final profile fetch failed:', profileError);
+                    throw profileError;
+                }
+
+                if (!isCancelled) {
+                    setCurrentUser(profile as User);
+                }
+            } catch (error) {
+                console.error('Profile bootstrap failed with full error object:', error);
+                if (!isCancelled) {
+                    setBootstrapError(error instanceof Error ? error.message : 'Failed to load your profile.');
+                }
+            } finally {
+                if (!isCancelled) {
+                    setIsBootstrappingProfile(false);
+                }
             }
-        });
+        };
+
+        bootstrapProfile();
+
+        return () => {
+            isCancelled = true;
+        };
+    }, [
+        isLoaded,
+        isSignedIn,
+        user?.id,
+        user?.primaryEmailAddress?.emailAddress,
+        user?.fullName,
+        user?.firstName,
+        user?.username
+    ]);
+
+    const handleLogout = async () => {
+        await signOut();
+        setCurrentUser(null);
+        wasJustSignedUpRef.current = false;
+        setAppState({ show: false });
     };
 
-    if (loading) return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;
-
-    if (window.location.pathname === AUTH_CALLBACK_PATH) {
-        return <AuthCallback />;
+    if (!isLoaded || (isSignedIn && isBootstrappingProfile)) {
+        return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;
     }
 
-    // PUBLIC VIEWS - These don't require session unless the user wants to enter the 'Studio'
-    const PUBLIC_INFO_VIEWS: View[] = ['about', 'useCases', 'testimonials'];
+    if (bootstrapError) {
+        return (
+            <div className="bg-bg-main h-screen w-screen flex items-center justify-center p-6">
+                <div className="max-w-md w-full bg-bg-surface border border-border-default rounded-2xl p-6 text-center">
+                    <h1 className="text-xl font-bold text-white mb-3">We could not load your studio profile</h1>
+                    <p className="text-sm text-text-secondary mb-5">{bootstrapError}</p>
+                    <button
+                        onClick={handleLogout}
+                        className="px-5 py-2.5 bg-accent text-bg-main font-bold rounded-lg hover:bg-accent/90 transition-colors"
+                    >
+                        Sign Out
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
-    if (!session) {
-        // If the appState wants to show the functional app but there's no session, show Auth.
-        // UNLESS the initialView is a public info view.
+    if (!isSignedIn) {
         if (appState.show && !PUBLIC_INFO_VIEWS.includes(appState.initialView!)) {
-            return <Auth 
-                onLogin={handleLogin} 
-                onSignUp={handleSignUp} 
-                onGoogleLogin={handleGoogleLogin} 
-                error={null} 
-                setError={() => {}} 
-            />;
+            return (
+                <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4 py-10">
+                    <div className="w-full max-w-5xl grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-center">
+                        <div className="hidden lg:block">
+                            <div className="inline-flex items-center gap-3 mb-6">
+                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center text-bg-main shadow-lg">
+                                    <LogoIcon className="w-7 h-7" />
+                                </div>
+                                <div>
+                                    <p className="text-lg font-brand font-bold tracking-tight">AfriTranslate AI Studio</p>
+                                    <p className="text-xs text-text-secondary uppercase tracking-[0.25em]">Culturally Intelligent Localization</p>
+                                </div>
+                            </div>
+                            <h1 className="text-4xl font-brand font-bold leading-tight mb-4">Secure sign-in for your translation studio.</h1>
+                            <p className="text-text-secondary max-w-xl leading-relaxed">
+                                Clerk now manages access to the studio while your translations, storage, and product data remain in Supabase.
+                            </p>
+                        </div>
+                        <div className="w-full">
+                            <SignIn
+                                routing="hash"
+                                fallbackRedirectUrl="/"
+                                signUpUrl={undefined}
+                                appearance={{
+                                    variables: {
+                                        colorBackground: '#0a0a0a',
+                                        colorPrimary: '#f5a623',
+                                        colorText: '#ffffff',
+                                        colorInputBackground: '#1a1a1a',
+                                        colorInputText: '#ffffff'
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
         }
-        // Otherwise show the informational Landing Page
+
         return <LandingPage initialView={appState.initialView} onStart={(view) => setAppState({ show: true, initialView: view })} />;
     }
 
-    return <TranslatorApp 
-        onShowLanding={() => setAppState({ show: false })} 
-        initialView={appState.initialView} 
+    if (!currentUser) {
+        return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;
+    }
+
+    return <TranslatorApp
+        initialUser={currentUser}
+        onLogout={handleLogout}
+        onShowLanding={() => setAppState({ show: false })}
+        initialView={appState.initialView}
         wasSignup={wasJustSignedUpRef.current}
     />;
 };

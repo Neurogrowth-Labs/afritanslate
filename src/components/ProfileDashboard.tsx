@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useClerk } from '@clerk/clerk-react';
 import type { User } from '../types';
 import { supabase } from '../../supabaseClient';
 import { CheckIcon, UserIcon, EmailIcon, BusinessIcon, GlobeIcon, BoltIcon, LockIcon, CloseIcon, UsersIcon, TrashIcon } from './Icons';
@@ -18,6 +19,7 @@ interface ProfileDashboardProps {
 }
 
 const ProfileDashboard: React.FC<ProfileDashboardProps> = ({ user, onUpdateUser }) => {
+    const { openUserProfile } = useClerk();
     const [name, setName] = useState(user.name);
     const [profession, setProfession] = useState(user.profession || '');
     const [bio, setBio] = useState(user.bio || '');
@@ -29,11 +31,8 @@ const ProfileDashboard: React.FC<ProfileDashboardProps> = ({ user, onUpdateUser 
 
     // Security States
     const [isUpdatingSecurity, setIsUpdatingSecurity] = useState(false);
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
     const [securityLoading, setSecurityLoading] = useState(false);
     const [securityError, setSecurityError] = useState<string | null>(null);
-    const [securitySuccess, setSecuritySuccess] = useState(false);
 
     // Team States
     const [teamEmails, setTeamEmails] = useState<string[]>(user.team_members || []);
@@ -79,35 +78,14 @@ const ProfileDashboard: React.FC<ProfileDashboardProps> = ({ user, onUpdateUser 
     const handleSecurityUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setSecurityError(null);
-        setSecuritySuccess(false);
-
-        if (newPassword !== confirmPassword) {
-            setSecurityError("Passwords do not match.");
-            return;
-        }
-
-        if (newPassword.length < 6) {
-            setSecurityError("Password must be at least 6 characters.");
-            return;
-        }
 
         setSecurityLoading(true);
 
         try {
-            const { error } = await supabase.auth.updateUser({ password: newPassword });
-            if (error) {
-                setSecurityError(error.message);
-            } else {
-                setSecuritySuccess(true);
-                setNewPassword('');
-                setConfirmPassword('');
-                setTimeout(() => {
-                    setIsUpdatingSecurity(false);
-                    setSecuritySuccess(false);
-                }, 3000);
-            }
+            openUserProfile();
+            setIsUpdatingSecurity(false);
         } catch (err: any) {
-            setSecurityError(err.message || "An unexpected error occurred.");
+            setSecurityError(err.message || "Unable to open Clerk account management.");
         } finally {
             setSecurityLoading(false);
         }
@@ -368,38 +346,16 @@ const ProfileDashboard: React.FC<ProfileDashboardProps> = ({ user, onUpdateUser 
 
                         {isUpdatingSecurity && (
                             <form onSubmit={handleSecurityUpdate} className="space-y-3 pt-3 border-t border-border-default animate-fade-in">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">New Password</label>
-                                        <input 
-                                            type="password" 
-                                            value={newPassword}
-                                            onChange={e => setNewPassword(e.target.value)}
-                                            placeholder="Min 6 characters"
-                                            className="w-full p-1.5 bg-bg-main border border-border-default rounded text-[12px] text-white focus:ring-1 focus:ring-accent outline-none" 
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Confirm Password</label>
-                                        <input 
-                                            type="password" 
-                                            value={confirmPassword}
-                                            onChange={e => setConfirmPassword(e.target.value)}
-                                            placeholder="Repeat password"
-                                            className="w-full p-1.5 bg-bg-main border border-border-default rounded text-[12px] text-white focus:ring-1 focus:ring-accent outline-none" 
-                                            required
-                                        />
-                                    </div>
-                                </div>
+                                <p className="text-[11px] text-text-secondary">
+                                    Passwords, passkeys, and sign-in methods are now managed securely through Clerk.
+                                </p>
                                 {securityError && <p className="text-red-400 text-[10px] font-medium">{securityError}</p>}
-                                {securitySuccess && <p className="text-green-400 text-[10px] font-medium">Password updated successfully!</p>}
                                 <button 
                                     type="submit"
                                     disabled={securityLoading}
                                     className="px-3 py-1.5 bg-accent text-bg-main text-[10px] font-bold rounded hover:bg-accent/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50 uppercase tracking-wide w-full sm:w-auto"
                                 >
-                                    {securityLoading ? <div className="w-3 h-3 border-2 border-bg-main border-t-transparent rounded-full animate-spin"></div> : 'Update Password'}
+                                    {securityLoading ? <div className="w-3 h-3 border-2 border-bg-main border-t-transparent rounded-full animate-spin"></div> : 'Manage In Clerk'}
                                 </button>
                             </form>
                         )}

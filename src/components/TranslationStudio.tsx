@@ -6,7 +6,7 @@ import { translateWithCulture, CulturalTranslationResult } from '../../services/
 import { saveBrandGlossaryTerm, getUserGlossary, BrandGlossaryTerm } from '../services/culturalService';
 import { SAMPLE_TRANSLATIONS } from '../data/sampleTranslations';
 
-const GlossaryDrawer: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ isOpen, onClose }) => {
+const GlossaryDrawer: React.FC<{ isOpen: boolean, onClose: () => void, userId: string }> = ({ isOpen, onClose, userId }) => {
   const [terms, setTerms] = useState<BrandGlossaryTerm[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [newTerm, setNewTerm] = useState<BrandGlossaryTerm>({ term: '', preferred_translation: '', forbidden_terms: [] });
@@ -20,7 +20,7 @@ const GlossaryDrawer: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ is
 
   const loadGlossary = async () => {
     try {
-      const data = await getUserGlossary();
+      const data = await getUserGlossary(userId);
       setTerms(data as BrandGlossaryTerm[]);
     } catch (err) {
       console.error('Failed to load glossary:', err);
@@ -34,7 +34,7 @@ const GlossaryDrawer: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ is
         ...newTerm,
         forbidden_terms: forbiddenText.split(',').map(t => t.trim()).filter(t => t)
       };
-      await saveBrandGlossaryTerm(termToSave);
+      await saveBrandGlossaryTerm(userId, termToSave);
       setNewTerm({ term: '', preferred_translation: '', forbidden_terms: [] });
       setForbiddenText('');
       setShowForm(false);
@@ -113,7 +113,11 @@ const GlossaryDrawer: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ is
   );
 };
 
-const TranslationStudio: React.FC = () => {
+interface TranslationStudioProps {
+  userId: string;
+}
+
+const TranslationStudio: React.FC<TranslationStudioProps> = ({ userId }) => {
   // Input/Output State
   const [sourceText, setSourceText] = useState('');
   const [targetLang, setTargetLang] = useState('sw');
@@ -297,7 +301,7 @@ Generated: ${new Date().toLocaleString()}
 
   return (
     <div className="h-full flex flex-col bg-bg-main relative">
-      <GlossaryDrawer isOpen={isGlossaryOpen} onClose={() => setIsGlossaryOpen(false)} />
+      <GlossaryDrawer isOpen={isGlossaryOpen} onClose={() => setIsGlossaryOpen(false)} userId={userId} />
       {/* Header */}
       <div className="bg-bg-surface/50 backdrop-blur-md border-b border-white/5 px-6 py-4">
         <div className="flex items-center justify-between">
