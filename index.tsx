@@ -21,9 +21,6 @@ root.render(
     <ClerkProvider
       publishableKey={PUBLISHABLE_KEY}
       fallbackRedirectUrl="/"
-      afterSignUpUrl="/"
-      signInUrl={undefined}
-      signUpUrl={undefined}
     >
       <App />
     </ClerkProvider>

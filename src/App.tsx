@@ -887,7 +887,6 @@ const App: React.FC = () => {
                             <SignIn
                                 routing="hash"
                                 fallbackRedirectUrl="/"
-                                signUpUrl={undefined}
                                 appearance={{
                                     variables: {
                                         colorBackground: '#0a0a0a',
