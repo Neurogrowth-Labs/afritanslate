@@ -19,6 +19,7 @@ import ContactForm from './components/ContactForm';
 import ScriptTranslator from './components/ScriptTranslator';
 import BookTranslator from './components/BookTranslator';
 import MeetingSummarizer from './components/MeetingSummarizer';
+import MeetingInsights from './components/MeetingInsights';
 import UpgradeModal from './components/UpgradeModal';
 import TranslationStudio from './components/TranslationStudio';
 import GlossaryVault from './components/GlossaryVault';
@@ -379,7 +380,7 @@ const TranslatorApp: React.FC<{
         switch(currentMode) {
             case 'script': return <ScriptTranslator />;
             case 'book': return <BookTranslator />;
-            case 'meetings': return <MeetingSummarizer currentUser={currentUser} />;
+            case 'meetings': return <MeetingInsights />;
             case 'email': return <EmailTranslator />;
             case 'transcriber': return <AudioTranscriber />;
             case 'studio': return <TranslationStudio userId={currentUser.id} />;

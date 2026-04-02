@@ -26,3 +26,5 @@ root.render(
     </ClerkProvider>
   </React.StrictMode>
 );
+
+import './src/styles/meetingInsights.css';

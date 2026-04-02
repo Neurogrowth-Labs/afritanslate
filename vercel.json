@@ -1,6 +1,17 @@
 {
     "rewrites": [
+      {
+        "source": "/api/meeting-insights/:id",
+        "destination": "/api/meeting-insights/[id]"
+      },
+      {
+        "source": "/api/meeting-insights/upload-url",
+        "destination": "/api/meeting-insights/upload-url"
+      },
+      {
+        "source": "/api/meeting-insights",
+        "destination": "/api/meeting-insights/index"
+      },
       { "source": "/(.*)", "destination": "/index.html" }
     ]
   }
-  
