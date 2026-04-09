@@ -1,5 +1,5 @@
 import { supabaseAdmin } from './_supabase';
-import { geminiPro, geminiFlash, generateJSON } from './_gemini';
+import { generateContent } from './_ai-provider';
 import {
   buildTXT,
   buildSRT,
@@ -118,7 +118,8 @@ Output format — return ONLY a valid JSON array, no markdown, no explanation:
 ]
 `;
 
-  const segments = await generateJSON<TranscriptSegment[]>(geminiPro, prompt);
+  const text = await generateContent(prompt);
+  const segments = JSON.parse(text) as TranscriptSegment[];
 
   if (!Array.isArray(segments) || segments.length === 0) {
     throw new Error('transcription_failed: Gemini returned empty or invalid transcript');
@@ -180,7 +181,8 @@ Output format — return ONLY valid JSON, no markdown:
 }
 `;
 
-  const localizationMap = await generateJSON<Record<string, string>>(geminiFlash, prompt);
+  const text = await generateContent(prompt);
+  const localizationMap = JSON.parse(text) as Record<string, string>;
 
   return segments.map((s) => ({
     ...s,
@@ -249,7 +251,8 @@ Return ONLY valid JSON in exactly this structure, no markdown:
 }
 `;
 
-  return await generateJSON<MeetingInsightsResult>(geminiPro, prompt);
+  const text = await generateContent(prompt);
+  return JSON.parse(text) as MeetingInsightsResult;
 }
 
 // ── Main Orchestrator ──────────────────────────────────────────────────────────
