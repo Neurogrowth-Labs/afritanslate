@@ -1,17 +1,26 @@
 {
-    "rewrites": [
-      {
-        "source": "/api/meeting-insights/:id",
-        "destination": "/api/meeting-insights/[id]"
-      },
-      {
-        "source": "/api/meeting-insights/upload-url",
-        "destination": "/api/meeting-insights/upload-url"
-      },
-      {
-        "source": "/api/meeting-insights",
-        "destination": "/api/meeting-insights/index"
-      },
-      { "source": "/(.*)", "destination": "/index.html" }
-    ]
-  }
+  "rewrites": [
+    {
+      "source": "/api/meeting-insights/upload-url",
+      "destination": "/api/meeting-insights/upload-url"
+    },
+    {
+      "source": "/api/meeting-insights/:id",
+      "destination": "/api/meeting-insights/[id]"
+    },
+    {
+      "source": "/api/meeting-insights",
+      "destination": "/api/meeting-insights/index"
+    },
+    { "source": "/api/chat/:path*", "destination": "/api/chat/index" },
+    { "source": "/api/studio/:path*", "destination": "/api/studio/index" },
+    { "source": "/api/assistant/:path*", "destination": "/api/assistant/index" },
+    { "source": "/api/script-translator/:path*", "destination": "/api/script-translator/index" },
+    { "source": "/api/book-translator/:path*", "destination": "/api/book-translator/index" },
+    { "source": "/api/email-translator/:path*", "destination": "/api/email-translator/index" },
+    { "source": "/api/audio-transcriber/:path*", "destination": "/api/audio-transcriber/index" },
+    { "source": "/api/live-conversation/:path*", "destination": "/api/live-conversation/index" },
+    { "source": "/api/video-generator/:path*", "destination": "/api/video-generator/index" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
