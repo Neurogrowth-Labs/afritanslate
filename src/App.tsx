@@ -32,11 +32,12 @@ import AboutPage from './components/AboutPage';
 import UseCasesPage from './components/UseCasesPage';
 import TestimonialsPage from './components/TestimonialsPage';
 import VideoGenerator from './components/VideoGenerator';
+import CreativeStudio from './components/creative/CreativeStudio';
 import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
+import { SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from '../services/geminiService'; // Import service
 import { generateOperationalManual } from '../services/pdfGenerator'; // Import PDF generator
 import { getTrialStatus, TrialStatus } from './utils/trialUtils';
@@ -53,19 +54,9 @@ const getDisplayName = (user: ReturnType<typeof useUser>['user']) => {
 
 const isLegacyProfileId = (profileId: string) => !profileId.startsWith('user_');
 
-// --- PLACEHOLDER COMPONENTS --- //
-const ImageGenerator: React.FC = () => (
-    <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-3 overflow-hidden">
-        <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-4 border border-accent/20 shadow-[0_0_30px_-10px_rgba(244,163,0,0.3)]">
-            <ImageIcon className="w-8 h-8 text-accent" />
-        </div>
-        <h1 className="text-xl sm:text-2xl font-extrabold text-white mb-1.5">Visual Translation Engine</h1>
-        <p className="text-[12px] text-text-secondary mb-3 max-w-lg">Describe cultural concepts and materialize them into art.</p>
-        <div className="w-full max-w-4xl flex-1 bg-bg-surface border border-border-default rounded-xl flex items-center justify-center text-text-secondary">
-            Feature Loading...
-        </div>
-    </div>
-);
+// NOTE: The standalone ImageGenerator placeholder and VideoGenerator route are
+// now unified inside CreativeStudio (/studio/creative). VideoGenerator's AI
+// pipeline is preserved for re-use during the AI integration phase.
 
 const getInitialAppState = () => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -92,7 +83,16 @@ const TranslatorApp: React.FC<{
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
     
-    const [currentView, setCurrentView] = useState<View>(initialView);
+    const [currentView, setCurrentView] = useState<View>(() => {
+        // If the user deep-linked into /studio/creative, start in 'creative'
+        // synchronously so the URL-sync effect does not race against the
+        // pathname-deep-link effect and wipe the ?tab query param before
+        // CreativeStudio mounts and reads it.
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/studio/creative')) {
+            return 'creative';
+        }
+        return initialView;
+    });
     const [currentMode, setCurrentMode] = useState<TranslationMode>('chat');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -122,6 +122,41 @@ const TranslatorApp: React.FC<{
             window.removeEventListener('offline', handleOffline);
         };
     }, []);
+
+    // Honour the /studio/creative deep link on first paint so the unified
+    // Creative Studio is reachable via a real URL.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (window.location.pathname.startsWith('/studio/creative')) {
+            setCurrentView('creative');
+        }
+        const onPop = () => {
+            if (window.location.pathname.startsWith('/studio/creative')) {
+                setCurrentView('creative');
+            }
+        };
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
+    }, []);
+
+    // Mirror the active view back to the URL so the path stays in sync when
+    // users land on Creative Studio via the sidebar, and clear the stale path
+    // when they navigate away so a refresh does not force them back in.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const onCreativePath = window.location.pathname.startsWith('/studio/creative');
+        if (currentView === 'creative') {
+            if (onCreativePath) return;
+            const url = new URL(window.location.href);
+            url.pathname = '/studio/creative';
+            window.history.replaceState({}, '', url.toString());
+        } else if (onCreativePath) {
+            const url = new URL(window.location.href);
+            url.pathname = '/';
+            url.searchParams.delete('tab');
+            window.history.replaceState({}, '', url.toString());
+        }
+    }, [currentView]);
 
     useEffect(() => {
         setCurrentUser(initialUser);
@@ -370,8 +405,9 @@ const TranslatorApp: React.FC<{
         if (currentView === 'privacy') return <PrivacyPolicy />;
         if (currentView === 'contact') return <ContactForm />;
         if (currentView === 'live') return <LiveConversation />;
-        if (currentView === 'image') return <ImageGenerator />;
-        if (currentView === 'motion') return <VideoGenerator />;
+        if (currentView === 'creative') return <CreativeStudio />;
+        if (currentView === 'image') return <CreativeStudio defaultTab="visual" />;
+        if (currentView === 'motion') return <CreativeStudio defaultTab="motion" />;
         if (currentView === 'about') return <AboutPage />;
         if (currentView === 'useCases') return <UseCasesPage />;
         if (currentView === 'testimonials') return <TestimonialsPage />;
@@ -421,7 +457,7 @@ const TranslatorApp: React.FC<{
     // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
     // vs views that act like traditional web pages (Page-like behavior)
     const fullHeightViews: (View | TranslationMode)[] = [
-        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image', 'glossary'
+        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image', 'glossary', 'creative'
     ];
     const isFullHeightView = fullHeightViews.includes(currentView) || fullHeightViews.includes(currentMode);
 
@@ -631,11 +667,13 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
         <div className="bg-bg-main h-full w-full text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
             <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-16 flex-shrink-0 transition-all">
                 <div className="container mx-auto px-6 h-full flex items-center justify-between">
-                    <button onClick={() => setCurrentView('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center text-bg-main shadow-lg group-hover:shadow-accent/20 transition-all">
-                            <LogoIcon className="w-5 h-5" />
-                        </div>
-                        <span className="text-lg font-brand font-bold text-white tracking-tight">AfriTranslate AI</span>
+                    <button onClick={() => setCurrentView('home')} className="flex items-center hover:opacity-80 transition-opacity group" aria-label="AfriTranslate AI — home">
+                        <img
+                            src="/logo-transparent.svg"
+                            alt="AfriTranslate AI"
+                            className="h-7 w-auto select-none"
+                            draggable={false}
+                        />
                     </button>
                     <nav className="hidden lg:flex items-center gap-8">
                         <button onClick={() => setCurrentView('about')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Mission</button>
@@ -870,14 +908,14 @@ const App: React.FC = () => {
                 <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4 py-10">
                     <div className="w-full max-w-5xl grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-center">
                         <div className="hidden lg:block">
-                            <div className="inline-flex items-center gap-3 mb-6">
-                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center text-bg-main shadow-lg">
-                                    <LogoIcon className="w-7 h-7" />
-                                </div>
-                                <div>
-                                    <p className="text-lg font-brand font-bold tracking-tight">AfriTranslate AI Studio</p>
-                                    <p className="text-xs text-text-secondary uppercase tracking-[0.25em]">Culturally Intelligent Localization</p>
-                                </div>
+                            <div className="mb-6">
+                                <img
+                                    src="/logo-transparent.svg"
+                                    alt="AfriTranslate AI"
+                                    className="h-10 w-auto mb-3 select-none"
+                                    draggable={false}
+                                />
+                                <p className="text-xs text-text-secondary uppercase tracking-[0.25em]">Culturally Intelligent Localization</p>
                             </div>
                             <h1 className="text-4xl font-brand font-bold leading-tight mb-4">Secure sign-in for your translation studio.</h1>
                             <p className="text-text-secondary max-w-xl leading-relaxed">
@@ -889,6 +927,10 @@ const App: React.FC = () => {
                                 routing="hash"
                                 fallbackRedirectUrl="/"
                                 appearance={{
+                                    layout: {
+                                        logoImageUrl: '/logo-transparent.svg',
+                                        logoPlacement: 'inside',
+                                    },
                                     variables: {
                                         colorBackground: '#0a0a0a',
                                         colorPrimary: '#f5a623',

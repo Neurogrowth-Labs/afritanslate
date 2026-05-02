@@ -5,7 +5,7 @@ import {
     SearchIcon, LibraryIcon, PriceTagIcon, ScriptIcon, BookIcon, 
     MeetingIcon, LiveIcon, ImageIcon, LockIcon, OfflineIcon, 
     CheckIcon, DownloadIcon, EmailIcon, MicrophoneIcon, TranslateIcon,
-    CloseIcon, UserIcon, ThinkingIcon, LogoIcon, TrashIcon, PlusIcon
+    CloseIcon, UserIcon, ThinkingIcon, TrashIcon, PlusIcon
 } from './Icons';
 import { getTrialStatus } from '../utils/trialUtils';
 
@@ -98,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return currentLevel >= minLevel; // Otherwise, compare plan level
     };
 
-    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2 };
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2, creative: 2 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -119,12 +119,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* Header: Brand & New Chat */}
             <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center shadow-lg shadow-accent/20 text-[#121212]">
-                            <LogoIcon className="w-5 h-5" />
-                        </div>
-                        <span className="font-brand font-bold text-lg text-white tracking-tight">Studio AI</span>
-                    </div>
+                    <img
+                        src="/logo-transparent.svg"
+                        alt="AfriTranslate AI"
+                        className="h-8 w-auto select-none"
+                        draggable={false}
+                    />
                     <button 
                         onClick={() => setIsOpen(false)}
                         className="md:hidden p-1.5 text-text-secondary hover:text-white"
@@ -169,8 +169,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Creative</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Motion Generator" icon={<PlayIcon />} isActive={currentView === 'motion'} onClick={() => handleFeatureClick(() => onSetView('motion'), FEATURE_LEVELS.motion)} isLocked={!hasAccess(FEATURE_LEVELS.motion)} disabled={isOffline} />
-                        <NavButton label="Visual Arts" icon={<ImageIcon className="w-4 h-4" />} isActive={currentView === 'image'} onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} isLocked={!hasAccess(FEATURE_LEVELS.image)} disabled={isOffline} />
+                        <NavButton
+                            label="Creative Studio"
+                            icon={<PlayIcon />}
+                            isActive={currentView === 'creative' || currentView === 'motion' || currentView === 'image'}
+                            onClick={() => handleFeatureClick(() => { onSetView('creative'); setIsOpen(false); }, FEATURE_LEVELS.creative)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.creative)}
+                            disabled={isOffline}
+                        />
                     </div>
                 </div>
 
