@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { User } from '../types';
 import { supabase } from '../../supabaseClient';
 import { GoogleGenAI } from "@google/genai";
-import { SendIcon, LogoIcon } from './Icons';
+import { SendIcon } from './Icons';
 
 interface OnboardingAgentProps {
     user: User;
@@ -91,8 +91,13 @@ const OnboardingAgent: React.FC<OnboardingAgentProps> = ({ user, onComplete }) =
             <div className="hidden md:flex w-1/3 bg-bg-surface border-r border-border-default p-12 flex-col justify-center items-center text-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(244,163,0,0.1),transparent)]"></div>
                 <div className="relative z-10 space-y-8">
-                    <div className="w-24 h-24 bg-accent/20 rounded-3xl rotate-12 flex items-center justify-center mx-auto border-2 border-accent shadow-2xl">
-                        <LogoIcon />
+                    <div className="flex justify-center mx-auto">
+                        <img
+                            src="/logo-transparent.svg"
+                            alt="AfriTranslate AI"
+                            className="h-12 w-auto select-none"
+                            draggable={false}
+                        />
                     </div>
                     <div className="space-y-4">
                         <h1 className="text-3xl font-brand font-bold text-white tracking-tight">Cultural Intelligence<br/><span className="text-accent">Activated.</span></h1>

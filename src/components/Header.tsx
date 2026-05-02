@@ -1,7 +1,7 @@
 
 import React from 'react';
 import type { User } from '../types';
-import { MenuIcon, LogoutIcon, BoltIcon, LogoIcon } from './Icons';
+import { MenuIcon, LogoutIcon, BoltIcon } from './Icons';
 import LanguageSelector from './LanguageSelector';
 
 interface HeaderProps {
@@ -40,17 +40,17 @@ const Header: React.FC<HeaderProps> = ({
           <MenuIcon className="w-5 h-5" />
         </button>
         <div className="flex items-center gap-3">
-          <div className="text-accent">
-            <LogoIcon className="w-6 h-6" />
-          </div>
-          <div className="flex flex-col">
-            <h1 className="text-[14px] font-bold text-white leading-tight font-brand tracking-wide">AfriTranslate AI</h1>
-            <div className="flex items-center gap-1.5 mt-0.5">
-                <div className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-yellow-500 animate-pulse' : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`}></div>
-                <span className="text-[9px] text-text-secondary font-medium tracking-widest uppercase">
-                    {isOffline ? 'Offline' : 'System Active'}
-                </span>
-            </div>
+          <img
+            src="/logo-transparent.svg"
+            alt="AfriTranslate AI"
+            className="h-7 w-auto select-none"
+            draggable={false}
+          />
+          <div className="flex items-center gap-1.5 pl-3 border-l border-white/5 self-stretch">
+            <div className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-yellow-500 animate-pulse' : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'}`}></div>
+            <span className="text-[9px] text-text-secondary font-medium tracking-widest uppercase">
+                {isOffline ? 'Offline' : 'System Active'}
+            </span>
           </div>
         </div>
       </div>

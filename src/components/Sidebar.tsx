@@ -5,7 +5,7 @@ import {
     SearchIcon, LibraryIcon, PriceTagIcon, ScriptIcon, BookIcon, 
     MeetingIcon, LiveIcon, ImageIcon, LockIcon, OfflineIcon, 
     CheckIcon, DownloadIcon, EmailIcon, MicrophoneIcon, TranslateIcon,
-    CloseIcon, UserIcon, ThinkingIcon, LogoIcon, TrashIcon, PlusIcon
+    CloseIcon, UserIcon, ThinkingIcon, TrashIcon, PlusIcon
 } from './Icons';
 import { getTrialStatus } from '../utils/trialUtils';
 
@@ -119,12 +119,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             {/* Header: Brand & New Chat */}
             <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center shadow-lg shadow-accent/20 text-[#121212]">
-                            <LogoIcon className="w-5 h-5" />
-                        </div>
-                        <span className="font-brand font-bold text-lg text-white tracking-tight">Studio AI</span>
-                    </div>
+                    <img
+                        src="/logo-transparent.svg"
+                        alt="AfriTranslate AI"
+                        className="h-8 w-auto select-none"
+                        draggable={false}
+                    />
                     <button 
                         onClick={() => setIsOpen(false)}
                         className="md:hidden p-1.5 text-text-secondary hover:text-white"
