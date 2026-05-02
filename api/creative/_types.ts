@@ -119,3 +119,39 @@ export interface GenerateImageQuotaFallback {
 export type GenerateImageResponse =
     | GenerateImageSuccess
     | GenerateImageQuotaFallback;
+
+// ── Pattern generation (Phase C) ─────────────────────────────────────────────
+
+export type PatternType =
+    | 'tribal'
+    | 'textile'
+    | 'afrofuturistic'
+    | 'geometric'
+    | 'kente'
+    | 'ndebele'
+    | 'adinkra';
+
+export type PatternComplexity = 'simple' | 'medium' | 'intricate';
+
+export interface GeneratePatternRequest {
+    patternType: PatternType;
+    primaryColor: string;
+    secondaryColor: string;
+    /** Optional accent — pass empty string when not specified. */
+    accentColor: string;
+    complexity: PatternComplexity;
+    tileable: boolean;
+}
+
+export interface GeneratePatternResponse {
+    /** Server-sanitised SVG markup (`<svg ...>...</svg>`). */
+    svgContent: string;
+    /** Descriptive name for the pattern, e.g. "Festival Adire Wave". */
+    patternName: string;
+    /** Cultural origin string, e.g. "Kente — Akan people, Ghana". */
+    culturalOrigin: string;
+    /** 1–2 sentences describing the pattern. */
+    designNotes: string;
+    /** Cultural significance of the colours used. */
+    colorMeaning: string;
+}
