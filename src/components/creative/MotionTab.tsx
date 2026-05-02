@@ -1,6 +1,68 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FilmStripIcon, ImageIcon, CloseIcon, DownloadIcon, ThinkingIcon } from '../Icons';
+import CulturalSuggestionsCard, {
+    type CulturalSuggestions,
+} from './CulturalSuggestionsCard';
+
+type SuggestionStatus =
+    | { kind: 'idle' }
+    | { kind: 'loading' }
+    | { kind: 'error'; message: string }
+    | { kind: 'ready'; data: CulturalSuggestions };
+
+/**
+ * Read a Clerk session token from the global Clerk client. Mirrors the
+ * pattern used by `src/services/meetingInsightsClient.ts` so all paid
+ * server-side AI endpoints share one auth mechanism.
+ */
+async function getClerkToken(): Promise<string | null> {
+    const clerk = (
+        window as unknown as {
+            Clerk?: {
+                session?: { getToken: () => Promise<string | null> };
+            };
+        }
+    ).Clerk;
+    try {
+        return (await clerk?.session?.getToken()) ?? null;
+    } catch {
+        return null;
+    }
+}
+
+async function fetchCulturalSuggestions(
+    body: { prompt: string; region: string; tone: string; goal: string },
+): Promise<CulturalSuggestions> {
+    const token = await getClerkToken();
+    if (!token) {
+        throw new Error(
+            'You need to be signed in to get AI cultural suggestions.',
+        );
+    }
+
+    const res = await fetch('/api/creative/cultural-suggestions', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+        let message = `Request failed (${res.status})`;
+        try {
+            const data = (await res.json()) as { error?: string };
+            if (data?.error) message = data.error;
+        } catch {
+            // body wasn't JSON; keep generic message
+        }
+        throw new Error(message);
+    }
+
+    return (await res.json()) as CulturalSuggestions;
+}
 
 const ASPECT_RATIOS: { id: '16:9' | '9:16' | '1:1'; label: string; ratio: string }[] = [
     { id: '16:9', label: 'Landscape', ratio: '16/9' },
@@ -57,7 +119,11 @@ const MotionTab: React.FC = () => {
     const [status, setStatus] = useState<GenerationStatus>('idle');
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [suggestions, setSuggestions] = useState<SuggestionStatus>({
+        kind: 'idle',
+    });
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const suggestionRequestId = useRef(0);
 
     const updateForm = <K extends keyof FormState>(key: K, value: FormState[K]) =>
         setForm(prev => ({ ...prev, [key]: value }));
@@ -75,17 +141,54 @@ const MotionTab: React.FC = () => {
         }
     };
 
+    const runCulturalSuggestions = async (snapshot: FormState) => {
+        const requestId = ++suggestionRequestId.current;
+        setSuggestions({ kind: 'loading' });
+        try {
+            const data = await fetchCulturalSuggestions({
+                prompt: snapshot.prompt,
+                region: snapshot.region,
+                tone: snapshot.tone,
+                goal: snapshot.context,
+            });
+            // Ignore stale responses if a newer request has been kicked off.
+            if (suggestionRequestId.current !== requestId) return;
+            setSuggestions({ kind: 'ready', data });
+        } catch (err) {
+            if (suggestionRequestId.current !== requestId) return;
+            const message =
+                err instanceof Error
+                    ? err.message
+                    : 'Could not reach the cultural consultant.';
+            setSuggestions({ kind: 'error', message });
+        }
+    };
+
     const handleGenerate = () => {
         if (!form.prompt.trim()) return;
         setStatus('generating');
-        // Skeleton: simulate generation with a timed mock until real video AI is integrated.
+        // Phase A: fetch cultural style guidance (real Gemini call) in parallel
+        // with the still-mocked video preview lifecycle. Real video AI lands later.
+        void runCulturalSuggestions(form);
         setTimeout(() => setStatus('preview'), 2200);
+    };
+
+    const handleRetrySuggestions = () => {
+        if (!form.prompt.trim()) return;
+        void runCulturalSuggestions(form);
+    };
+
+    const handleDismissSuggestions = () => {
+        suggestionRequestId.current++; // invalidate any in-flight request
+        setSuggestions({ kind: 'idle' });
     };
 
     const handleReset = () => {
         setStatus('idle');
         setForm(INITIAL_FORM);
         handleFile(null);
+        suggestionRequestId.current++;
+        setSuggestions({ kind: 'idle' });
     };
 
     return (
@@ -228,8 +331,20 @@ const MotionTab: React.FC = () => {
                 </p>
             </section>
 
-            {/* --- Right: Preview --- */}
-            <section className="relative min-h-[420px] rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-white/[0.01] backdrop-blur-xl overflow-hidden flex flex-col">
+            {/* --- Right: Cultural Suggestions (above) + Preview (below) --- */}
+            <div className="flex flex-col gap-4 sm:gap-5 min-w-0">
+                <AnimatePresence>
+                    {suggestions.kind !== 'idle' && (
+                        <CulturalSuggestionsCard
+                            key="cultural-suggestions"
+                            status={suggestions}
+                            onRetry={handleRetrySuggestions}
+                            onDismiss={handleDismissSuggestions}
+                        />
+                    )}
+                </AnimatePresence>
+
+                <section className="relative min-h-[420px] rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.03] to-white/[0.01] backdrop-blur-xl overflow-hidden flex flex-col">
                 <div className="absolute inset-0 pointer-events-none opacity-50">
                     <div className="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-accent/10 blur-3xl" />
                     <div className="absolute -bottom-32 -right-16 w-80 h-80 rounded-full bg-fuchsia-400/10 blur-3xl" />
@@ -335,7 +450,8 @@ const MotionTab: React.FC = () => {
                     <SummaryStat label="Tone" value={form.tone} />
                     <SummaryStat label="Region" value={form.region} />
                 </div>
-            </section>
+                </section>
+            </div>
         </div>
     );
 };
