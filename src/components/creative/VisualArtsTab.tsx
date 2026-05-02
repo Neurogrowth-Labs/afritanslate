@@ -8,6 +8,7 @@ import {
     CloseIcon,
 } from '../Icons';
 import { getClerkToken } from './_clerkToken';
+import PatternGeneratorSection from './PatternGeneratorSection';
 import type {
     GenerateImageRequest,
     GenerateImageResponse,
@@ -251,7 +252,8 @@ const VisualArtsTab: React.FC = () => {
     const aspectForLayout = useCaseConfig.aspect;
 
     return (
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,460px)_minmax(0,1fr)] gap-4 sm:gap-5 p-4 sm:p-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5">
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,460px)_minmax(0,1fr)] gap-4 sm:gap-5">
             {/* --- Left: Controls --- */}
             <section className="rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl p-4 sm:p-5 space-y-5">
                 <FieldGroup label="Concept">
@@ -459,6 +461,9 @@ const VisualArtsTab: React.FC = () => {
                     </AnimatePresence>
                 </div>
             </section>
+        </div>
+
+        <PatternGeneratorSection />
         </div>
     );
 };
