@@ -277,9 +277,9 @@ export default async function handler(
 
     // ── Step 2: image generation ─────────────────────────────────────────────
 
-    let images: GeneratedImagePayload[] = [];
-
-    async function tryGenerate(numberOfImages: number) {
+    async function tryGenerate(
+        numberOfImages: number,
+    ): Promise<GeneratedImagePayload[]> {
         const response = await ai.models.generateImages({
             model: IMAGE_MODEL,
             prompt: enrichment.enrichedPrompt,
@@ -300,47 +300,88 @@ export default async function handler(
             .filter((v): v is GeneratedImagePayload => v !== null);
     }
 
-    try {
-        images = await tryGenerate(NUMBER_OF_IMAGES);
+    /**
+     * Attempt N=4, then N=1 if the first call either:
+     *   - threw a quota / unavailability-style error, OR
+     *   - succeeded but returned zero images (RAI filter / empty result).
+     *
+     * Returns either a list of images or a "quota" outcome. Throws only on
+     * non-recoverable, non-quota errors (which the caller maps to 502).
+     */
+    type GenerateOutcome =
+        | { kind: 'images'; images: GeneratedImagePayload[] }
+        | { kind: 'quota'; detail: string };
 
-        // Some quota tiers reject N>1 even though they accept N=1; retry once.
-        if (images.length === 0) {
+    async function generateWithFallback(): Promise<GenerateOutcome> {
+        let firstQuotaErr: unknown = null;
+
+        try {
+            const images = await tryGenerate(NUMBER_OF_IMAGES);
+            if (images.length > 0) return { kind: 'images', images };
+            // Empty array — fall through to the N=1 retry below (RAI filter
+            // path: the quota itself is fine, the prompt may have been
+            // softened down to nothing).
             console.warn(
                 '[creative/generate-image] zero images returned at N=4, retrying at N=1',
             );
-            images = await tryGenerate(FALLBACK_NUMBER_OF_IMAGES);
+        } catch (err) {
+            if (!isQuotaOrUnavailableError(err)) {
+                // Genuine, non-recoverable failure — propagate so the handler
+                // returns 502.
+                throw err;
+            }
+            firstQuotaErr = err;
+            console.warn(
+                '[creative/generate-image] N=4 rejected with quota-style error, retrying at N=1',
+                err,
+            );
         }
+
+        // N=1 retry path.
+        try {
+            const images = await tryGenerate(FALLBACK_NUMBER_OF_IMAGES);
+            if (images.length > 0) return { kind: 'images', images };
+            return {
+                kind: 'quota',
+                detail:
+                    'Imagen returned no usable images for this prompt (it may have been filtered).',
+            };
+        } catch (retryErr) {
+            // If the original error was a quota error, treat any retry failure
+            // as a quota outcome (the UI can still show the cultural context).
+            // If the original call had succeeded with zero images, a non-quota
+            // retry failure is a real error — surface it as 502.
+            if (firstQuotaErr === null && !isQuotaOrUnavailableError(retryErr)) {
+                throw retryErr;
+            }
+            const cause =
+                retryErr instanceof Error
+                    ? retryErr
+                    : firstQuotaErr instanceof Error
+                      ? firstQuotaErr
+                      : null;
+            return {
+                kind: 'quota',
+                detail:
+                    cause?.message ?? 'Image generation is currently unavailable.',
+            };
+        }
+    }
+
+    let outcome: GenerateOutcome;
+    try {
+        outcome = await generateWithFallback();
     } catch (err) {
         console.error('[creative/generate-image] image generation failed', err);
-
-        if (isQuotaOrUnavailableError(err)) {
-            const fallback: GenerateImageQuotaFallback = {
-                error: 'IMAGE_GEN_UNAVAILABLE',
-                detail:
-                    err instanceof Error
-                        ? err.message
-                        : 'Image generation is currently unavailable.',
-                enrichedPrompt: enrichment.enrichedPrompt,
-                culturalContext: enrichment.culturalContext,
-                avoidanceNotes: enrichment.avoidanceNotes,
-                suggestedColors: enrichment.suggestedColors,
-                aspectRatio,
-            };
-            return res.status(200).json(fallback);
-        }
-
         return res.status(502).json({
             error: 'Image generation failed. Please try again.',
         });
     }
 
-    if (images.length === 0) {
-        // Treat "still nothing" as an unavailability, not a 500 — the UI can
-        // continue to show the cultural context.
+    if (outcome.kind === 'quota') {
         const fallback: GenerateImageQuotaFallback = {
             error: 'IMAGE_GEN_UNAVAILABLE',
-            detail:
-                'Imagen returned no usable images for this prompt (it may have been filtered).',
+            detail: outcome.detail,
             enrichedPrompt: enrichment.enrichedPrompt,
             culturalContext: enrichment.culturalContext,
             avoidanceNotes: enrichment.avoidanceNotes,
@@ -351,7 +392,7 @@ export default async function handler(
     }
 
     const success: GenerateImageSuccess = {
-        images,
+        images: outcome.images,
         enrichedPrompt: enrichment.enrichedPrompt,
         culturalContext: enrichment.culturalContext,
         avoidanceNotes: enrichment.avoidanceNotes,
