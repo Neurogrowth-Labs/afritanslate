@@ -207,8 +207,21 @@ function sanitiseSvg(input: string): string | null {
     return svg;
 }
 
-function escapeRegex(s: string): string {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/**
+ * Strip SVG fragment-id references before we scan for hex colours, so
+ * `url(#fade)`, `xlink:href="#abc"`, `<use href="#cafe">`, etc. don't get
+ * mistaken for colour values. The system prompt explicitly allows
+ * <pattern>/<linearGradient>/<radialGradient>, which all use this idiom.
+ */
+function stripFragmentRefs(svg: string): string {
+    return (
+        svg
+            // url(#id) — covers fill, stroke, mask, filter, clip-path, etc.
+            .replace(/url\(\s*['"]?#[^)'"]*['"]?\s*\)/gi, '')
+            // (xlink:)?href="#id" / href='#id'
+            .replace(/\s(?:xlink:)?href\s*=\s*"#[^"]*"/gi, '')
+            .replace(/\s(?:xlink:)?href\s*=\s*'#[^']*'/gi, '')
+    );
 }
 
 /**
@@ -231,8 +244,12 @@ function paletteMismatchReason(
     palette.add('transparent');
     palette.add('currentcolor');
 
+    // Drop fragment-id references first so url(#fade), href="#bead" etc.
+    // don't false-positive as colours.
+    const scanTarget = stripFragmentRefs(svg);
+
     // Pull all hex colours and compare.
-    const hexes = svg.match(/#[0-9a-fA-F]{3,6}\b/g) ?? [];
+    const hexes = scanTarget.match(/#[0-9a-fA-F]{3,6}\b/g) ?? [];
     for (const hex of hexes) {
         if (!palette.has(hex.toLowerCase())) {
             return `Pattern referenced colour "${hex}" outside the chosen palette.`;
