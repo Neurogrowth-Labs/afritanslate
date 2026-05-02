@@ -98,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return currentLevel >= minLevel; // Otherwise, compare plan level
     };
 
-    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2 };
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2, creative: 2 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -169,8 +169,14 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Creative</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Motion Generator" icon={<PlayIcon />} isActive={currentView === 'motion'} onClick={() => handleFeatureClick(() => onSetView('motion'), FEATURE_LEVELS.motion)} isLocked={!hasAccess(FEATURE_LEVELS.motion)} disabled={isOffline} />
-                        <NavButton label="Visual Arts" icon={<ImageIcon className="w-4 h-4" />} isActive={currentView === 'image'} onClick={() => handleFeatureClick(() => onSetView('image'), FEATURE_LEVELS.image)} isLocked={!hasAccess(FEATURE_LEVELS.image)} disabled={isOffline} />
+                        <NavButton
+                            label="Creative Studio"
+                            icon={<PlayIcon />}
+                            isActive={currentView === 'creative' || currentView === 'motion' || currentView === 'image'}
+                            onClick={() => handleFeatureClick(() => { onSetView('creative'); setIsOpen(false); }, FEATURE_LEVELS.creative)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.creative)}
+                            disabled={isOffline}
+                        />
                     </div>
                 </div>
 

@@ -5,7 +5,7 @@ export type TranslationMode = 'chat' | 'script' | 'book' | 'literary' | 'meeting
 
 export type TranscriptionStyle = 'normal' | 'interview';
 
-export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding' | 'glossary';
+export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding' | 'glossary' | 'creative';
 
 export type MeetingMode = 'live' | 'upload' | 'schedule';
 

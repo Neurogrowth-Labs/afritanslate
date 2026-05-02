@@ -32,6 +32,7 @@ import AboutPage from './components/AboutPage';
 import UseCasesPage from './components/UseCasesPage';
 import TestimonialsPage from './components/TestimonialsPage';
 import VideoGenerator from './components/VideoGenerator';
+import CreativeStudio from './components/creative/CreativeStudio';
 import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
@@ -53,19 +54,9 @@ const getDisplayName = (user: ReturnType<typeof useUser>['user']) => {
 
 const isLegacyProfileId = (profileId: string) => !profileId.startsWith('user_');
 
-// --- PLACEHOLDER COMPONENTS --- //
-const ImageGenerator: React.FC = () => (
-    <div className="flex flex-col items-center justify-center h-full text-center animate-fade-in p-3 overflow-hidden">
-        <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-4 border border-accent/20 shadow-[0_0_30px_-10px_rgba(244,163,0,0.3)]">
-            <ImageIcon className="w-8 h-8 text-accent" />
-        </div>
-        <h1 className="text-xl sm:text-2xl font-extrabold text-white mb-1.5">Visual Translation Engine</h1>
-        <p className="text-[12px] text-text-secondary mb-3 max-w-lg">Describe cultural concepts and materialize them into art.</p>
-        <div className="w-full max-w-4xl flex-1 bg-bg-surface border border-border-default rounded-xl flex items-center justify-center text-text-secondary">
-            Feature Loading...
-        </div>
-    </div>
-);
+// NOTE: The standalone ImageGenerator placeholder and VideoGenerator route are
+// now unified inside CreativeStudio (/studio/creative). VideoGenerator's AI
+// pipeline is preserved for re-use during the AI integration phase.
 
 const getInitialAppState = () => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -122,6 +113,33 @@ const TranslatorApp: React.FC<{
             window.removeEventListener('offline', handleOffline);
         };
     }, []);
+
+    // Honour the /studio/creative deep link on first paint so the unified
+    // Creative Studio is reachable via a real URL.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (window.location.pathname.startsWith('/studio/creative')) {
+            setCurrentView('creative');
+        }
+        const onPop = () => {
+            if (window.location.pathname.startsWith('/studio/creative')) {
+                setCurrentView('creative');
+            }
+        };
+        window.addEventListener('popstate', onPop);
+        return () => window.removeEventListener('popstate', onPop);
+    }, []);
+
+    // Mirror the active view back to the URL so the path stays in sync when
+    // users land on Creative Studio via the sidebar.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        if (currentView !== 'creative') return;
+        if (window.location.pathname.startsWith('/studio/creative')) return;
+        const url = new URL(window.location.href);
+        url.pathname = '/studio/creative';
+        window.history.replaceState({}, '', url.toString());
+    }, [currentView]);
 
     useEffect(() => {
         setCurrentUser(initialUser);
@@ -370,8 +388,9 @@ const TranslatorApp: React.FC<{
         if (currentView === 'privacy') return <PrivacyPolicy />;
         if (currentView === 'contact') return <ContactForm />;
         if (currentView === 'live') return <LiveConversation />;
-        if (currentView === 'image') return <ImageGenerator />;
-        if (currentView === 'motion') return <VideoGenerator />;
+        if (currentView === 'creative') return <CreativeStudio />;
+        if (currentView === 'image') return <CreativeStudio defaultTab="visual" />;
+        if (currentView === 'motion') return <CreativeStudio defaultTab="motion" />;
         if (currentView === 'about') return <AboutPage />;
         if (currentView === 'useCases') return <UseCasesPage />;
         if (currentView === 'testimonials') return <TestimonialsPage />;
@@ -421,7 +440,7 @@ const TranslatorApp: React.FC<{
     // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
     // vs views that act like traditional web pages (Page-like behavior)
     const fullHeightViews: (View | TranslationMode)[] = [
-        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image', 'glossary'
+        'live', 'chat', 'script', 'book', 'meetings', 'transcriber', 'onboarding', 'studio', 'motion', 'email', 'image', 'glossary', 'creative'
     ];
     const isFullHeightView = fullHeightViews.includes(currentView) || fullHeightViews.includes(currentMode);
 
