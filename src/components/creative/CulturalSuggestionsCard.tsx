@@ -65,6 +65,16 @@ const CulturalSuggestionsCard: React.FC<Props> = ({
 
     if (status.kind === 'idle') return null;
 
+    // Only the 'ready' state has enough content to make collapsing useful.
+    // Loading shows a tiny skeleton; error shows the retry button which must stay
+    // visible. Letting the user toggle in those states would rotate the chevron
+    // without changing visibility — a broken control.
+    const collapsible = status.kind === 'ready';
+    const bodyVisible =
+        status.kind === 'loading' ||
+        status.kind === 'error' ||
+        (status.kind === 'ready' && expanded);
+
     return (
         <motion.section
             initial={{ opacity: 0, y: -8 }}
@@ -81,9 +91,10 @@ const CulturalSuggestionsCard: React.FC<Props> = ({
             <header className="relative z-10 flex items-center justify-between px-4 sm:px-5 py-3 border-b border-white/10">
                 <button
                     type="button"
-                    onClick={() => setExpanded((v) => !v)}
-                    className="flex items-center gap-2.5 text-left"
-                    aria-expanded={expanded}
+                    onClick={collapsible ? () => setExpanded((v) => !v) : undefined}
+                    className={`flex items-center gap-2.5 text-left ${collapsible ? '' : 'cursor-default'}`}
+                    aria-expanded={collapsible ? expanded : undefined}
+                    disabled={!collapsible}
                 >
                     <span className="w-7 h-7 rounded-lg bg-emerald-400/10 border border-emerald-400/20 text-emerald-300 flex items-center justify-center text-[14px]">
                         🌍
@@ -111,7 +122,7 @@ const CulturalSuggestionsCard: React.FC<Props> = ({
                             Dismiss
                         </button>
                     )}
-                    {(status.kind === 'ready' || status.kind === 'error') && (
+                    {collapsible && (
                         <button
                             type="button"
                             onClick={() => setExpanded((v) => !v)}
@@ -127,9 +138,7 @@ const CulturalSuggestionsCard: React.FC<Props> = ({
             </header>
 
             <AnimatePresence initial={false}>
-                {(status.kind === 'loading' ||
-                    (expanded && status.kind === 'ready') ||
-                    status.kind === 'error') && (
+                {bodyVisible && (
                     <motion.div
                         key={status.kind}
                         initial={{ height: 0, opacity: 0 }}
