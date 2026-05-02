@@ -131,14 +131,22 @@ const TranslatorApp: React.FC<{
     }, []);
 
     // Mirror the active view back to the URL so the path stays in sync when
-    // users land on Creative Studio via the sidebar.
+    // users land on Creative Studio via the sidebar, and clear the stale path
+    // when they navigate away so a refresh does not force them back in.
     useEffect(() => {
         if (typeof window === 'undefined') return;
-        if (currentView !== 'creative') return;
-        if (window.location.pathname.startsWith('/studio/creative')) return;
-        const url = new URL(window.location.href);
-        url.pathname = '/studio/creative';
-        window.history.replaceState({}, '', url.toString());
+        const onCreativePath = window.location.pathname.startsWith('/studio/creative');
+        if (currentView === 'creative') {
+            if (onCreativePath) return;
+            const url = new URL(window.location.href);
+            url.pathname = '/studio/creative';
+            window.history.replaceState({}, '', url.toString());
+        } else if (onCreativePath) {
+            const url = new URL(window.location.href);
+            url.pathname = '/';
+            url.searchParams.delete('tab');
+            window.history.replaceState({}, '', url.toString());
+        }
     }, [currentView]);
 
     useEffect(() => {
