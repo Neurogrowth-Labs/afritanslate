@@ -229,7 +229,7 @@ const VisualArtsTab: React.FC = () => {
                 <div className="relative z-10 flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar">
                     <AnimatePresence mode="wait">
                         {status === 'idle' && <IdleState />}
-                        {status === 'generating' && <GeneratingState />}
+                        {status === 'generating' && <GeneratingState aspect={form.aspect} />}
                         {status === 'preview' && (
                             <motion.div
                                 key="preview"
@@ -312,7 +312,7 @@ const IdleState: React.FC = () => (
     </motion.div>
 );
 
-const GeneratingState: React.FC = () => (
+const GeneratingState: React.FC<{ aspect: FormState['aspect'] }> = ({ aspect }) => (
     <motion.div
         key="gen"
         initial={{ opacity: 0 }}
@@ -324,7 +324,7 @@ const GeneratingState: React.FC = () => (
             <div
                 key={i}
                 className="relative rounded-xl border border-white/10 overflow-hidden bg-white/[0.04]"
-                style={{ aspectRatio: '1/1' }}
+                style={{ aspectRatio: aspect.replace(':', '/') }}
             >
                 <div className="absolute inset-0 animate-pulse-slow bg-gradient-to-br from-white/[0.04] via-white/[0.08] to-white/[0.02]" />
             </div>

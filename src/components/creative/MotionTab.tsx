@@ -70,6 +70,8 @@ const MotionTab: React.FC = () => {
             reader.readAsDataURL(file);
         } else {
             setImagePreview(null);
+            // Reset the input so re-selecting the same file fires onChange.
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
