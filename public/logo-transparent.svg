@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="910" height="192" viewBox="203 313 910 192" role="img" aria-labelledby="title desc">
   <title id="title">AfriTranslate AI logo</title>
-  <desc id="desc">Clean vector recreation of the AfriTranslate AI logo with an orange icon and black wordmark.</desc>
+  <desc id="desc">Clean vector recreation of the AfriTranslate AI logo with an orange icon and a light wordmark for use on dark surfaces.</desc>
   <defs>
     <linearGradient id="afriOrange" x1="223" y1="333" x2="396" y2="485" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ff7b2d"/>
@@ -11,7 +11,7 @@
   <path d="M311 384 L311 399 L310 400 L311 401 L318 402 L324 408 L326 414 L326 420 L327 421 L326 424 L327 425 L326 428 L324 430 L311 434 L310 436 L311 439 L310 440 L320 448 L321 451 L325 456 L327 466 L328 467 L328 484 L351 484 L352 485 L353 484 L356 484 L357 485 L360 484 L381 484 L389 481 L392 478 L395 472 L395 468 L396 467 L396 393 L394 388 L391 385 L388 384 Z
 M223 384 L223 471 L227 480 L231 483 L234 483 L235 484 L279 484 L280 485 L282 484 L286 484 L287 483 L286 482 L287 481 L286 480 L286 422 L287 421 L287 414 L289 409 L296 402 L301 400 L301 384 Z
 M223 346 L223 373 L377 373 L378 374 L379 373 L383 373 L380 364 L377 359 L377 357 L369 346 L358 338 L347 334 L342 334 L341 333 L240 333 L239 334 L234 334 L228 337 L225 341 Z" fill="url(#afriOrange)" fill-rule="evenodd"/>
-  <g fill="#111217" fill-rule="evenodd">
+  <g fill="#e5e5e5" fill-rule="evenodd">
     <path d="M9 0H341L449 325H1006L1110 0H1451L928 1490H532ZM532 571 583 725C631 877 677 1029 731 1214C784 1029 830 877 876 725L926 571Z" transform="translate(445.000 443.000) scale(0.0488281 -0.0488281)"/>
     <path d="M719 1056H503V1143C503 1227 534 1259 619 1259H719V1490H552C324 1490 209 1390 209 1193V1056H18V825H209V0H503V825H719Z" transform="translate(511.338 443.000) scale(0.0488281 -0.0488281)"/>
     <path d="M104 0H399V572C399 731 488 815 609 815C659 815 714 811 736 810V1061C712 1062 683 1063 649 1063C510 1063 430 1003 391 876H388V1056H104Z" transform="translate(543.398 443.000) scale(0.0488281 -0.0488281)"/>
