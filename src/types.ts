@@ -6,7 +6,7 @@ export type TranslationMode = 'chat' | 'script' | 'book' | 'meetings' | 'email' 
 export type TranscriptionStyle = 'normal' | 'interview';
 
 // FIX: Added 'home' to the View type to represent the landing page's main view.
-export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding' | 'glossary';
+export type View = 'home' | 'chat' | 'library' | 'pricing' | 'payment' | 'terms' | 'privacy' | 'contact' | 'paymentSuccess' | 'live' | 'image' | 'about' | 'demo' | 'useCases' | 'testimonials' | 'motion' | 'profile' | 'onboarding' | 'glossary' | 'creative';
 
 export type MeetingMode = 'live' | 'upload' | 'schedule';
 
