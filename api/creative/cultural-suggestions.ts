@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
+import { verifyClerkToken } from './_auth';
 import type {
     CulturalSuggestionsRequest,
     CulturalSuggestionsResponse,
@@ -199,6 +200,10 @@ export default async function handler(
         res.setHeader('Allow', 'POST');
         return res.status(405).json({ error: 'Method not allowed' });
     }
+
+    // Gate on Clerk auth before doing anything that costs quota.
+    const userId = await verifyClerkToken(req, res);
+    if (!userId) return; // verifyClerkToken already wrote the response
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {

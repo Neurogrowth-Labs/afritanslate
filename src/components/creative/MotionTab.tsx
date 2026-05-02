@@ -11,12 +11,42 @@ type SuggestionStatus =
     | { kind: 'error'; message: string }
     | { kind: 'ready'; data: CulturalSuggestions };
 
+/**
+ * Read a Clerk session token from the global Clerk client. Mirrors the
+ * pattern used by `src/services/meetingInsightsClient.ts` so all paid
+ * server-side AI endpoints share one auth mechanism.
+ */
+async function getClerkToken(): Promise<string | null> {
+    const clerk = (
+        window as unknown as {
+            Clerk?: {
+                session?: { getToken: () => Promise<string | null> };
+            };
+        }
+    ).Clerk;
+    try {
+        return (await clerk?.session?.getToken()) ?? null;
+    } catch {
+        return null;
+    }
+}
+
 async function fetchCulturalSuggestions(
     body: { prompt: string; region: string; tone: string; goal: string },
 ): Promise<CulturalSuggestions> {
+    const token = await getClerkToken();
+    if (!token) {
+        throw new Error(
+            'You need to be signed in to get AI cultural suggestions.',
+        );
+    }
+
     const res = await fetch('/api/creative/cultural-suggestions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(body),
     });
 
