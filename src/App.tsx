@@ -37,7 +37,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
-import { LogoIcon, SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
+import { SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from '../services/geminiService'; // Import service
 import { generateOperationalManual } from '../services/pdfGenerator'; // Import PDF generator
 import { getTrialStatus, TrialStatus } from './utils/trialUtils';
@@ -667,11 +667,13 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
         <div className="bg-bg-main h-full w-full text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
             <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-16 flex-shrink-0 transition-all">
                 <div className="container mx-auto px-6 h-full flex items-center justify-between">
-                    <button onClick={() => setCurrentView('home')} className="flex items-center gap-2 hover:opacity-80 transition-opacity group">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center text-bg-main shadow-lg group-hover:shadow-accent/20 transition-all">
-                            <LogoIcon className="w-5 h-5" />
-                        </div>
-                        <span className="text-lg font-brand font-bold text-white tracking-tight">AfriTranslate AI</span>
+                    <button onClick={() => setCurrentView('home')} className="flex items-center hover:opacity-80 transition-opacity group" aria-label="AfriTranslate AI — home">
+                        <img
+                            src="/logo-transparent.svg"
+                            alt="AfriTranslate AI"
+                            className="h-7 w-auto select-none"
+                            draggable={false}
+                        />
                     </button>
                     <nav className="hidden lg:flex items-center gap-8">
                         <button onClick={() => setCurrentView('about')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Mission</button>
@@ -906,14 +908,14 @@ const App: React.FC = () => {
                 <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4 py-10">
                     <div className="w-full max-w-5xl grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-center">
                         <div className="hidden lg:block">
-                            <div className="inline-flex items-center gap-3 mb-6">
-                                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center text-bg-main shadow-lg">
-                                    <LogoIcon className="w-7 h-7" />
-                                </div>
-                                <div>
-                                    <p className="text-lg font-brand font-bold tracking-tight">AfriTranslate AI Studio</p>
-                                    <p className="text-xs text-text-secondary uppercase tracking-[0.25em]">Culturally Intelligent Localization</p>
-                                </div>
+                            <div className="mb-6">
+                                <img
+                                    src="/logo-transparent.svg"
+                                    alt="AfriTranslate AI"
+                                    className="h-10 w-auto mb-3 select-none"
+                                    draggable={false}
+                                />
+                                <p className="text-xs text-text-secondary uppercase tracking-[0.25em]">Culturally Intelligent Localization</p>
                             </div>
                             <h1 className="text-4xl font-brand font-bold leading-tight mb-4">Secure sign-in for your translation studio.</h1>
                             <p className="text-text-secondary max-w-xl leading-relaxed">
@@ -925,6 +927,10 @@ const App: React.FC = () => {
                                 routing="hash"
                                 fallbackRedirectUrl="/"
                                 appearance={{
+                                    layout: {
+                                        logoImageUrl: '/logo-transparent.svg',
+                                        logoPlacement: 'inside',
+                                    },
                                     variables: {
                                         colorBackground: '#0a0a0a',
                                         colorPrimary: '#f5a623',
