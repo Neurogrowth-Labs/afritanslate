@@ -341,9 +341,10 @@ export default async function handler(
     const paletteIssue = paletteMismatchReason(svg, validated);
     if (paletteIssue) {
         console.warn('[creative/generate-pattern]', paletteIssue);
-        // Don't 502 — the caller likely just wants to retry. Surfacing this as
-        // a 4xx-style error keeps the contract simple.
-        return res.status(502).json({
+        // 422: the upstream call worked, but the *content* of its response
+        // failed a server-side validation. The client treats all non-2xx
+        // statuses uniformly, so this is for correctness/observability.
+        return res.status(422).json({
             error: paletteIssue + ' Please try again.',
         });
     }
