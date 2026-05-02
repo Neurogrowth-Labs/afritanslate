@@ -83,7 +83,16 @@ const TranslatorApp: React.FC<{
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
     
-    const [currentView, setCurrentView] = useState<View>(initialView);
+    const [currentView, setCurrentView] = useState<View>(() => {
+        // If the user deep-linked into /studio/creative, start in 'creative'
+        // synchronously so the URL-sync effect does not race against the
+        // pathname-deep-link effect and wipe the ?tab query param before
+        // CreativeStudio mounts and reads it.
+        if (typeof window !== 'undefined' && window.location.pathname.startsWith('/studio/creative')) {
+            return 'creative';
+        }
+        return initialView;
+    });
     const [currentMode, setCurrentMode] = useState<TranslationMode>('chat');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
