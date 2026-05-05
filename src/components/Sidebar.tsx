@@ -1,11 +1,10 @@
 import React, { useState, useMemo, Fragment } from 'react';
 import type { Conversation, User, TranslationMode, View } from '../types';
 import { ADD_ONS, FOOTER_LINKS } from '../../constants';
-import { 
-    SearchIcon, LibraryIcon, PriceTagIcon, ScriptIcon, BookIcon, 
-    MeetingIcon, LiveIcon, ImageIcon, LockIcon, OfflineIcon, 
-    CheckIcon, DownloadIcon, EmailIcon, MicrophoneIcon, TranslateIcon,
-    CloseIcon, UserIcon, ThinkingIcon, TrashIcon, PlusIcon
+import {
+    SearchIcon, LibraryIcon, PriceTagIcon, BookIcon,
+    MeetingIcon, LockIcon,
+    CloseIcon, UserIcon, TrashIcon, PlusIcon
 } from './Icons';
 import { getTrialStatus } from '../utils/trialUtils';
 
@@ -154,18 +153,20 @@ const Sidebar: React.FC<SidebarProps> = ({
                 </div>
             </div>
 
-            {/* Main Navigation Sections */}
+            {/*
+              Pre-launch v1: AI features that route through the legacy
+              `services/geminiService.ts` (Translation Studio, AI Assistant,
+              Live Conversation, Audio Transcriber, Script Translator,
+              Literary Translator, Email Localization) are temporarily hidden
+              from the sidebar because they would call a now-removed client
+              key. The corresponding components still exist and routes still
+              mount on deep-link, but throw an explicit "moved server-side"
+              error from `getApiKey()` rather than crashing silently.
+              They will be re-enabled in v2 once each surface is moved
+              behind a /api/* Vercel route, mirroring the pattern at
+              api/creative/* and api/meeting-insights/*.
+            */}
             <div className="flex-1 overflow-y-auto px-3 space-y-6 custom-scrollbar pb-6">
-                <div>
-                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Tools</h4>
-                    <div className="space-y-0.5">
-                        <NavButton label="Translation Studio" icon={<TranslateIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'studio'} onClick={() => { onSetView('chat'); onSetMode('studio'); setIsOpen(false); }} />
-                        <NavButton label="AI Assistant" icon={<ThinkingIcon className="w-4 h-4"/>} isActive={currentView === 'chat' && currentMode === 'chat'} onClick={() => { onSetView('chat'); onSetMode('chat'); setIsOpen(false); }} />
-                        <NavButton label="Live Conversation" icon={<LiveIcon className="w-4 h-4" />} isActive={currentView === 'live'} onClick={() => handleFeatureClick(() => onSetView('live'), FEATURE_LEVELS.live)} isLocked={!hasAccess(FEATURE_LEVELS.live)} disabled={isOffline} />
-                        <NavButton label="Audio Transcriber" icon={<MicrophoneIcon className="w-4 h-4" />} isActive={currentMode === 'transcriber'} onClick={() => handleFeatureClick(() => onSetMode('transcriber'), FEATURE_LEVELS.transcriber)} isLocked={!hasAccess(FEATURE_LEVELS.transcriber)} disabled={isOffline} />
-                    </div>
-                </div>
-
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Creative</h4>
                     <div className="space-y-0.5">
@@ -183,9 +184,6 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Professional</h4>
                     <div className="space-y-0.5">
-                        <NavButton label="Script Translator" icon={<ScriptIcon className="w-4 h-4" />} isActive={currentMode === 'script'} onClick={() => handleFeatureClick(() => onSetMode('script'), FEATURE_LEVELS.script)} isLocked={!hasAccess(FEATURE_LEVELS.script)} disabled={isOffline} />
-                        <NavButton label="Literary Translator" icon={<BookIcon className="w-4 h-4" />} isActive={currentMode === 'book'} onClick={() => handleFeatureClick(() => onSetMode('book'), FEATURE_LEVELS.book)} isLocked={!hasAccess(FEATURE_LEVELS.book)} disabled={isOffline} />
-                        <NavButton label="Email Localization" icon={<EmailIcon className="w-4 h-4" />} isActive={currentMode === 'email'} onClick={() => handleFeatureClick(() => onSetMode('email'), FEATURE_LEVELS.email)} isLocked={!hasAccess(FEATURE_LEVELS.email)} disabled={isOffline} />
                         <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={!hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
                         <NavButton label="Glossary Vault" icon={<BookIcon className="w-4 h-4" />} isActive={currentView === 'glossary'} onClick={() => handleFeatureClick(() => onSetView('glossary'), FEATURE_LEVELS.glossary)} isLocked={!hasAccess(FEATURE_LEVELS.glossary)} disabled={isOffline} />
                     </div>

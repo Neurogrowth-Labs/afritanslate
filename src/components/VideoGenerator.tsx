@@ -69,13 +69,15 @@ const VideoGenerator: React.FC = () => {
     }, [isLoading]);
 
     const checkApiKey = async () => {
-        if (process.env.API_KEY) {
-            setHasApiKey(true);
-            return;
-        }
+        // F-01 fix: never read a Gemini key on the client. This component is
+        // hidden from the v1 sidebar and any deep-link will land on the
+        // "API Key configuration required" UI below until the video flow is
+        // moved behind a /api/* server route in v2.
         if (window.aistudio) {
             const hasKey = await window.aistudio.hasSelectedApiKey();
             setHasApiKey(hasKey);
+        } else {
+            setHasApiKey(false);
         }
     };
 
@@ -152,7 +154,13 @@ const VideoGenerator: React.FC = () => {
 
             const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
             if (downloadLink) {
-                setVideoUrl(`${downloadLink}&key=${process.env.API_KEY}`);
+                // F-01 fix: the video download URL previously appended
+                // `&key=${process.env.API_KEY}` from the client bundle, which
+                // was the same leaked key as the rest of F-01. The full
+                // video flow needs a /api/video-proxy route that signs the
+                // download URL server-side; until that lands the unsigned
+                // URL will 401 and the user sees the error toast below.
+                setVideoUrl(downloadLink);
             } else {
                 throw new Error("No video was generated.");
             }
