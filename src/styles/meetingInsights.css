@@ -63,6 +63,10 @@
   letter-spacing: 0.04em;
 }
 
+/* F-UI: input text colour pinned to text-primary white (#e5e5e5) so the
+   meeting-insights submission form remains legible when typing — the default
+   `color: inherit` on <input>/<select> is browser-dependent and on some
+   themes resolved to a darker grey on top of bg-bg-main. */
 .form-input,
 .form-select {
   padding: 0.55rem 0.75rem;

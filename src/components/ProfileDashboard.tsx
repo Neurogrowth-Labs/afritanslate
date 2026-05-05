@@ -278,7 +278,7 @@ const ProfileDashboard: React.FC<ProfileDashboardProps> = ({ user, onUpdateUser 
                                                 type="text" 
                                                 readOnly 
                                                 value={`https://afritranslate.ai/join/team/${user.id}`}
-                                                className="w-full p-1.5 bg-bg-surface border border-border-default rounded text-[11px] text-text-secondary select-all focus:outline-none"
+                                                className="w-full p-1.5 bg-bg-surface border border-border-default rounded text-[11px] text-white select-all focus:outline-none"
                                             />
                                             <button 
                                                 onClick={handleCopyLink}

@@ -1,6 +1,6 @@
 ---
 name: afritanslate-local-dev
-description: How to boot AfriTranslate locally with Clerk auth working. Covers the pk_test_ vs pk_live_ requirement, the .env.local layout, and the dev-server URL. Use this any time you need to run the app on localhost.
+description: How to boot AfriTranslate locally with Clerk auth and Supabase working. Covers the pk_test_ vs pk_live_ requirement, the placeholder-Supabase trap, the .env.local layout, and the dev-server URL. Use this any time you need to run the app on localhost.
 ---
 
 # Local development
@@ -18,11 +18,37 @@ Vite reads `.env.local` at start. After editing it, kill and restart Vite — HM
 
 ```
 VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
-VITE_SUPABASE_URL=https://placeholder.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder...
+VITE_SUPABASE_URL=https://<project>.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
 ```
 
-Supabase placeholders are fine for surfaces that don't hit the DB (LandingPage, sign-in, Clerk widget, public info views). Real Supabase creds are only needed for signed-in features.
+All three are required to reach the signed-in shell. The previous version of this skill claimed Supabase placeholders were fine for unauth surfaces — that's still true for the LandingPage and Clerk SignIn widget themselves, but **`src/App.tsx:780-866` runs a `bootstrapProfile` effect on every successful sign-in** that hits Supabase for a `profiles` row. With placeholder Supabase values the request resolves to `https://placeholder.supabase.co/rest/v1/profiles?...` (DNS doesn't resolve, status 0), the effect throws, and the app renders the **"We could not load your studio profile / Failed to load your profile"** error screen with only a Sign Out button. The signed-in shell is unreachable.
+
+The symptom looks like a code bug; the actual cause is the placeholder Supabase URL.
+
+## Permanent secrets (saved across all future sessions)
+
+Three user-scoped secrets are saved on this user's account:
+
+| Secret | Value | Used by |
+|---|---|---|
+| `VITE_CLERK_PUBLISHABLE_KEY` | `pk_test_*` (Clerk Development instance) | `index.tsx` Clerk provider |
+| `VITE_SUPABASE_URL` | `https://<project>.supabase.co` | `supabaseClient.ts` |
+| `VITE_SUPABASE_ANON_KEY` | anon JWT | `supabaseClient.ts` |
+
+All three are exposed to the shell as env vars by the same names. Plumb all three into `.env.local` like:
+
+```bash
+cat > .env.local <<EOF
+VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
+VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+EOF
+```
+
+Then `npm run dev` and you can sign in and reach the signed-in shell on localhost without any further user interaction.
+
+If any of the three are missing in a future session, request them via the secrets tool with `should_save=true`/`save_scope=user` so subsequent sessions inherit them. Devin Secrets Needed: `VITE_CLERK_PUBLISHABLE_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
 ## Clerk: pk_test_ vs pk_live_ — important
 
@@ -33,15 +59,11 @@ Supabase placeholders are fine for surfaces that don't hit the DB (LandingPage, 
 
 Get a `pk_test_` key from https://dashboard.clerk.com/last-active?path=api-keys — the top-left dropdown switches between Production and Development; pick Development, then API Keys.
 
-The key is saved as a user-scoped secret named `VITE_CLERK_PUBLISHABLE_KEY` and is exposed to the shell as `$VITE_CLERK_PUBLISHABLE_KEY`. Plumb it into `.env.local` like:
+## Clerk new-device 2FA
 
-```bash
-cat > .env.local <<EOF
-VITE_CLERK_PUBLISHABLE_KEY=$VITE_CLERK_PUBLISHABLE_KEY
-VITE_SUPABASE_URL=https://placeholder.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder...
-EOF
-```
+Fresh sign-ins from this VM trigger Clerk's new-device email-code 2FA ("Check your email — You're signing in from a new device"). The user must forward the 6-digit code from the test account's inbox. It's a one-time per VM identity — once you complete it, subsequent sign-ins on the same VM do not re-prompt.
+
+Clerk also runs HaveIBeenPwned breach-check on every password attempt; previously-breached passwords are rejected with **"Password compromised"**. If this happens, ask the user for a fresh non-breached password (random pass-phrase from a password manager works).
 
 ## Common build/lint/test commands
 
@@ -53,3 +75,12 @@ EOF
 ## Live entry point — read this before refactoring
 
 The live entry is `index.tsx` → `./src/App` (`src/App.tsx`). The repo also contains a top-level `App.tsx` and `src/components/Auth.tsx` that look like real code but are **not mounted anywhere** (dead code). Before editing anything related to login/auth or top-level layout, confirm you're working in `src/App.tsx`, not the unused root-level files.
+
+## Bootstrap-profile defaults to study before testing plan-gated UI
+
+The profile insert at `src/App.tsx:812-822` hard-codes `role: 'user'` and `plan: 'Premium'`. Newly bootstrapped accounts will not satisfy plan/role gates that require other values:
+
+- `currentUser.role === 'admin'` (e.g. AdminPortal at `src/App.tsx:444`)
+- `user.plan === 'Training'` (e.g. ProfileDashboard team-invite block at `src/components/ProfileDashboard.tsx:241`)
+
+To test those surfaces at runtime, either flip the row in Supabase before signing in, or use the asset-equivalent shell-grep + Tailwind-compile-runtime-proof pattern documented in `testing-the-app/SKILL.md`.
