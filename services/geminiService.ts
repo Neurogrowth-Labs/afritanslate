@@ -5,13 +5,24 @@ import { GLOTTOLOG_METADATA } from '../constants';
 import { saveCulturalInsight, checkGlossaryCompliance } from '../src/services/culturalService';
 import { getLanguageName } from '../src/utils/languageMapping';
 
-// Helper function to get API key from environment
-function getApiKey(): string {
-    const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-    if (!apiKey) {
-        throw new Error('VITE_GOOGLE_API_KEY is not set in .env file');
-    }
-    return apiKey;
+// All Gemini calls in this file are deprecated and must run server-side.
+// The previous implementation read `import.meta.env.VITE_GOOGLE_API_KEY`
+// from the client bundle, which would expose the key to anyone who
+// downloads the site. The corresponding sidebar entries are hidden in
+// Sidebar.tsx for the v1 launch; any deep-link into one of these routes
+// throws this explicit error so the user sees a clear message instead
+// of a raw stack trace, and the team has a single place to delete from
+// once each function has been migrated to a /api/* Vercel route.
+//
+// New code that needs a Gemini call MUST add a serverless route under
+// /api/* and read `process.env.GEMINI_API_KEY` there (see
+// `api/creative/cultural-suggestions.ts` for the canonical pattern).
+function getApiKey(): never {
+    throw new Error(
+        'AI features moved server-side for security. ' +
+        'Use Creative Studio or Meeting Insights, or wait for v2 where ' +
+        'these surfaces will be re-enabled behind /api/* routes.'
+    );
 }
 
 function handleApiError(error: unknown, context: string): Error {

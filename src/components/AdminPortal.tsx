@@ -374,17 +374,17 @@ const LibraryForm: React.FC<{ item: LibraryItem | Omit<LibraryItem, 'id'>, onSav
                     <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
                         <div>
                             <label>Type</label>
-                            <select name="type" value={formData.type} onChange={handleChange} className="w-full mt-1 p-2 bg-bg-main border border-border-default rounded-md">
+                            <select name="type" value={formData.type} onChange={handleChange} className="w-full mt-1 p-2 bg-bg-main border border-border-default rounded-md text-white">
                                 {ITEM_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
                          <div>
                             <label>Text</label>
-                            <textarea name="text" value={formData.text} onChange={handleChange} rows={2} className="w-full mt-1 p-2 bg-bg-main border border-border-default rounded-md"/>
+                            <textarea name="text" value={formData.text} onChange={handleChange} rows={2} className="w-full mt-1 p-2 bg-bg-main border border-border-default rounded-md text-white"/>
                         </div>
                         <div>
                             <label>Meaning</label>
-                            <textarea name="meaning" value={formData.meaning} onChange={handleChange} rows={3} className="w-full mt-1 p-2 bg-bg-main border border-border-default rounded-md"/>
+                            <textarea name="meaning" value={formData.meaning} onChange={handleChange} rows={3} className="w-full mt-1 p-2 bg-bg-main border border-border-default rounded-md text-white"/>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div>
