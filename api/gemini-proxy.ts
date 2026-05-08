@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyClerkToken } from './creative/_auth';
+import { GLOTTOLOG_METADATA } from '../constants';
 
 /**
  * Single shared server-side Gemini proxy.
@@ -567,6 +568,37 @@ const CHAT_TRANSLATION_SCHEMA = {
         explanation: { type: Type.STRING },
         pronunciation: { type: Type.STRING },
         original: { type: Type.STRING },
+        linguisticAnalysis: {
+            type: Type.OBJECT,
+            properties: {
+                structural: {
+                    type: Type.OBJECT,
+                    properties: {
+                        tonality: { type: Type.STRING },
+                        nounClasses: { type: Type.STRING },
+                        phonetics: { type: Type.STRING },
+                        grammarNotes: { type: Type.STRING },
+                    },
+                },
+                sociolinguistic: {
+                    type: Type.OBJECT,
+                    properties: {
+                        intellectualization: { type: Type.STRING },
+                        translanguaging: { type: Type.STRING },
+                        culturalContext: { type: Type.STRING },
+                    },
+                },
+                glottolog: {
+                    type: Type.OBJECT,
+                    properties: {
+                        family: { type: Type.STRING },
+                        parent: { type: Type.STRING },
+                        glottocode: { type: Type.STRING },
+                        features: { type: Type.STRING },
+                    },
+                },
+            },
+        },
     },
     required: [
         'directTranslation',
@@ -575,12 +607,33 @@ const CHAT_TRANSLATION_SCHEMA = {
     ],
 };
 
+interface ChatLinguisticAnalysis {
+    structural?: {
+        tonality?: string;
+        nounClasses?: string;
+        phonetics?: string;
+        grammarNotes?: string;
+    };
+    sociolinguistic?: {
+        intellectualization?: string;
+        translanguaging?: string;
+        culturalContext?: string;
+    };
+    glottolog?: {
+        family?: string;
+        parent?: string;
+        glottocode?: string;
+        features?: string;
+    };
+}
+
 interface ChatTranslationResult {
     directTranslation: string;
     culturallyAwareTranslation: string;
     explanation: string;
     pronunciation?: string;
     original?: string;
+    linguisticAnalysis?: ChatLinguisticAnalysis;
 }
 
 async function handleChat(
@@ -596,11 +649,28 @@ async function handleChat(
     const sourceLanguageName = getLanguageName(sourceLang);
     const targetLanguageName = getLanguageName(targetLang);
 
+    // Inject the same Glottolog metadata the original client-side
+    // `getNuancedTranslation` did so the LinguisticDeepDive panel in
+    // Studio.tsx and the LinguisticInsights section in Message.tsx stay
+    // populated.
+    const glottologInfo = GLOTTOLOG_METADATA[targetLang];
+    const glottologPrompt = glottologInfo
+        ? `[SCIENTIFIC CLASSIFICATION - GLOTTOLOG]
+Target Language: ${targetLang}
+Family: ${glottologInfo.family} > ${glottologInfo.parent}
+Glottocode: ${glottologInfo.glottocode}
+Typological Features to Enforce: ${glottologInfo.features}
+
+INSTRUCTION: Because this language belongs to the ${glottologInfo.family} family, strictly adhere to its specific structural rules (e.g., if Bantu, enforce noun class concordance; if Afroasiatic/Chadic, ensure gender/number agreement).`
+        : '';
+
     const prompt = `
-You are an AfriTranslate cultural consultant assisting a user in conversational mode.
+You are an AfriTranslate cultural consultant assisting a user in conversational mode, rooted in decolonial frameworks and the "African Linguistic Gaze".
 
 Translate the user's message from ${sourceLanguageName} into ${targetLanguageName}.
 Tone: ${tone}.
+
+${glottologPrompt}
 
 Return JSON with:
 - directTranslation: a faithful word-level translation.
@@ -608,6 +678,10 @@ Return JSON with:
 - explanation: 1-3 sentences on the cultural choices made.
 - pronunciation: phonetic guide for the cultural translation (optional, omit if not useful).
 - original: the original source text (verbatim).
+- linguisticAnalysis: a structured object detailing:
+    structural: { tonality, nounClasses, phonetics, grammarNotes } — notes on tone, noun-class agreement, unique phonemes (clicks, labial-velar stops, implosives), and serial verb constructions where applicable.
+    sociolinguistic: { intellectualization, translanguaging, culturalContext } — notes on indigenous-coinage vs loanword strategy, code-switching/superdiversity (e.g., Sheng, Naija Pidgin), and the "African Linguistic Gaze" perspective.
+    glottolog: { family, parent, glottocode, features } — populate from the scientific classification above when provided.
 
 Source text:
 """${text}"""
@@ -1117,12 +1191,28 @@ Return JSON with:
 Phrase:
 """${phrase}"""`;
 
-    return generateJson<DetectedLanguage>(
+    const result = await generateJson<DetectedLanguage>(
         apiKey,
         prompt,
         SPEAKER_LANG_SCHEMA,
         0.1,
     );
+
+    // Match the contract enforced by `handleDetectLanguage`: clamp confidence
+    // to [0, 1], lowercase the ISO-639-1 code, and provide fallback defaults.
+    const confidence = Number.isFinite(result.confidence)
+        ? Math.max(0, Math.min(1, result.confidence))
+        : 0;
+
+    return {
+        languageCode: typeof result.languageCode === 'string' && result.languageCode
+            ? result.languageCode.toLowerCase()
+            : 'en',
+        languageName: typeof result.languageName === 'string' && result.languageName
+            ? result.languageName
+            : 'Unknown',
+        confidence,
+    };
 }
 
 // ── Dispatcher ───────────────────────────────────────────────────────────────
