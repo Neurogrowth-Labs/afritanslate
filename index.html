@@ -119,6 +119,20 @@
         }
       }
 
+      /* Reserve room for the fixed BottomNav on mobile. The nav itself is
+         ~64px tall plus `env(safe-area-inset-bottom)` for notched devices
+         (~34px on iPhone). Apply this on the scroll container that lives
+         beneath the BottomNav. Resets to 0 on tablet+ where the BottomNav
+         is hidden and the sidebar takes over. */
+      .pb-bottom-nav {
+        padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+      }
+      @media (min-width: 768px) {
+        .pb-bottom-nav {
+          padding-bottom: 0;
+        }
+      }
+
       /* Slim, premium scrollbars */
       ::-webkit-scrollbar {
         width: 6px;

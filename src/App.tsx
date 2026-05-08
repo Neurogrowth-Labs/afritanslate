@@ -499,7 +499,7 @@ const TranslatorApp: React.FC<{
                   isOffline={isOffline}
                   onLogout={handleLogout}
               />
-              <main className="flex-1 overflow-hidden bg-[#0d0d0d] relative min-h-0 flex flex-col pb-16 md:pb-0">
+              <main className="flex-1 overflow-hidden bg-[#0d0d0d] relative min-h-0 flex flex-col pb-bottom-nav">
                   <div className={`flex-1 min-h-0 ${isFullHeightView ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
                     <div className={!isFullHeightView ? "p-4 sm:p-6 lg:p-8 min-h-full" : "h-full"}>
                         {renderContent()}
