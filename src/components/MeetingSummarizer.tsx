@@ -99,10 +99,11 @@ const MeetingSummarizer: React.FC<MeetingSummarizerProps> = ({ currentUser }) =>
     const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
     const workletUrlRef = useRef<string | null>(null);
 
-    // F-01 fix: this component used to instantiate `new GoogleGenAI` from the
-    // client bundle for live transcription via Gemini's WebSocket. That path
-    // required the leaked `process.env.API_KEY` and is therefore disabled in
-    // v1. The async pipeline at /api/meeting-insights supersedes this flow,
+    // F-01 fix: this component used to instantiate the Google Gen AI client
+    // directly from the client bundle for live transcription via Gemini's
+    // WebSocket. That path required the leaked `process.env.API_KEY` and is
+    // therefore disabled in v1. The async pipeline at /api/meeting-insights
+    // supersedes this flow,
     // and the legacy entry point is hidden from the sidebar. Live transcription
     // here will be re-enabled once /api/live-transcription is implemented.
     useEffect(() => {

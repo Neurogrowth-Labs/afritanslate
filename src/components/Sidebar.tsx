@@ -4,7 +4,8 @@ import { ADD_ONS, FOOTER_LINKS } from '../../constants';
 import {
     SearchIcon, LibraryIcon, PriceTagIcon, BookIcon,
     MeetingIcon, LockIcon,
-    CloseIcon, UserIcon, TrashIcon, PlusIcon
+    CloseIcon, UserIcon, TrashIcon, PlusIcon,
+    TranslateIcon, MicrophoneIcon, ScriptIcon, EmailIcon, LiveIcon, SparklesIcon,
 } from './Icons';
 import { getTrialStatus } from '../utils/trialUtils';
 
@@ -97,7 +98,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return currentLevel >= minLevel; // Otherwise, compare plan level
     };
 
-    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2, creative: 2, studio: 1 };
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2, creative: 2, studio: 1, chat: 1 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -154,15 +155,12 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/*
-              Phase 1 of the AI restoration (post PR #7): Translation Studio
-              is wired to `POST /api/gemini-proxy` and is now restored to the
-              sidebar. The remaining six surfaces — AI Assistant, Live
-              Conversation, Audio Transcriber, Script Translator, Literary
-              Translator, Email Localization — still route through the
-              legacy `services/geminiService.ts` and throw an explicit
-              "moved server-side" error from `getApiKey()`. They stay
-              hidden until each is migrated to a `functionName` registered
-              in `api/gemini-proxy.ts` (Phase 2+).
+              Sidebar navigation. After PRs #7/#10 + Phase 2+3, every AI
+              surface listed here routes through `POST /api/gemini-proxy`
+              and reads `process.env.GEMINI_API_KEY` only on the Vercel
+              server — no Gemini key ships in the client bundle. See
+              `api/gemini-proxy.ts` for the dispatcher and
+              `services/geminiService.ts` for each client wrapper.
             */}
             <div className="flex-1 overflow-y-auto px-3 space-y-6 custom-scrollbar pb-6">
                 <div>
@@ -184,6 +182,52 @@ const Sidebar: React.FC<SidebarProps> = ({
                             isLocked={!hasAccess(FEATURE_LEVELS.creative)}
                             disabled={isOffline}
                         />
+                        <NavButton
+                            label="Script Translator"
+                            icon={<ScriptIcon className="w-4 h-4" />}
+                            isActive={currentMode === 'script'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('script'); setIsOpen(false); }, FEATURE_LEVELS.script)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.script)}
+                            disabled={isOffline}
+                        />
+                        <NavButton
+                            label="Literary Translator"
+                            icon={<BookIcon className="w-4 h-4" />}
+                            isActive={currentMode === 'book'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('book'); setIsOpen(false); }, FEATURE_LEVELS.book)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.book)}
+                            disabled={isOffline}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Conversation</h4>
+                    <div className="space-y-0.5">
+                        <NavButton
+                            label="AI Assistant"
+                            icon={<SparklesIcon className="w-4 h-4" />}
+                            isActive={currentMode === 'chat'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('chat'); setIsOpen(false); }, FEATURE_LEVELS.chat)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.chat)}
+                            disabled={isOffline}
+                        />
+                        <NavButton
+                            label="Live Conversation"
+                            icon={<LiveIcon className="w-4 h-4" />}
+                            isActive={currentView === 'live'}
+                            onClick={() => handleFeatureClick(() => { onSetView('live'); setIsOpen(false); }, FEATURE_LEVELS.live)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.live)}
+                            disabled={isOffline}
+                        />
+                        <NavButton
+                            label="Audio Transcriber"
+                            icon={<MicrophoneIcon className="w-4 h-4" />}
+                            isActive={currentMode === 'transcriber'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('transcriber'); setIsOpen(false); }, FEATURE_LEVELS.transcriber)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.transcriber)}
+                            disabled={isOffline}
+                        />
                     </div>
                 </div>
 
@@ -192,6 +236,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <div className="space-y-0.5">
                         <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={!hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
                         <NavButton label="Glossary Vault" icon={<BookIcon className="w-4 h-4" />} isActive={currentView === 'glossary'} onClick={() => handleFeatureClick(() => onSetView('glossary'), FEATURE_LEVELS.glossary)} isLocked={!hasAccess(FEATURE_LEVELS.glossary)} disabled={isOffline} />
+                        <NavButton label="Email Localization" icon={<EmailIcon className="w-4 h-4" />} isActive={currentMode === 'email'} onClick={() => handleFeatureClick(() => onSetMode('email'), FEATURE_LEVELS.email)} isLocked={!hasAccess(FEATURE_LEVELS.email)} disabled={isOffline} />
                     </div>
                 </div>
 
