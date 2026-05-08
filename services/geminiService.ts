@@ -1,9 +1,9 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics, SceneBreakdown, CastingSide, DubbingLine, StoryboardPanel, MeetingAnalysisResult } from '../types';
-import { GLOTTOLOG_METADATA } from '../constants';
+import { GLOTTOLOG_METADATA } from '../shared/glottologMetadata';
 import { saveCulturalInsight, checkGlossaryCompliance } from '../src/services/culturalService';
-import { getLanguageName } from '../src/utils/languageMapping';
+import { getClerkToken } from '../src/components/creative/_clerkToken';
 
 // All Gemini calls in this file used to read `import.meta.env.VITE_GOOGLE_API_KEY`
 // from the client bundle, which exposed the key to anyone who downloads the
@@ -63,12 +63,7 @@ async function fileToBase64Part(file: File): Promise<{ mimeType: string; data: s
 // `api/gemini-proxy.ts` runs the matching server-side handler.
 
 async function getClerkSessionToken(): Promise<string> {
-    const clerk = (
-        window as unknown as {
-            Clerk?: { session?: { getToken: () => Promise<string | null> } };
-        }
-    ).Clerk;
-    const token = await clerk?.session?.getToken();
+    const token = await getClerkToken();
     if (!token) {
         throw new Error('Not authenticated. Sign in to use AI features.');
     }
@@ -414,18 +409,13 @@ export async function getNuancedTranslation(
         const inlineAttachments = await Promise.all(
             attachments.map((f) => fileToBase64Part(f)),
         );
-        // Surface the user's explicit region selection by appending it to the
-        // tone hint; the proxy handler does not yet take a separate region
-        // argument so we encode it into the tone string instead.
-        const toneWithRegion = targetRegion && targetRegion !== 'General'
-            ? `${tone} — localised for ${targetRegion}`
-            : tone;
         return await callGeminiProxy<TranslationResult>('chat', [
             text,
             sourceLang,
             targetLang,
-            toneWithRegion,
+            tone,
             inlineAttachments,
+            targetRegion ?? '',
         ]);
     } catch (error) {
         throw handleApiError(error, 'getting translation');
@@ -1042,86 +1032,21 @@ export async function translateWithCulture(
   options: TranslationOptions,
   isNaturalize?: boolean
 ): Promise<CulturalTranslationResult> {
-  
-  // Step 1: Check for glossary violations BEFORE translating
+
+  // Step 1: Check for glossary violations BEFORE translating. The proxy
+  // does its own server-side prompt construction (see `handleTranslateWithCulture`
+  // in api/gemini-proxy.ts); the only client-side responsibility left is
+  // glossary enforcement against the user's own Supabase-stored terms.
   const glossaryViolations = await checkGlossaryCompliance(text);
-  
-  // Step 2: Get full language names from codes
-  const sourceLanguageName = getLanguageName(options.sourceLang || 'en');
-  const targetLanguageName = getLanguageName(options.targetLang);
-  
-  // Step 3: Build the cultural intelligence prompt
-  let prompt = '';
-  
-  if (isNaturalize) {
-    prompt = `
-You are an expert African linguist and cultural consultant for AfriTranslate.
-
-Task: Take this translation and rewrite it to sound completely natural, idiomatic and authentic to a native ${targetLanguageName} speaker. Remove any literal or awkward phrasing.
-
-CRITICAL: The output MUST be in ${targetLanguageName}, not any other language.
-
-Naturalization Parameters:
-- Target Language: ${targetLanguageName}
-- Dialect: ${options.dialect || 'Standard'}
-- Tone: ${options.tone || 'Neutral'}
-- Formality Level: ${options.formality || 'Medium'}
-
-Output Format (STRICT JSON):
-{
-  "translation": "the naturalized text here",
-  "cultural_notes": ["note explaining the idiomatic changes"],
-  "risk_flags": [],
-  "tone_analysis": "brief analysis of the naturalized tone",
-  "risk_score": 0
-}
-
-Text to Naturalize: "${text}"
-`;
-  } else {
-    prompt = `
-You are an expert African linguist and cultural consultant for AfriTranslate.
-
-Task: Translate the following text from ${sourceLanguageName} into ${targetLanguageName}.
-
-CRITICAL: The output MUST be in ${targetLanguageName}, not any other language.
-
-Translation Parameters:
-- Source Language: ${sourceLanguageName}
-- Target Language: ${targetLanguageName}
-- Dialect: ${options.dialect || 'Standard'}
-- Tone: ${options.tone || 'Neutral'}
-- Formality Level: ${options.formality || 'Medium'}
-
-Special Instructions:
-1. Adapt all idioms to be culturally natural for ${options.dialect || targetLanguageName}.
-2. Flag any phrases that may be culturally risky or offensive.
-3. Provide context notes explaining important cultural adaptations.
-4. Rate the overall cultural risk on a scale of 0-100.
-
-Output Format (STRICT JSON):
-{
-  "translation": "the translated text here",
-  "cultural_notes": ["note 1", "note 2"],
-  "risk_flags": [
-    {"phrase": "problematic phrase", "reason": "why it's risky", "severity": "low/medium/high"}
-  ],
-  "tone_analysis": "brief analysis of tone appropriateness",
-  "risk_score": 0-100
-}
-
-Source Text: "${text}"
-`;
-  }
 
   try {
-    // Step 4: Call the server-side Gemini proxy.
+    // Step 2: Call the server-side Gemini proxy.
     const parsedResult = await callGeminiProxy<CulturalTranslationResult>(
       'translateWithCulture',
       [text, options, isNaturalize ?? false],
     );
 
-    // Step 5: Add glossary violations (computed client-side from the user's
+    // Step 3: Add glossary violations (computed client-side from the user's
     // own glossary in Supabase) to the risk flags returned by the server.
     if (glossaryViolations.length > 0) {
       parsedResult.risk_flags.push(...glossaryViolations.map(v => ({

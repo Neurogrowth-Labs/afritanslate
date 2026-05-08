@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyClerkToken } from './creative/_auth';
-import { GLOTTOLOG_METADATA } from '../constants';
+import { GLOTTOLOG_METADATA } from '../shared/glottologMetadata';
+import { getLanguageName } from '../shared/languageNames';
 
 /**
  * Single shared server-side Gemini proxy.
@@ -21,38 +22,9 @@ import { GLOTTOLOG_METADATA } from '../constants';
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
-// ── Language code → human-readable name (server-side copy of
-//    src/utils/languageMapping.ts so prompts can resolve names without
-//    any client-supplied label). Keep in sync if either copy changes.
-const LANGUAGE_NAMES: Record<string, string> = {
-    en: 'English',
-    sw: 'Swahili (Kiswahili)',
-    zu: 'Zulu (isiZulu)',
-    xh: 'Xhosa (isiXhosa)',
-    af: 'Afrikaans',
-    yo: 'Yoruba',
-    ig: 'Igbo',
-    ha: 'Hausa',
-    am: 'Amharic',
-    om: 'Oromo',
-    so: 'Somali',
-    rw: 'Kinyarwanda',
-    sn: 'Shona (chiShona)',
-    st: 'Sesotho',
-    tn: 'Setswana',
-    ts: 'Tsonga',
-    wo: 'Wolof',
-    fr: 'French',
-    pt: 'Portuguese',
-    ar: 'Arabic',
-    ss: 'Swati',
-    nr: 'Ndebele',
-    ve: 'Venda',
-};
-
-function getLanguageName(code: string): string {
-    return LANGUAGE_NAMES[code] ?? code;
-}
+// `LANGUAGE_NAMES`/`getLanguageName` and `GLOTTOLOG_METADATA` are imported
+// from `shared/` above so the same single source of truth is used here and
+// in `services/geminiService.ts` / `src/utils/languageMapping.ts`.
 
 // ── Shared types mirrored on the client (services/geminiService.ts).
 interface TranslationOptions {
@@ -108,6 +80,21 @@ function expectString(value: unknown, field: string, max = 8000): string {
     return value;
 }
 
+const TRANSLATION_TONES: ReadonlyArray<NonNullable<TranslationOptions['tone']>> = [
+    'Marketing',
+    'Legal',
+    'Street',
+    'Religious',
+    'Corporate',
+    'Neutral',
+];
+
+const TRANSLATION_FORMALITIES: ReadonlyArray<NonNullable<TranslationOptions['formality']>> = [
+    'High',
+    'Medium',
+    'Low',
+];
+
 function expectTranslationOptions(value: unknown): TranslationOptions {
     if (!value || typeof value !== 'object') {
         throw new Error('Field "options" must be an object.');
@@ -116,16 +103,30 @@ function expectTranslationOptions(value: unknown): TranslationOptions {
     if (typeof o.targetLang !== 'string' || o.targetLang.trim().length === 0) {
         throw new Error('Field "options.targetLang" is required.');
     }
+    let tone: TranslationOptions['tone'];
+    if (typeof o.tone === 'string') {
+        if (!(TRANSLATION_TONES as ReadonlyArray<string>).includes(o.tone)) {
+            throw new Error(
+                `Field "options.tone" must be one of: ${TRANSLATION_TONES.join(', ')}.`,
+            );
+        }
+        tone = o.tone as TranslationOptions['tone'];
+    }
+    let formality: TranslationOptions['formality'];
+    if (typeof o.formality === 'string') {
+        if (!(TRANSLATION_FORMALITIES as ReadonlyArray<string>).includes(o.formality)) {
+            throw new Error(
+                `Field "options.formality" must be one of: ${TRANSLATION_FORMALITIES.join(', ')}.`,
+            );
+        }
+        formality = o.formality as TranslationOptions['formality'];
+    }
     return {
         targetLang: o.targetLang,
         sourceLang: typeof o.sourceLang === 'string' ? o.sourceLang : undefined,
         dialect: typeof o.dialect === 'string' ? o.dialect : undefined,
-        tone: typeof o.tone === 'string'
-            ? (o.tone as TranslationOptions['tone'])
-            : undefined,
-        formality: typeof o.formality === 'string'
-            ? (o.formality as TranslationOptions['formality'])
-            : undefined,
+        tone,
+        formality,
         includeCulturalNotes: typeof o.includeCulturalNotes === 'boolean'
             ? o.includeCulturalNotes
             : undefined,
@@ -645,6 +646,9 @@ async function handleChat(
     const targetLang = expectString(args[2], 'targetLang', 100);
     const tone = typeof args[3] === 'string' && args[3] ? args[3] : 'Neutral';
     const attachments = expectInlineDataPartArray(args[4], 'attachments');
+    const targetRegion = typeof args[5] === 'string' && args[5].trim().length > 0
+        ? args[5].trim()
+        : '';
 
     const sourceLanguageName = getLanguageName(sourceLang);
     const targetLanguageName = getLanguageName(targetLang);
@@ -664,11 +668,19 @@ Typological Features to Enforce: ${glottologInfo.features}
 INSTRUCTION: Because this language belongs to the ${glottologInfo.family} family, strictly adhere to its specific structural rules (e.g., if Bantu, enforce noun class concordance; if Afroasiatic/Chadic, ensure gender/number agreement).`
         : '';
 
+    const regionPrompt = targetRegion && targetRegion !== 'General'
+        ? `[STRICT REGIONAL LOCALIZATION]
+Region: ${targetRegion}
+You MUST use the vocabulary, slang, idioms, and conventions specific to ${targetRegion}. Avoid generic ${targetLanguageName} that would feel out-of-place to a speaker from ${targetRegion}.`
+        : '';
+
     const prompt = `
 You are an AfriTranslate cultural consultant assisting a user in conversational mode, rooted in decolonial frameworks and the "African Linguistic Gaze".
 
 Translate the user's message from ${sourceLanguageName} into ${targetLanguageName}.
-Tone: ${tone}.
+Tone: ${tone}.${targetRegion && targetRegion !== 'General' ? `\nRegion: ${targetRegion}.` : ''}
+
+${regionPrompt}
 
 ${glottologPrompt}
 
