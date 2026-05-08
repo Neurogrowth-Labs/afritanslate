@@ -97,7 +97,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return currentLevel >= minLevel; // Otherwise, compare plan level
     };
 
-    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2, creative: 2 };
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2, creative: 2, studio: 1 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -154,22 +154,28 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/*
-              Pre-launch v1: AI features that route through the legacy
-              `services/geminiService.ts` (Translation Studio, AI Assistant,
-              Live Conversation, Audio Transcriber, Script Translator,
-              Literary Translator, Email Localization) are temporarily hidden
-              from the sidebar because they would call a now-removed client
-              key. The corresponding components still exist and routes still
-              mount on deep-link, but throw an explicit "moved server-side"
-              error from `getApiKey()` rather than crashing silently.
-              They will be re-enabled in v2 once each surface is moved
-              behind a /api/* Vercel route, mirroring the pattern at
-              api/creative/* and api/meeting-insights/*.
+              Phase 1 of the AI restoration (post PR #7): Translation Studio
+              is wired to `POST /api/gemini-proxy` and is now restored to the
+              sidebar. The remaining six surfaces — AI Assistant, Live
+              Conversation, Audio Transcriber, Script Translator, Literary
+              Translator, Email Localization — still route through the
+              legacy `services/geminiService.ts` and throw an explicit
+              "moved server-side" error from `getApiKey()`. They stay
+              hidden until each is migrated to a `functionName` registered
+              in `api/gemini-proxy.ts` (Phase 2+).
             */}
             <div className="flex-1 overflow-y-auto px-3 space-y-6 custom-scrollbar pb-6">
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Creative</h4>
                     <div className="space-y-0.5">
+                        <NavButton
+                            label="Translation Studio"
+                            icon={<PlayIcon />}
+                            isActive={currentMode === 'studio'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('studio'); setIsOpen(false); }, FEATURE_LEVELS.studio)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.studio)}
+                            disabled={isOffline}
+                        />
                         <NavButton
                             label="Creative Studio"
                             icon={<PlayIcon />}
