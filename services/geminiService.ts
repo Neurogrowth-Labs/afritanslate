@@ -5,24 +5,78 @@ import { GLOTTOLOG_METADATA } from '../constants';
 import { saveCulturalInsight, checkGlossaryCompliance } from '../src/services/culturalService';
 import { getLanguageName } from '../src/utils/languageMapping';
 
-// All Gemini calls in this file are deprecated and must run server-side.
-// The previous implementation read `import.meta.env.VITE_GOOGLE_API_KEY`
-// from the client bundle, which would expose the key to anyone who
-// downloads the site. The corresponding sidebar entries are hidden in
-// Sidebar.tsx for the v1 launch; any deep-link into one of these routes
-// throws this explicit error so the user sees a clear message instead
-// of a raw stack trace, and the team has a single place to delete from
-// once each function has been migrated to a /api/* Vercel route.
+// All Gemini calls in this file used to read `import.meta.env.VITE_GOOGLE_API_KEY`
+// from the client bundle, which exposed the key to anyone who downloads the
+// site. Migration plan after PR #7 (security fix):
 //
-// New code that needs a Gemini call MUST add a serverless route under
-// /api/* and read `process.env.GEMINI_API_KEY` there (see
-// `api/creative/cultural-suggestions.ts` for the canonical pattern).
+// • Phase 1 (this commit): Translation Studio's four functions
+//   (`translateWithCulture`, `getTranslationSuggestions`, `detectLanguage`,
+//   `getCulturalContext`) now POST to `POST /api/gemini-proxy` via
+//   `callGeminiProxy`. The Gemini key only exists as `process.env.GEMINI_API_KEY`
+//   on the Vercel server. See `api/gemini-proxy.ts` for the dispatcher and
+//   `meetingInsightsClient.ts` / `api/creative/_auth.ts` for the auth pattern.
+//
+// • Phase 2+: every other function below still calls `getApiKey()` and throws
+//   the explicit "moved server-side" error so deep-linking into AI Assistant /
+//   Live Conversation / Audio Transcriber / Script / Literary / Email
+//   surfaces shows a clear message instead of a raw stack trace. Each of
+//   these will be migrated to a `functionName` registered in
+//   `api/gemini-proxy.ts` and switched to `callGeminiProxy` here.
 function getApiKey(): never {
     throw new Error(
         'AI features moved server-side for security. ' +
-        'Use Creative Studio or Meeting Insights, or wait for v2 where ' +
-        'these surfaces will be re-enabled behind /api/* routes.'
+        'Use Creative Studio, Meeting Insights, or Translation Studio, or ' +
+        'wait for v2 where the remaining surfaces will be re-enabled behind ' +
+        '/api/gemini-proxy.'
     );
+}
+
+// ── Server-side Gemini proxy client ───────────────────────────────────────────
+//
+// Mirrors the Clerk Bearer pattern in `meetingInsightsClient.ts` and
+// `src/components/creative/_clerkToken.ts`. All migrated functions in this
+// file call `callGeminiProxy(functionName, args)` and the dispatcher in
+// `api/gemini-proxy.ts` runs the matching server-side handler.
+
+async function getClerkSessionToken(): Promise<string> {
+    const clerk = (
+        window as unknown as {
+            Clerk?: { session?: { getToken: () => Promise<string | null> } };
+        }
+    ).Clerk;
+    const token = await clerk?.session?.getToken();
+    if (!token) {
+        throw new Error('Not authenticated. Sign in to use AI features.');
+    }
+    return token;
+}
+
+async function callGeminiProxy<T>(
+    functionName: string,
+    args: unknown[],
+): Promise<T> {
+    const token = await getClerkSessionToken();
+    const res = await fetch('/api/gemini-proxy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ functionName, args }),
+    });
+    let payload: { result?: T; error?: string };
+    try {
+        payload = await res.json();
+    } catch {
+        throw new Error(`Gemini proxy returned a non-JSON response (HTTP ${res.status}).`);
+    }
+    if (!res.ok || payload.error) {
+        throw new Error(payload.error ?? `Gemini proxy failed (HTTP ${res.status}).`);
+    }
+    if (payload.result === undefined) {
+        throw new Error('Gemini proxy returned no result.');
+    }
+    return payload.result;
 }
 
 function handleApiError(error: unknown, context: string): Error {
@@ -1072,52 +1126,15 @@ Source Text: "${text}"
 `;
   }
 
-  // Debug logging
-  console.log('=== TRANSLATION REQUEST ===');
-  console.log('Source Language Code:', options.sourceLang || 'auto-detect');
-  console.log('Source Language Name:', sourceLanguageName);
-  console.log('Target Language Code:', options.targetLang);
-  console.log('Target Language Name:', targetLanguageName);
-  console.log('Full Prompt:', prompt);
-  console.log('===========================');
-  
   try {
-    // Step 4: Call Gemini API
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            translation: { type: Type.STRING },
-            cultural_notes: { type: Type.ARRAY, items: { type: Type.STRING } },
-            risk_flags: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  phrase: { type: Type.STRING },
-                  reason: { type: Type.STRING },
-                  severity: { type: Type.STRING, enum: ['low', 'medium', 'high'] }
-                },
-                required: ["phrase", "reason", "severity"]
-              }
-            },
-            tone_analysis: { type: Type.STRING },
-            risk_score: { type: Type.INTEGER }
-          },
-          required: ["translation", "cultural_notes", "risk_flags", "tone_analysis", "risk_score"]
-        },
-        temperature: 0.4
-      }
-    });
-    
-    const parsedResult: CulturalTranslationResult = JSON.parse(response.text.trim());
-    
-    // Step 5: Add glossary violations to risk flags
+    // Step 4: Call the server-side Gemini proxy.
+    const parsedResult = await callGeminiProxy<CulturalTranslationResult>(
+      'translateWithCulture',
+      [text, options, isNaturalize ?? false],
+    );
+
+    // Step 5: Add glossary violations (computed client-side from the user's
+    // own glossary in Supabase) to the risk flags returned by the server.
     if (glossaryViolations.length > 0) {
       parsedResult.risk_flags.push(...glossaryViolations.map(v => ({
         phrase: v.forbidden,
@@ -1126,28 +1143,86 @@ Source Text: "${text}"
       })));
       parsedResult.risk_score = Math.min(100, parsedResult.risk_score + 20);
     }
-    
+
     return parsedResult;
-    
+
   } catch (error) {
     console.error('Cultural translation error:', error);
-    // Fallback to basic translation
-    const basicTranslation = await getNuancedTranslation(
-      text, 
-      options.sourceLang || 'auto', 
-      options.targetLang, 
-      options.tone || 'Neutral'
-    );
-    return {
-      translation: basicTranslation.culturallyAwareTranslation || basicTranslation.directTranslation,
-      cultural_notes: [],
-      risk_flags: glossaryViolations.map(v => ({
-        phrase: v.forbidden,
-        reason: `Glossary violation: ${v.term}`,
-        severity: 'high' as const
-      })),
-      tone_analysis: 'Basic translation (cultural analysis unavailable)',
-      risk_score: glossaryViolations.length > 0 ? 30 : 0
-    };
+    // Surface the server error verbatim — the proxy already returns a
+    // user-readable message, and the previous "fallback to getNuancedTranslation"
+    // path also calls a not-yet-migrated client function and would throw.
+    throw error instanceof Error
+      ? error
+      : new Error('Cultural translation failed. Please try again.');
   }
+}
+
+// ── Phase 1 (Translation Studio) — additional proxy-backed helpers ───────────
+//
+// These three functions are routed through the same `/api/gemini-proxy` so
+// that adding new Translation Studio features (auto-detect source language,
+// alternative phrasings, cultural context for a paragraph) does not require
+// a new client-side Gemini key path. See `api/gemini-proxy.ts` for the
+// matching server-side handlers.
+
+export interface TranslationSuggestion {
+  text: string;
+  rationale: string;
+  register: 'formal' | 'neutral' | 'casual';
+}
+
+/**
+ * Return alternative phrasings of a translation in the requested register.
+ * Each suggestion preserves the meaning of the source text.
+ */
+export async function getTranslationSuggestions(
+  sourceText: string,
+  baseTranslation: string,
+  options: TranslationOptions,
+): Promise<{ suggestions: TranslationSuggestion[] }> {
+  return callGeminiProxy<{ suggestions: TranslationSuggestion[] }>(
+    'getTranslationSuggestions',
+    [sourceText, baseTranslation, options],
+  );
+}
+
+export interface DetectedLanguage {
+  /** ISO-639-1 short code (e.g. "sw"). Lower-case. */
+  languageCode: string;
+  /** Human-readable name (e.g. "Swahili (Kiswahili)"). */
+  languageName: string;
+  /** 0..1 confidence reported by the model. */
+  confidence: number;
+}
+
+/**
+ * Identify the source language of `text`. Designed for the Translation
+ * Studio "auto-detect" affordance — the returned `languageCode` plugs
+ * straight into `TranslationOptions.sourceLang`.
+ */
+export async function detectLanguage(text: string): Promise<DetectedLanguage> {
+  return callGeminiProxy<DetectedLanguage>('detectLanguage', [text]);
+}
+
+export interface CulturalContextResult {
+  summary: string;
+  keyConcepts: string[];
+  sensitivities: string[];
+  suggestedAdaptations: string[];
+}
+
+/**
+ * Return concise cultural context for a piece of source text targeted at a
+ * specific language / dialect — used by the Translation Studio cultural
+ * insights panel.
+ */
+export async function getCulturalContext(
+  text: string,
+  targetLang: string,
+  dialect?: string,
+): Promise<CulturalContextResult> {
+  return callGeminiProxy<CulturalContextResult>(
+    'getCulturalContext',
+    [text, targetLang, dialect ?? ''],
+  );
 }
