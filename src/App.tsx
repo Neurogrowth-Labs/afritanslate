@@ -515,6 +515,8 @@ const TranslatorApp: React.FC<{
               currentMode={currentMode}
               onSetView={handleSetView}
               onSetMode={handleSetMode}
+              currentUser={currentUser}
+              onUpgrade={() => { setHighlightedPlan(null); setIsUpgradeModalOpen(true); }}
           />
           <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} highlightedPlan={highlightedPlan} onChoosePlan={(plan) => { setSelectedPlanForPayment(plan); setIsUpgradeModalOpen(false); setCurrentView('payment'); }} onContactSales={() => { setIsUpgradeModalOpen(false); setCurrentView('contact');}} />
           
