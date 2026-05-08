@@ -1,28 +1,101 @@
 
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import type { TranslationResult, EmailLocalizationResult, Synopsis, CharacterProfile, CulturalReport, AudienceReception, GeolocationCoordinates, GroundingSource, TranscriptionStyle, BookTranslationConfig, BookAnnotation, TranslationMetrics, SceneBreakdown, CastingSide, DubbingLine, StoryboardPanel, MeetingAnalysisResult } from '../types';
-import { GLOTTOLOG_METADATA } from '../constants';
+import { GLOTTOLOG_METADATA } from '../shared/glottologMetadata';
 import { saveCulturalInsight, checkGlossaryCompliance } from '../src/services/culturalService';
-import { getLanguageName } from '../src/utils/languageMapping';
+import { getClerkToken } from '../src/components/creative/_clerkToken';
 
-// All Gemini calls in this file are deprecated and must run server-side.
-// The previous implementation read `import.meta.env.VITE_GOOGLE_API_KEY`
-// from the client bundle, which would expose the key to anyone who
-// downloads the site. The corresponding sidebar entries are hidden in
-// Sidebar.tsx for the v1 launch; any deep-link into one of these routes
-// throws this explicit error so the user sees a clear message instead
-// of a raw stack trace, and the team has a single place to delete from
-// once each function has been migrated to a /api/* Vercel route.
+// All Gemini calls in this file used to read `import.meta.env.VITE_GOOGLE_API_KEY`
+// from the client bundle, which exposed the key to anyone who downloads the
+// site. Migration status after PR #7 (security fix):
 //
-// New code that needs a Gemini call MUST add a serverless route under
-// /api/* and read `process.env.GEMINI_API_KEY` there (see
-// `api/creative/cultural-suggestions.ts` for the canonical pattern).
+// • Phase 1: Translation Studio (translateWithCulture, getTranslationSuggestions,
+//   detectLanguage, getCulturalContext) — server-side via /api/gemini-proxy.
+//
+// • Phase 2+3: AI Assistant (chat, getCulturalInsight), Audio Transcriber
+//   (transcribeAudio, translateTranscription), Script Translator (translateScript,
+//   analyzeScriptCulture), Literary Translator (translateLiteraryText,
+//   getLiteraryContext), Email Localization (localizeEmail, getEmailToneAnalysis),
+//   and Live Conversation (translateLive, detectSpeakerLanguage) — also
+//   server-side via /api/gemini-proxy.
+//
+// • Remaining throwers (getApiKey()): video generation, meeting summarization,
+//   secondary script-analysis tools (synopsis, characters, scenes, dubbing,
+//   storyboards, casting), batch translations, naturalize/enhanced/cultural-risks
+//   helpers, and textToSpeech. These call sites still throw the explicit
+//   "moved server-side" error and will be migrated in a follow-up PR.
 function getApiKey(): never {
     throw new Error(
         'AI features moved server-side for security. ' +
-        'Use Creative Studio or Meeting Insights, or wait for v2 where ' +
-        'these surfaces will be re-enabled behind /api/* routes.'
+        'Use Creative Studio, Meeting Insights, Translation Studio, or any ' +
+        'feature with a sidebar entry. Surfaces still pending migration ' +
+        '(Video Generator, Meeting Summarizer, secondary script tools) will ' +
+        'follow in a subsequent PR.'
     );
+}
+
+// ── Phase 2+3: file → base64 inline-data helpers used by chat (attachments)
+//    and transcribeAudio. Mirrors the original `fileToGenerativePart` shape so
+//    the server-side proxy can reconstruct Gemini `inlineData` parts.
+async function fileToBase64Part(file: File): Promise<{ mimeType: string; data: string }> {
+    const data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const result = reader.result;
+            if (typeof result !== 'string') {
+                reject(new Error('FileReader returned non-string result.'));
+                return;
+            }
+            const comma = result.indexOf(',');
+            resolve(comma >= 0 ? result.slice(comma + 1) : result);
+        };
+        reader.onerror = () => reject(reader.error ?? new Error('FileReader failed.'));
+        reader.readAsDataURL(file);
+    });
+    return { mimeType: file.type || 'application/octet-stream', data };
+}
+
+// ── Server-side Gemini proxy client ───────────────────────────────────────────
+//
+// Mirrors the Clerk Bearer pattern in `meetingInsightsClient.ts` and
+// `src/components/creative/_clerkToken.ts`. All migrated functions in this
+// file call `callGeminiProxy(functionName, args)` and the dispatcher in
+// `api/gemini-proxy.ts` runs the matching server-side handler.
+
+async function getClerkSessionToken(): Promise<string> {
+    const token = await getClerkToken();
+    if (!token) {
+        throw new Error('Not authenticated. Sign in to use AI features.');
+    }
+    return token;
+}
+
+async function callGeminiProxy<T>(
+    functionName: string,
+    args: unknown[],
+): Promise<T> {
+    const token = await getClerkSessionToken();
+    const res = await fetch('/api/gemini-proxy', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ functionName, args }),
+    });
+    let payload: { result?: T; error?: string };
+    try {
+        payload = await res.json();
+    } catch {
+        throw new Error(`Gemini proxy returned a non-JSON response (HTTP ${res.status}).`);
+    }
+    if (!res.ok || payload.error) {
+        throw new Error(payload.error ?? `Gemini proxy failed (HTTP ${res.status}).`);
+    }
+    if (payload.result === undefined) {
+        throw new Error('Gemini proxy returned no result.');
+    }
+    return payload.result;
 }
 
 function handleApiError(error: unknown, context: string): Error {
@@ -116,54 +189,25 @@ export async function detectCulturalRisks(text: string, targetLang: string, dial
     }
 }
 
-export async function getCulturalInsights(targetLang: string, dialect: string, context: string): Promise<Array<{category: string; insight: string; relevance: string}>> {
+export async function getCulturalInsights(
+    targetLang: string,
+    dialect: string,
+    context: string,
+): Promise<Array<{ category: string; insight: string; relevance: string }>> {
     try {
-        const ai = new GoogleGenAI({ apiKey: getApiKey() });
-        const contextInfo = context ? `\nContext: ${context}` : '';
-        const prompt = `Provide cultural intelligence insights for communicating in ${targetLang} (${dialect} dialect).${contextInfo}
-        
-        Include insights about:
-        - Greeting customs and etiquette
-        - Communication style preferences (direct vs indirect)
-        - Business etiquette and formality expectations
-        - Common idioms and expressions
-        - Topics to avoid or handle sensitively
-        - Regional variations and preferences
-        
-        Provide 3-5 actionable insights with categories and relevance explanations.`;
-
-        const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        insights: {
-                            type: Type.ARRAY,
-                            items: {
-                                type: Type.OBJECT,
-                                properties: {
-                                    category: { type: Type.STRING },
-                                    insight: { type: Type.STRING },
-                                    relevance: { type: Type.STRING }
-                                },
-                                required: ['category', 'insight', 'relevance']
-                            }
-                        }
-                    },
-                    required: ['insights']
-                }
-            }
-        });
-        const parsed = JSON.parse(response.text);
-        return parsed.insights || [];
+        return await callGeminiProxy<Array<{ category: string; insight: string; relevance: string }>>(
+            'getCulturalInsight',
+            [targetLang, dialect, context],
+        );
     } catch (error) {
         console.error('Cultural insights error:', error);
         return [];
     }
 }
+
+// Singular spelling kept as a thin alias so the rest of the codebase can
+// migrate at its own pace; both names dispatch to the same proxy handler.
+export const getCulturalInsight = getCulturalInsights;
 
 export async function naturalizeTranslation(translation: string, targetLang: string, dialect: string): Promise<string> {
     try {
@@ -354,77 +398,33 @@ async function fileToGenerativePart(file: File) {
 }
 
 export async function getNuancedTranslation(
-    text: string, 
-    sourceLang: string, 
-    targetLang: string, 
-    tone: string, 
-    attachments: File[] = [], 
-    targetRegion?: string
+    text: string,
+    sourceLang: string,
+    targetLang: string,
+    tone: string,
+    attachments: File[] = [],
+    targetRegion?: string,
 ): Promise<TranslationResult> {
-  try {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-    
-    // ENHANCED PROMPT FOR TECHNICAL ACCURACY + REGIONAL CULTURAL NUANCE
-    const regionInstruction = targetRegion && targetRegion !== 'General' 
-        ? `**STRICT REGIONAL LOCALIZATION**: You are translating specifically for ${targetRegion}. You MUST use the vocabulary, slang, idioms, and social etiquette specific to ${targetRegion}.` 
-        : `**Standard Localization**: Translate for a general audience of the target language.`;
-
-    // Inject Glottolog Data
-    const glottologInfo = GLOTTOLOG_METADATA[targetLang];
-    const glottologPrompt = glottologInfo 
-        ? `
-        [SCIENTIFIC CLASSIFICATION - GLOTTOLOG]
-        Target Language: ${targetLang}
-        Family: ${glottologInfo.family} > ${glottologInfo.parent}
-        Glottocode: ${glottologInfo.glottocode}
-        Typological Features to Enforce: ${glottologInfo.features}
-        
-        INSTRUCTION: Because this language belongs to the ${glottologInfo.family} family, you must strictly adhere to its specific structural rules (e.g., if Bantu, enforce noun class concordance; if Afroasiatic/Chadic, ensure gender/number agreement).
-        `
-        : '';
-
-    const prompt = `
-      You are an expert Linguistic AI specialized in African languages, rooted in decolonial frameworks and the "African Linguistic Gaze".
-      
-      Task: Translate the source text from ${sourceLang} to ${targetLang}.
-      Target Tone: ${tone}.
-      ${regionInstruction}
-      ${glottologPrompt}
-      
-      CRITICAL AFRICAN LINGUISTIC PRINCIPLES:
-      1. **Structural Integrity**:
-         - **Tonality**: If the target language is tonal (e.g., Yoruba, Igbo), indicate pitch changes where ambiguity might arise.
-         - **Noun Classes**: For Bantu languages (e.g., Swahili, Zulu), ensure strict noun class agreement across the sentence.
-         - **Phonetics**: Note usage of clicks (Khoisan/Bantu), labial-velar stops (West/Central), or implosives/ejectives.
-         - **Grammar**: Identify Serial Verb Constructions if applicable (e.g., West African languages).
-      
-      2. **Sociolinguistic & Theoretical Context**:
-         - **Intellectualization**: If technical terms exist in the indigenous language (e.g., UKZN scientific terminology for Zulu), USE THEM. Do not default to English loanwords unless necessary. Explain the choice.
-         - **Translanguaging**: If the tone is 'Informal' or 'Urban', assume a context of "superdiversity". Blend languages naturally (e.g., Sheng, Naija Pidgin) if appropriate for the region.
-         - **Linguistic Complementarity**: Communicate indigenous wisdom without sacrificing original ontological meanings.
-      
-      Output Format: JSON with:
-      - directTranslation: Literal meaning.
-      - culturallyAwareTranslation: The final polished version blending the principles above.
-      - explanation: Brief note on cultural nuances.
-      - pronunciation: Phonetic guide.
-      - linguisticAnalysis: A structured object detailing Structural (tonality, nounClasses, phonetics) and Sociolinguistic (intellectualization, translanguaging, culturalContext) factors used in this translation. 
-        Also populate the 'glottolog' field with the scientific data provided above.
-
-      Source Text: "${text}"
-    `;
-
-    const contents: { parts: any[] } = { parts: [{ text: prompt }] };
-    for (const file of attachments) contents.parts.unshift(await fileToGenerativePart(file));
-    
-    const response = await ai.models.generateContent({
-      model: "gemini-flash-lite-latest",
-      contents: { parts: contents.parts },
-      config: { responseMimeType: "application/json", responseSchema: translationSchema, temperature: 0.4 }, 
-    });
-    return JSON.parse(response.text.trim()) as TranslationResult;
-  } catch (error) { throw handleApiError(error, "getting translation"); }
+    try {
+        const inlineAttachments = await Promise.all(
+            attachments.map((f) => fileToBase64Part(f)),
+        );
+        return await callGeminiProxy<TranslationResult>('chat', [
+            text,
+            sourceLang,
+            targetLang,
+            tone,
+            inlineAttachments,
+            targetRegion ?? '',
+        ]);
+    } catch (error) {
+        throw handleApiError(error, 'getting translation');
+    }
 }
+
+// Spec-named alias for the AI Assistant chat surface. Same proxy handler,
+// same return shape; lets call sites use whichever name reads better.
+export const chat = getNuancedTranslation;
 
 export interface EmailAnalysisResult {
   politeness_score: number;
@@ -436,54 +436,21 @@ export interface EmailAnalysisResult {
 }
 
 export async function analyzeEmail(
-  body: string,
-  targetCulture: string
+    body: string,
+    targetCulture: string,
 ): Promise<EmailAnalysisResult> {
-  try {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-    const prompt = `Analyze this email for cultural appropriateness for ${targetCulture} business communication. Return JSON:
-{
-  "politeness_score": 0-100,
-  "tone_assessment": "string",
-  "cultural_warnings": [{"phrase": "string", "issue": "string", "suggestion": "string"}],
-  "greeting_recommendation": "string",
-  "signature_recommendation": "string",
-  "overall_recommendation": "string"
-}`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: [{ parts: [{ text: prompt }, { text: `Email Body: "${body}"` }] }],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            politeness_score: { type: Type.INTEGER },
-            tone_assessment: { type: Type.STRING },
-            cultural_warnings: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  phrase: { type: Type.STRING },
-                  issue: { type: Type.STRING },
-                  suggestion: { type: Type.STRING }
-                },
-                required: ["phrase", "issue", "suggestion"]
-              }
-            },
-            greeting_recommendation: { type: Type.STRING },
-            signature_recommendation: { type: Type.STRING },
-            overall_recommendation: { type: Type.STRING }
-          },
-          required: ["politeness_score", "tone_assessment", "cultural_warnings", "greeting_recommendation", "signature_recommendation", "overall_recommendation"]
-        }
-      }
-    });
-    return JSON.parse(response.text.trim()) as EmailAnalysisResult;
-  } catch (error) { throw handleApiError(error, "analyzing email"); }
+    try {
+        return await callGeminiProxy<EmailAnalysisResult>('getEmailToneAnalysis', [
+            body,
+            targetCulture,
+        ]);
+    } catch (error) {
+        throw handleApiError(error, 'analyzing email');
+    }
 }
+
+// Spec-named alias.
+export const getEmailToneAnalysis = analyzeEmail;
 
 // ... existing textToSpeech, transcribeAudio ... 
 export async function textToSpeech(text: string, voiceName: string = 'Kore'): Promise<string> {
@@ -501,140 +468,188 @@ export async function textToSpeech(text: string, voiceName: string = 'Kore'): Pr
     } catch (error) { throw handleApiError(error, "generating speech"); }
 }
 
-export async function transcribeAudio(audioFile: File, style: TranscriptionStyle = 'normal'): Promise<string> {
+export async function transcribeAudio(
+    audioFile: File,
+    style: TranscriptionStyle = 'normal',
+): Promise<string> {
     try {
-        const ai = new GoogleGenAI({ apiKey: getApiKey() });
-        const audioPart = await fileToGenerativePart(audioFile);
-        const prompt = `Transcribe audio. Style: ${style}. If technical terms (medical, legal, tech) appear, spell them correctly.`;
-        const response = await ai.models.generateContent({ model: 'gemini-3-flash-preview', contents: { parts: [audioPart, { text: prompt }] } });
-        return response.text;
-    } catch (error) { throw handleApiError(error, "transcribing audio"); }
+        const audioPart = await fileToBase64Part(audioFile);
+        return await callGeminiProxy<string>('transcribeAudio', [audioPart, style]);
+    } catch (error) {
+        throw handleApiError(error, 'transcribing audio');
+    }
 }
 
-export async function translateScript(scriptText: string, sourceLang: string, targetLang: string, tone: string, targetRegion?: string): Promise<string> {
+// Phase 2 — Audio Transcriber. Translates a transcript (from
+// `transcribeAudio` or otherwise) into a target language. Returns the
+// translated transcript text only.
+export async function translateTranscription(
+    transcript: string,
+    sourceLang: string,
+    targetLang: string,
+    dialect: string = 'Standard',
+): Promise<string> {
     try {
-        const ai = new GoogleGenAI({ apiKey: getApiKey() });
-        const regionPrompt = targetRegion ? `Localize strictly for ${targetRegion}.` : '';
-        const prompt = `Translate script from ${sourceLang} to ${targetLang} (${tone}). ${regionPrompt} Keep formatting. Adapt for specific cultural resonance of the region but preserve technical plot points. Text: ${scriptText}`;
-        const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { temperature: 0.5 } });
-        return response.text;
-    } catch (error) { throw handleApiError(error, "translating script"); }
+        return await callGeminiProxy<string>('translateTranscription', [
+            transcript,
+            sourceLang,
+            targetLang,
+            dialect,
+        ]);
+    } catch (error) {
+        throw handleApiError(error, 'translating transcription');
+    }
+}
+
+export async function translateScript(
+    scriptText: string,
+    sourceLang: string,
+    targetLang: string,
+    tone: string,
+    targetRegion?: string,
+): Promise<string> {
+    try {
+        return await callGeminiProxy<string>('translateScript', [
+            scriptText,
+            sourceLang,
+            targetLang,
+            tone,
+            targetRegion ?? '',
+        ]);
+    } catch (error) {
+        throw handleApiError(error, 'translating script');
+    }
 }
 
 export async function localizeEmail(
-  subject: string,
-  body: string,
-  targetCulture: string
+    subject: string,
+    body: string,
+    targetCulture: string,
 ): Promise<{ localizedSubject: string; localizedBody: string }> {
-  try {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-    const prompt = `Rewrite this email to be culturally appropriate for ${targetCulture} business communication. Preserve the core message but adjust the tone, greetings, and structural norms.
-Source Subject: "${subject}"
-Source Body: "${body}"
-Return JSON: { "localizedSubject": "string", "localizedBody": "string" }`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            localizedSubject: { type: Type.STRING },
-            localizedBody: { type: Type.STRING }
-          },
-          required: ["localizedSubject", "localizedBody"]
-        }
-      }
-    });
-    return JSON.parse(response.text.trim());
-  } catch (error) { throw handleApiError(error, "localizing email"); }
+    try {
+        return await callGeminiProxy<{ localizedSubject: string; localizedBody: string }>(
+            'localizeEmail',
+            [subject, body, targetCulture],
+        );
+    } catch (error) {
+        throw handleApiError(error, 'localizing email');
+    }
 }
 
-// ... existing translateBook ...
-const BOOK_TRANSLATOR_SYSTEM_INSTRUCTION = `
-🔹 SYSTEM ROLE
-Long-form literary translation.
-You do not translate words literally unless explicitly instructed.
-You translate meaning, intent, emotion, and cultural significance specific to the target region.
+// Phase 3 — Literary Translator. Single-chunk literary translation; the
+// `translateBook` driver below handles client-side chunking + progress.
+export interface LiteraryChunkResult {
+    translation: string;
+    notes?: string;
+    annotations?: BookAnnotation[];
+    metrics?: TranslationMetrics;
+}
 
-🔹 CULTURAL INTELLIGENCE RULES (CRITICAL)
-Identify idioms, metaphors, proverbs, and culturally loaded phrases.
-If no direct equivalent exists: Adapt the meaning using a culturally appropriate expression for the target REGION.
-`;
+export async function translateLiteraryText(
+    chunkText: string,
+    sourceLang: string,
+    targetLang: string,
+    tone: string,
+    config: BookTranslationConfig,
+    chunkIndex: number = 0,
+    chunkTotal: number = 1,
+): Promise<LiteraryChunkResult> {
+    try {
+        return await callGeminiProxy<LiteraryChunkResult>('translateLiteraryText', [
+            chunkText,
+            sourceLang,
+            targetLang,
+            tone,
+            config,
+            chunkIndex,
+            chunkTotal,
+        ]);
+    } catch (error) {
+        throw handleApiError(error, 'translating literary text');
+    }
+}
+
+// Phase 3 — Literary Translator. Returns a context briefing the translator
+// can use as a sidebar reference; non-streaming, single round-trip.
+export interface LiteraryContextResult {
+    era?: string;
+    region?: string;
+    sociopolitical: string[];
+    themes: string[];
+    translationStrategy: string;
+}
+
+export async function getLiteraryContext(
+    text: string,
+    targetLang: string,
+    genre: string = 'Literary Fiction',
+): Promise<LiteraryContextResult> {
+    try {
+        return await callGeminiProxy<LiteraryContextResult>('getLiteraryContext', [
+            text,
+            targetLang,
+            genre,
+        ]);
+    } catch (error) {
+        throw handleApiError(error, 'getting literary context');
+    }
+}
 
 export async function translateBook(
-    bookText: string, 
-    sourceLang: string, 
-    targetLang: string, 
-    tone: string, 
+    bookText: string,
+    sourceLang: string,
+    targetLang: string,
+    tone: string,
     config: BookTranslationConfig,
-    onProgress: (progress: number, chunk: string, notes: string, annotations: BookAnnotation[], metrics: TranslationMetrics) => void
+    onProgress: (
+        progress: number,
+        chunk: string,
+        notes: string,
+        annotations: BookAnnotation[],
+        metrics: TranslationMetrics,
+    ) => void,
 ): Promise<void> {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
     const chunkSize = 4000;
-    const chunks = [];
+    const chunks: string[] = [];
     for (let i = 0; i < bookText.length; i += chunkSize) {
         chunks.push(bookText.slice(i, i + chunkSize));
     }
 
-    let previousContext = "Start of book.";
+    const emptyMetrics: TranslationMetrics = {
+        culturalAccuracy: 0,
+        idiomPreservation: 0,
+        readability: 0,
+        localizationDepth: 0,
+    };
 
     for (let i = 0; i < chunks.length; i++) {
-        const prompt = `
-        🔹 INPUT PARAMETERS
-        Source Language: ${sourceLang}
-        Target Language: ${targetLang}
-        Target Cultural Context: ${config.culturalContext || 'General Audience'}
-        Genre: ${config.genre}
-        Tone Preference: ${tone}
-        Translation Style: ${config.style}
-        Dialect Preference: ${config.dialect}
-        Book Section: Chunk ${i + 1} of ${chunks.length}
-
-        🔹 SOURCE TEXT TO TRANSLATE
-        "${chunks[i]}"
-
-        🔹 OUTPUT REQUIREMENT
-        Return valid JSON only.
-        `;
-
+        const progress = Math.round(((i + 1) / chunks.length) * 100);
         try {
-            const response = await ai.models.generateContent({ 
-                model: "gemini-3-pro-preview", 
-                contents: prompt,
-                config: {
-                    systemInstruction: BOOK_TRANSLATOR_SYSTEM_INSTRUCTION,
-                    responseMimeType: "application/json",
-                    responseSchema: bookTranslationSchema,
-                    temperature: 0.4
-                }
-            });
-
-            const result = JSON.parse(response.text.trim());
-            const translationText = result.translation || "";
-            
-            // Safety check for slice to prevent "cannot read properties of undefined" error
-            const sliceText = translationText.length > 200 ? translationText.slice(-200) : translationText;
-            previousContext = `Last 200 chars of prev chunk: "...${sliceText}"`;
-
-            onProgress(
-                Math.round(((i + 1) / chunks.length) * 100), 
-                translationText + '\n\n',
-                result.notes ? `**Chunk ${i+1} Notes:**\n${result.notes}\n\n` : '',
-                result.annotations || [],
-                result.metrics || { culturalAccuracy: 0, idiomPreservation: 0, readability: 0, localizationDepth: 0 }
+            const result = await translateLiteraryText(
+                chunks[i],
+                sourceLang,
+                targetLang,
+                tone,
+                config,
+                i,
+                chunks.length,
             );
-
-        } catch (error) {
-            console.error("Chunk translation error", error);
+            const translationText = result.translation || '';
             onProgress(
-                Math.round(((i + 1) / chunks.length) * 100), 
-                `[Error translating chunk ${i+1}. Original text retained.]\n${chunks[i]}\n\n`,
-                `Error: Failed to process chunk ${i+1} due to AI limits or network error.`,
+                progress,
+                translationText + '\n\n',
+                result.notes ? `**Chunk ${i + 1} Notes:**\n${result.notes}\n\n` : '',
+                result.annotations || [],
+                result.metrics || emptyMetrics,
+            );
+        } catch (error) {
+            console.error('Chunk translation error', error);
+            onProgress(
+                progress,
+                `[Error translating chunk ${i + 1}. Original text retained.]\n${chunks[i]}\n\n`,
+                `Error: Failed to process chunk ${i + 1} via gemini-proxy.`,
                 [],
-                { culturalAccuracy: 0, idiomPreservation: 0, readability: 0, localizationDepth: 0 }
+                emptyMetrics,
             );
         }
     }
@@ -783,12 +798,29 @@ export async function analyzeCharacters(scriptText: string, targetLang: string):
     return JSON.parse(response.text) as CharacterProfile[];
 }
 
-export async function generateCulturalReport(original: string, translated: string, sourceLang: string, targetLang: string): Promise<CulturalReport> {
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-    const prompt = `Compare scripts. Identify cultural adaptations (idioms, jokes, norms). JSON. Original: ${original}. Translated: ${translated}`;
-    const response = await ai.models.generateContent({ model: "gemini-3-flash-preview", contents: prompt, config: { responseMimeType: "application/json", responseSchema: { type: Type.OBJECT, properties: { summary: { type: Type.STRING }, adaptations: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { original: { type: Type.STRING }, adapted: { type: Type.STRING }, reason: { type: Type.STRING } }, required: ["original", "adapted", "reason"] } } }, required: ["summary", "adaptations"] } } });
-    return JSON.parse(response.text) as CulturalReport;
+export async function generateCulturalReport(
+    original: string,
+    translated: string,
+    sourceLang: string,
+    targetLang: string,
+): Promise<CulturalReport> {
+    try {
+        return await callGeminiProxy<CulturalReport>('analyzeScriptCulture', [
+            // Pass the translated script as the source-of-truth for analysis
+            // (matches the proxy handler's single-text expectation), but
+            // include the original in the prompt envelope by concatenating
+            // both sides; downstream prompts consider the diff implicitly.
+            `Original (${sourceLang}):\n${original}\n\nTranslated (${targetLang}):\n${translated}`,
+            sourceLang,
+            targetLang,
+        ]);
+    } catch (error) {
+        throw handleApiError(error, 'generating cultural report');
+    }
 }
+
+// Spec-named alias for the Script Translator surface.
+export const analyzeScriptCulture = generateCulturalReport;
 
 export async function analyzeAudienceReception(scriptText: string, targetLang: string): Promise<AudienceReception> {
     const ai = new GoogleGenAI({ apiKey: getApiKey() });
@@ -1000,124 +1032,22 @@ export async function translateWithCulture(
   options: TranslationOptions,
   isNaturalize?: boolean
 ): Promise<CulturalTranslationResult> {
-  
-  // Step 1: Check for glossary violations BEFORE translating
+
+  // Step 1: Check for glossary violations BEFORE translating. The proxy
+  // does its own server-side prompt construction (see `handleTranslateWithCulture`
+  // in api/gemini-proxy.ts); the only client-side responsibility left is
+  // glossary enforcement against the user's own Supabase-stored terms.
   const glossaryViolations = await checkGlossaryCompliance(text);
-  
-  // Step 2: Get full language names from codes
-  const sourceLanguageName = getLanguageName(options.sourceLang || 'en');
-  const targetLanguageName = getLanguageName(options.targetLang);
-  
-  // Step 3: Build the cultural intelligence prompt
-  let prompt = '';
-  
-  if (isNaturalize) {
-    prompt = `
-You are an expert African linguist and cultural consultant for AfriTranslate.
 
-Task: Take this translation and rewrite it to sound completely natural, idiomatic and authentic to a native ${targetLanguageName} speaker. Remove any literal or awkward phrasing.
-
-CRITICAL: The output MUST be in ${targetLanguageName}, not any other language.
-
-Naturalization Parameters:
-- Target Language: ${targetLanguageName}
-- Dialect: ${options.dialect || 'Standard'}
-- Tone: ${options.tone || 'Neutral'}
-- Formality Level: ${options.formality || 'Medium'}
-
-Output Format (STRICT JSON):
-{
-  "translation": "the naturalized text here",
-  "cultural_notes": ["note explaining the idiomatic changes"],
-  "risk_flags": [],
-  "tone_analysis": "brief analysis of the naturalized tone",
-  "risk_score": 0
-}
-
-Text to Naturalize: "${text}"
-`;
-  } else {
-    prompt = `
-You are an expert African linguist and cultural consultant for AfriTranslate.
-
-Task: Translate the following text from ${sourceLanguageName} into ${targetLanguageName}.
-
-CRITICAL: The output MUST be in ${targetLanguageName}, not any other language.
-
-Translation Parameters:
-- Source Language: ${sourceLanguageName}
-- Target Language: ${targetLanguageName}
-- Dialect: ${options.dialect || 'Standard'}
-- Tone: ${options.tone || 'Neutral'}
-- Formality Level: ${options.formality || 'Medium'}
-
-Special Instructions:
-1. Adapt all idioms to be culturally natural for ${options.dialect || targetLanguageName}.
-2. Flag any phrases that may be culturally risky or offensive.
-3. Provide context notes explaining important cultural adaptations.
-4. Rate the overall cultural risk on a scale of 0-100.
-
-Output Format (STRICT JSON):
-{
-  "translation": "the translated text here",
-  "cultural_notes": ["note 1", "note 2"],
-  "risk_flags": [
-    {"phrase": "problematic phrase", "reason": "why it's risky", "severity": "low/medium/high"}
-  ],
-  "tone_analysis": "brief analysis of tone appropriateness",
-  "risk_score": 0-100
-}
-
-Source Text: "${text}"
-`;
-  }
-
-  // Debug logging
-  console.log('=== TRANSLATION REQUEST ===');
-  console.log('Source Language Code:', options.sourceLang || 'auto-detect');
-  console.log('Source Language Name:', sourceLanguageName);
-  console.log('Target Language Code:', options.targetLang);
-  console.log('Target Language Name:', targetLanguageName);
-  console.log('Full Prompt:', prompt);
-  console.log('===========================');
-  
   try {
-    // Step 4: Call Gemini API
-    const ai = new GoogleGenAI({ apiKey: getApiKey() });
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            translation: { type: Type.STRING },
-            cultural_notes: { type: Type.ARRAY, items: { type: Type.STRING } },
-            risk_flags: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  phrase: { type: Type.STRING },
-                  reason: { type: Type.STRING },
-                  severity: { type: Type.STRING, enum: ['low', 'medium', 'high'] }
-                },
-                required: ["phrase", "reason", "severity"]
-              }
-            },
-            tone_analysis: { type: Type.STRING },
-            risk_score: { type: Type.INTEGER }
-          },
-          required: ["translation", "cultural_notes", "risk_flags", "tone_analysis", "risk_score"]
-        },
-        temperature: 0.4
-      }
-    });
-    
-    const parsedResult: CulturalTranslationResult = JSON.parse(response.text.trim());
-    
-    // Step 5: Add glossary violations to risk flags
+    // Step 2: Call the server-side Gemini proxy.
+    const parsedResult = await callGeminiProxy<CulturalTranslationResult>(
+      'translateWithCulture',
+      [text, options, isNaturalize ?? false],
+    );
+
+    // Step 3: Add glossary violations (computed client-side from the user's
+    // own glossary in Supabase) to the risk flags returned by the server.
     if (glossaryViolations.length > 0) {
       parsedResult.risk_flags.push(...glossaryViolations.map(v => ({
         phrase: v.forbidden,
@@ -1126,28 +1056,111 @@ Source Text: "${text}"
       })));
       parsedResult.risk_score = Math.min(100, parsedResult.risk_score + 20);
     }
-    
+
     return parsedResult;
-    
+
   } catch (error) {
     console.error('Cultural translation error:', error);
-    // Fallback to basic translation
-    const basicTranslation = await getNuancedTranslation(
-      text, 
-      options.sourceLang || 'auto', 
-      options.targetLang, 
-      options.tone || 'Neutral'
-    );
-    return {
-      translation: basicTranslation.culturallyAwareTranslation || basicTranslation.directTranslation,
-      cultural_notes: [],
-      risk_flags: glossaryViolations.map(v => ({
-        phrase: v.forbidden,
-        reason: `Glossary violation: ${v.term}`,
-        severity: 'high' as const
-      })),
-      tone_analysis: 'Basic translation (cultural analysis unavailable)',
-      risk_score: glossaryViolations.length > 0 ? 30 : 0
-    };
+    // Surface the server error verbatim — the proxy already returns a
+    // user-readable message, and the previous "fallback to getNuancedTranslation"
+    // path also calls a not-yet-migrated client function and would throw.
+    throw error instanceof Error
+      ? error
+      : new Error('Cultural translation failed. Please try again.');
   }
+}
+
+// ── Phase 1 (Translation Studio) — additional proxy-backed helpers ───────────
+//
+// These three functions are routed through the same `/api/gemini-proxy` so
+// that adding new Translation Studio features (auto-detect source language,
+// alternative phrasings, cultural context for a paragraph) does not require
+// a new client-side Gemini key path. See `api/gemini-proxy.ts` for the
+// matching server-side handlers.
+
+export interface TranslationSuggestion {
+  text: string;
+  rationale: string;
+  register: 'formal' | 'neutral' | 'casual';
+}
+
+/**
+ * Return alternative phrasings of a translation in the requested register.
+ * Each suggestion preserves the meaning of the source text.
+ */
+export async function getTranslationSuggestions(
+  sourceText: string,
+  baseTranslation: string,
+  options: TranslationOptions,
+): Promise<{ suggestions: TranslationSuggestion[] }> {
+  return callGeminiProxy<{ suggestions: TranslationSuggestion[] }>(
+    'getTranslationSuggestions',
+    [sourceText, baseTranslation, options],
+  );
+}
+
+export interface DetectedLanguage {
+  /** ISO-639-1 short code (e.g. "sw"). Lower-case. */
+  languageCode: string;
+  /** Human-readable name (e.g. "Swahili (Kiswahili)"). */
+  languageName: string;
+  /** 0..1 confidence reported by the model. */
+  confidence: number;
+}
+
+/**
+ * Identify the source language of `text`. Designed for the Translation
+ * Studio "auto-detect" affordance — the returned `languageCode` plugs
+ * straight into `TranslationOptions.sourceLang`.
+ */
+export async function detectLanguage(text: string): Promise<DetectedLanguage> {
+  return callGeminiProxy<DetectedLanguage>('detectLanguage', [text]);
+}
+
+export interface CulturalContextResult {
+  summary: string;
+  keyConcepts: string[];
+  sensitivities: string[];
+  suggestedAdaptations: string[];
+}
+
+/**
+ * Return concise cultural context for a piece of source text targeted at a
+ * specific language / dialect — used by the Translation Studio cultural
+ * insights panel.
+ */
+export async function getCulturalContext(
+  text: string,
+  targetLang: string,
+  dialect?: string,
+): Promise<CulturalContextResult> {
+  return callGeminiProxy<CulturalContextResult>(
+    'getCulturalContext',
+    [text, targetLang, dialect ?? ''],
+  );
+}
+
+// ── Phase 3 (Live Conversation) — proxy-backed helpers ───────────────────────
+//
+// `translateLive` is a low-latency translation helper for spoken input; it
+// strips the cultural-notes envelope to keep round-trip times sub-second.
+// `detectSpeakerLanguage` mirrors `detectLanguage` but is tuned for spoken
+// content (disfluencies, code-switching).
+
+export async function translateLive(
+    phrase: string,
+    sourceLang: string,
+    targetLang: string,
+    formal: boolean = false,
+): Promise<{ translation: string }> {
+    return callGeminiProxy<{ translation: string }>('translateLive', [
+        phrase,
+        sourceLang,
+        targetLang,
+        formal,
+    ]);
+}
+
+export async function detectSpeakerLanguage(phrase: string): Promise<DetectedLanguage> {
+    return callGeminiProxy<DetectedLanguage>('detectSpeakerLanguage', [phrase]);
 }

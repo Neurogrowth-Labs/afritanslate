@@ -45,7 +45,7 @@ const GlossaryDrawer: React.FC<{ isOpen: boolean, onClose: () => void, userId: s
   };
 
   return (
-    <div className={`fixed inset-y-0 right-0 w-[320px] bg-bg-surface border-l border-white/10 shadow-2xl z-[60] transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+    <div className={`fixed inset-y-0 right-0 w-full max-w-[320px] bg-bg-surface border-l border-white/10 shadow-2xl z-[60] transform transition-transform duration-300 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
       <div className="p-4 flex flex-col h-full">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white">Brand Glossary</h2>
@@ -303,13 +303,13 @@ Generated: ${new Date().toLocaleString()}
     <div className="h-full flex flex-col bg-bg-main relative">
       <GlossaryDrawer isOpen={isGlossaryOpen} onClose={() => setIsGlossaryOpen(false)} userId={userId} />
       {/* Header */}
-      <div className="bg-bg-surface/50 backdrop-blur-md border-b border-white/5 px-6 py-4">
-        <div className="flex items-center justify-between">
+      <div className="bg-bg-surface/50 backdrop-blur-md border-b border-white/5 px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-white">Translation Studio</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white">Translation Studio</h1>
             <p className="text-sm text-text-secondary">Professional, culturally-intelligent translation</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setIsGlossaryOpen(true)}
               className="px-4 py-2 text-sm text-text-secondary hover:text-white border border-white/10 rounded-md hover:bg-white/5 transition-all flex items-center gap-2"
@@ -356,14 +356,14 @@ Generated: ${new Date().toLocaleString()}
       </div>
 
       {/* Main 3-Panel Layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-6 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-4 p-3 sm:p-4 lg:p-6 overflow-y-auto lg:overflow-hidden">
         
         {/* LEFT PANEL: Source Input */}
         <div className="lg:col-span-4 flex flex-col space-y-4">
-          <div className="bg-bg-surface rounded-lg border border-white/10 p-4 flex-1 flex flex-col shadow-xl">
-            <div className="flex items-center justify-between mb-3">
+          <div className="bg-bg-surface rounded-lg border border-white/10 p-4 flex-1 flex flex-col shadow-xl min-h-[280px] lg:min-h-0">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
               <h2 className="font-semibold text-white">Source Text</h2>
-              <div className="w-64">
+              <div className="w-full sm:w-64">
                 <LanguageSelector
                   value={sourceLang}
                   onChange={setSourceLang}
@@ -451,10 +451,10 @@ Generated: ${new Date().toLocaleString()}
         </div>
 
         {/* CENTER PANEL: Translation Output */}
-        <div className="lg:col-span-4 bg-bg-surface rounded-lg border border-white/10 p-4 flex flex-col shadow-xl">
-          <div className="flex items-center justify-between mb-3">
+        <div className="lg:col-span-4 bg-bg-surface rounded-lg border border-white/10 p-4 flex flex-col shadow-xl min-h-[280px] lg:min-h-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 gap-2">
             <h2 className="font-semibold text-white">Translation</h2>
-            <div className="w-64">
+            <div className="w-full sm:w-64">
               <LanguageSelector
                 value={targetLang}
                 onChange={setTargetLang}

@@ -4,7 +4,9 @@ import { ADD_ONS, FOOTER_LINKS } from '../../constants';
 import {
     SearchIcon, LibraryIcon, PriceTagIcon, BookIcon,
     MeetingIcon, LockIcon,
-    CloseIcon, UserIcon, TrashIcon, PlusIcon
+    CloseIcon, UserIcon, TrashIcon, PlusIcon,
+    TranslateIcon, MicrophoneIcon, ScriptIcon, EmailIcon, LiveIcon, SparklesIcon,
+    LogoutIcon,
 } from './Icons';
 import { getTrialStatus } from '../utils/trialUtils';
 
@@ -35,6 +37,7 @@ interface SidebarProps {
     isOffline: boolean;
     offlinePacks: string[];
     onToggleOfflinePack: (langCode: string) => void;
+    onLogout?: () => void;
 }
 
 const NavButton: React.FC<{ label: string; icon: React.ReactNode; isActive: boolean; onClick: () => void; isLocked?: boolean; disabled?: boolean }> = ({ label, icon, isActive, onClick, isLocked, disabled }) => (
@@ -71,7 +74,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     onUpgrade,
     isOffline,
     offlinePacks,
-    onToggleOfflinePack
+    onToggleOfflinePack,
+    onLogout,
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -97,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return currentLevel >= minLevel; // Otherwise, compare plan level
     };
 
-    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2, creative: 2 };
+    const FEATURE_LEVELS = { transcriber: 1, script: 1, book: 1, live: 2, motion: 2, image: 2, meetings: 2, email: 1, glossary: 2, creative: 2, studio: 1, chat: 1 };
 
     const handleFeatureClick = (action: () => void, requiredLevel: number) => {
         if (hasAccess(requiredLevel)) {
@@ -109,12 +113,27 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
 
     return (
-        <aside className={`
-            fixed md:relative inset-y-0 left-0 z-50 w-64 
-            bg-bg-surface/80 backdrop-blur-xl border-r border-white/5
-            flex flex-col transform transition-transform duration-300 ease-in-out 
-            ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 h-screen overflow-hidden shadow-2xl md:shadow-none
-        `}>
+        <>
+            {/* Backdrop scrim — only visible when drawer is open on mobile */}
+            {isOpen && (
+                <div
+                    onClick={() => setIsOpen(false)}
+                    aria-hidden
+                    className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                />
+            )}
+            <aside
+                role="navigation"
+                aria-label="All tools"
+                className={`
+                    fixed md:relative inset-y-0 left-0 z-50
+                    w-full max-w-sm md:w-64 md:max-w-none
+                    bg-bg-surface/95 md:bg-bg-surface/80 backdrop-blur-xl border-r border-white/5
+                    flex flex-col transform transition-transform duration-300 ease-in-out
+                    ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+                    h-screen overflow-hidden shadow-2xl md:shadow-none
+                `}
+            >
             {/* Header: Brand & New Chat */}
             <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between mb-2">
@@ -124,10 +143,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                         className="h-8 w-auto select-none"
                         draggable={false}
                     />
-                    <button 
+                    <button
                         onClick={() => setIsOpen(false)}
-                        className="md:hidden p-1.5 text-text-secondary hover:text-white"
-                        aria-label="Close sidebar"
+                        className="md:hidden touch-target p-2 text-text-secondary hover:text-white rounded-lg hover:bg-white/5"
+                        aria-label="Close menu"
                     >
                         <CloseIcon className="w-5 h-5" />
                     </button>
@@ -154,28 +173,77 @@ const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/*
-              Pre-launch v1: AI features that route through the legacy
-              `services/geminiService.ts` (Translation Studio, AI Assistant,
-              Live Conversation, Audio Transcriber, Script Translator,
-              Literary Translator, Email Localization) are temporarily hidden
-              from the sidebar because they would call a now-removed client
-              key. The corresponding components still exist and routes still
-              mount on deep-link, but throw an explicit "moved server-side"
-              error from `getApiKey()` rather than crashing silently.
-              They will be re-enabled in v2 once each surface is moved
-              behind a /api/* Vercel route, mirroring the pattern at
-              api/creative/* and api/meeting-insights/*.
+              Sidebar navigation. After PRs #7/#10 + Phase 2+3, every AI
+              surface listed here routes through `POST /api/gemini-proxy`
+              and reads `process.env.GEMINI_API_KEY` only on the Vercel
+              server — no Gemini key ships in the client bundle. See
+              `api/gemini-proxy.ts` for the dispatcher and
+              `services/geminiService.ts` for each client wrapper.
             */}
             <div className="flex-1 overflow-y-auto px-3 space-y-6 custom-scrollbar pb-6">
                 <div>
                     <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Creative</h4>
                     <div className="space-y-0.5">
                         <NavButton
+                            label="Translation Studio"
+                            icon={<PlayIcon />}
+                            isActive={currentMode === 'studio'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('studio'); setIsOpen(false); }, FEATURE_LEVELS.studio)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.studio)}
+                            disabled={isOffline}
+                        />
+                        <NavButton
                             label="Creative Studio"
                             icon={<PlayIcon />}
                             isActive={currentView === 'creative' || currentView === 'motion' || currentView === 'image'}
                             onClick={() => handleFeatureClick(() => { onSetView('creative'); setIsOpen(false); }, FEATURE_LEVELS.creative)}
                             isLocked={!hasAccess(FEATURE_LEVELS.creative)}
+                            disabled={isOffline}
+                        />
+                        <NavButton
+                            label="Script Translator"
+                            icon={<ScriptIcon className="w-4 h-4" />}
+                            isActive={currentMode === 'script'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('script'); setIsOpen(false); }, FEATURE_LEVELS.script)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.script)}
+                            disabled={isOffline}
+                        />
+                        <NavButton
+                            label="Literary Translator"
+                            icon={<BookIcon className="w-4 h-4" />}
+                            isActive={currentMode === 'book'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('book'); setIsOpen(false); }, FEATURE_LEVELS.book)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.book)}
+                            disabled={isOffline}
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <h4 className="px-3 mb-2 text-[10px] font-bold text-text-secondary uppercase tracking-[0.15em] opacity-60">Conversation</h4>
+                    <div className="space-y-0.5">
+                        <NavButton
+                            label="AI Assistant"
+                            icon={<SparklesIcon className="w-4 h-4" />}
+                            isActive={currentMode === 'chat'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('chat'); setIsOpen(false); }, FEATURE_LEVELS.chat)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.chat)}
+                            disabled={isOffline}
+                        />
+                        <NavButton
+                            label="Live Conversation"
+                            icon={<LiveIcon className="w-4 h-4" />}
+                            isActive={currentView === 'live'}
+                            onClick={() => handleFeatureClick(() => { onSetView('live'); setIsOpen(false); }, FEATURE_LEVELS.live)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.live)}
+                            disabled={isOffline}
+                        />
+                        <NavButton
+                            label="Audio Transcriber"
+                            icon={<MicrophoneIcon className="w-4 h-4" />}
+                            isActive={currentMode === 'transcriber'}
+                            onClick={() => handleFeatureClick(() => { onSetMode('transcriber'); setIsOpen(false); }, FEATURE_LEVELS.transcriber)}
+                            isLocked={!hasAccess(FEATURE_LEVELS.transcriber)}
                             disabled={isOffline}
                         />
                     </div>
@@ -186,6 +254,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                     <div className="space-y-0.5">
                         <NavButton label="Meeting Insights" icon={<MeetingIcon className="w-4 h-4" />} isActive={currentMode === 'meetings'} onClick={() => handleFeatureClick(() => onSetMode('meetings'), FEATURE_LEVELS.meetings)} isLocked={!hasAccess(FEATURE_LEVELS.meetings)} disabled={isOffline} />
                         <NavButton label="Glossary Vault" icon={<BookIcon className="w-4 h-4" />} isActive={currentView === 'glossary'} onClick={() => handleFeatureClick(() => onSetView('glossary'), FEATURE_LEVELS.glossary)} isLocked={!hasAccess(FEATURE_LEVELS.glossary)} disabled={isOffline} />
+                        <NavButton label="Email Localization" icon={<EmailIcon className="w-4 h-4" />} isActive={currentMode === 'email'} onClick={() => handleFeatureClick(() => onSetMode('email'), FEATURE_LEVELS.email)} isLocked={!hasAccess(FEATURE_LEVELS.email)} disabled={isOffline} />
                     </div>
                 </div>
 
@@ -254,8 +323,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <button onClick={onUpgrade} className="mt-2 px-3 py-1 text-[10px] font-bold bg-accent text-black rounded hover:bg-white hover:text-accent transition-colors">Upgrade Now</button>
                     </div>
                 )}
+
+                {/* Mobile-only Sign Out — desktop has its own logout button in
+                    Header. Hidden on `md+` so it doesn't double up. */}
+                {onLogout && (
+                    <button
+                        onClick={() => { onLogout(); setIsOpen(false); }}
+                        className="md:hidden mt-3 w-full touch-target flex items-center justify-center gap-2 py-2 text-text-secondary hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all border border-white/5"
+                    >
+                        <LogoutIcon className="w-4 h-4" />
+                        <span className="text-xs font-medium">Sign Out</span>
+                    </button>
+                )}
             </div>
-        </aside>
+            </aside>
+        </>
     );
 };
 

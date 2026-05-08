@@ -71,13 +71,13 @@ const EmailTranslator: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col h-full animate-fade-in p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto overflow-hidden">
-            <div className="flex-shrink-0 text-center mb-8">
-                <h1 className="text-3xl font-bold text-white mb-2">Email Localization</h1>
-                <p className="text-text-secondary">Bridge cultural etiquette gaps in your global communication.</p>
+        <div className="flex flex-col h-full animate-fade-in p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto overflow-y-auto lg:overflow-hidden">
+            <div className="flex-shrink-0 text-center mb-6 sm:mb-8">
+                <h1 className="text-xl sm:text-3xl font-bold text-white mb-2">Email Localization</h1>
+                <p className="text-sm text-text-secondary">Bridge cultural etiquette gaps in your global communication.</p>
             </div>
 
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-0 overflow-hidden">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8 min-h-0 lg:overflow-hidden">
                 {/* LEFT PANEL: Email Compose */}
                 <div className="flex flex-col min-h-0 bg-bg-surface p-6 rounded-2xl border border-border-default shadow-xl">
                     <h2 className="text-sm font-black text-white uppercase tracking-widest mb-4">Email Compose</h2>

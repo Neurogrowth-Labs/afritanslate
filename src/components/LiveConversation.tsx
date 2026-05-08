@@ -134,20 +134,20 @@ const LiveConversation: React.FC = () => {
     return (
         <div className="flex flex-col h-full bg-bg-main overflow-hidden relative">
             {/* TOP BAR */}
-            <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 bg-bg-surface/50 border-b border-white/5 backdrop-blur-md z-10">
-                <div className="flex items-center gap-4">
-                    <div className="w-40">
+            <div className="flex-shrink-0 flex flex-col md:flex-row md:items-center md:justify-between px-4 sm:px-6 py-3 sm:py-4 gap-3 bg-bg-surface/50 border-b border-white/5 backdrop-blur-md z-10">
+                <div className="flex items-center gap-3 sm:gap-4 w-full md:w-auto">
+                    <div className="flex-1 md:w-40">
                         <label className="block text-[9px] font-bold text-text-secondary uppercase mb-1">My Language</label>
                         <LanguageSelector label="" value={myLang} onChange={setMyLang} />
                     </div>
-                    <div className="text-text-secondary mt-4">↔</div>
-                    <div className="w-40">
+                    <div className="text-text-secondary mt-4 flex-shrink-0">↔</div>
+                    <div className="flex-1 md:w-40">
                         <label className="block text-[9px] font-bold text-text-secondary uppercase mb-1">Partner Language</label>
                         <LanguageSelector label="" value={partnerLang} onChange={setPartnerLang} />
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-end gap-3">
                     <span className="text-xs font-bold text-text-secondary uppercase">Formal Mode</span>
                     <button 
                         onClick={() => setIsFormal(!isFormal)}
@@ -158,16 +158,16 @@ const LiveConversation: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                 {/* MAIN AREA */}
-                <div className="flex-1 flex flex-col items-center justify-center p-12 relative bg-gradient-to-b from-transparent to-black/20">
+                <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-8 md:p-12 relative bg-gradient-to-b from-transparent to-black/20 min-h-[200px]">
                     {currentSubtitle ? (
                         <div className="max-w-4xl text-center animate-fade-in">
                             <div className="flex items-center justify-center gap-2 mb-4">
                                 <span className="px-3 py-1 bg-accent text-bg-main text-[10px] font-black rounded-full uppercase">{currentSubtitle.speaker}</span>
                                 <span className="text-[10px] text-text-secondary font-mono uppercase tracking-widest">{currentSubtitle.lang}</span>
                             </div>
-                            <h2 className="text-4xl md:text-5xl font-bold text-white leading-tight drop-shadow-2xl">
+                            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight drop-shadow-2xl">
                                 {currentSubtitle.text}
                             </h2>
                         </div>
@@ -187,8 +187,8 @@ const LiveConversation: React.FC = () => {
                     )}
                 </div>
 
-                {/* RIGHT PANEL */}
-                <div className="w-80 bg-bg-surface border-l border-white/5 flex flex-col shadow-2xl">
+                {/* RIGHT PANEL — full-width on mobile (under main), fixed sidebar on md+ */}
+                <div className="w-full md:w-80 max-h-[40vh] md:max-h-none bg-bg-surface border-t md:border-t-0 md:border-l border-white/5 flex flex-col shadow-2xl">
                     <div className="p-4 border-b border-white/5 bg-black/20 flex items-center justify-between">
                         <h3 className="text-xs font-bold text-white uppercase tracking-widest">Transcript</h3>
                         <span className="px-2 py-0.5 bg-white/5 text-[9px] text-text-secondary rounded-md">{transcript.length} entries</span>
@@ -223,9 +223,9 @@ const LiveConversation: React.FC = () => {
             </div>
 
             {/* BOTTOM CONTROLS */}
-            <div className="flex-shrink-0 h-24 bg-bg-surface border-t border-white/5 flex items-center justify-between px-12 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-                <div className="flex items-center gap-4 w-48">
-                    <button className="p-2 text-text-secondary hover:text-white transition-colors">
+            <div className="flex-shrink-0 bg-bg-surface border-t border-white/5 flex items-center justify-between px-4 sm:px-8 md:px-12 py-4 z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] gap-3">
+                <div className="hidden sm:flex items-center gap-4 w-32 md:w-48">
+                    <button className="p-2 text-text-secondary hover:text-white transition-colors touch-target" aria-label="Volume">
                         <VolumeUpIcon className="w-6 h-6" />
                     </button>
                     <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
@@ -233,10 +233,11 @@ const LiveConversation: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center gap-1">
-                    <button 
+                <div className="flex flex-col items-center gap-1 mx-auto">
+                    <button
                         onClick={isRecording ? stopRecording : startRecording}
-                        className={`w-16 h-16 rounded-full flex items-center justify-center transition-all shadow-2xl relative ${isRecording ? 'bg-red-500 hover:bg-red-600 scale-110' : 'bg-white/10 hover:bg-white/20'}`}
+                        aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center transition-all shadow-2xl relative ${isRecording ? 'bg-red-500 hover:bg-red-600 scale-110' : 'bg-white/10 hover:bg-white/20'}`}
                     >
                         {isRecording ? (
                             <>
@@ -252,12 +253,12 @@ const LiveConversation: React.FC = () => {
                     </span>
                 </div>
 
-                <div className="w-48 flex justify-end">
-                    <button 
+                <div className="w-auto sm:w-32 md:w-48 flex justify-end">
+                    <button
                         onClick={stopRecording}
-                        className="px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg text-xs font-bold hover:bg-red-500 hover:border-red-500 transition-all flex items-center gap-2"
+                        className="touch-target px-3 sm:px-4 py-2 bg-white/5 border border-white/10 text-white rounded-lg text-xs font-bold hover:bg-red-500 hover:border-red-500 transition-all flex items-center gap-2"
                     >
-                        End Session
+                        End
                     </button>
                 </div>
             </div>
