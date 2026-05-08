@@ -20,14 +20,14 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, highlighte
 
   return (
     <div 
-      className="fixed inset-0 bg-bg-main/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in"
+      className="mobile-bottom-sheet fixed inset-0 bg-bg-main/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-0 sm:p-4"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="upgrade-modal-title"
     >
       <div 
-        className="bg-bg-surface rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto border border-border-default m-4"
+        className="bg-bg-surface rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-y-auto border border-border-default"
         onClick={e => e.stopPropagation()}
       >
         <div className="p-6 md:p-8 relative">

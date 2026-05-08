@@ -408,3 +408,42 @@
 }
 .segment-text.inaudible { font-style: italic; color: rgba(229, 229, 229, 0.4); }
 .transcript-empty { color: #737373; font-size: 0.9rem; padding: 2rem 0; text-align: center; }
+
+/* ── Mobile responsiveness ───────────────────────────────────────── */
+@media (max-width: 767px) {
+  .meeting-insights-shell {
+    padding: 1rem 0.75rem;
+  }
+  .meeting-submission-form {
+    padding: 1.25rem 1rem;
+    gap: 1rem;
+  }
+  /* Stack the source-type toggle buttons vertically on narrow screens
+     so each button stays full-width and ≥44px tall. */
+  .toggle-group {
+    flex-direction: column;
+  }
+  .toggle-btn {
+    min-height: 44px;
+  }
+  .form-input,
+  .form-select {
+    /* font-size handled by global rule in index.html (>= 16px to prevent
+       iOS zoom-on-focus); the 0.55rem padding is already comfortable. */
+    width: 100%;
+    min-height: 44px;
+  }
+  /* Submit button stretches full-width and stays a comfortable touch
+     target on mobile (≥44px) instead of right-aligned. */
+  .submit-btn {
+    align-self: stretch;
+    width: 100%;
+    min-height: 44px;
+  }
+  .file-drop-zone {
+    padding: 1.5rem 0.75rem;
+  }
+  .meeting-insights-title {
+    font-size: 1.25rem;
+  }
+}

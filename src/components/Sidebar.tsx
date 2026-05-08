@@ -6,6 +6,7 @@ import {
     MeetingIcon, LockIcon,
     CloseIcon, UserIcon, TrashIcon, PlusIcon,
     TranslateIcon, MicrophoneIcon, ScriptIcon, EmailIcon, LiveIcon, SparklesIcon,
+    LogoutIcon,
 } from './Icons';
 import { getTrialStatus } from '../utils/trialUtils';
 
@@ -36,6 +37,7 @@ interface SidebarProps {
     isOffline: boolean;
     offlinePacks: string[];
     onToggleOfflinePack: (langCode: string) => void;
+    onLogout?: () => void;
 }
 
 const NavButton: React.FC<{ label: string; icon: React.ReactNode; isActive: boolean; onClick: () => void; isLocked?: boolean; disabled?: boolean }> = ({ label, icon, isActive, onClick, isLocked, disabled }) => (
@@ -72,7 +74,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     onUpgrade,
     isOffline,
     offlinePacks,
-    onToggleOfflinePack
+    onToggleOfflinePack,
+    onLogout,
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -110,12 +113,27 @@ const Sidebar: React.FC<SidebarProps> = ({
     };
 
     return (
-        <aside className={`
-            fixed md:relative inset-y-0 left-0 z-50 w-64 
-            bg-bg-surface/80 backdrop-blur-xl border-r border-white/5
-            flex flex-col transform transition-transform duration-300 ease-in-out 
-            ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 h-screen overflow-hidden shadow-2xl md:shadow-none
-        `}>
+        <>
+            {/* Backdrop scrim — only visible when drawer is open on mobile */}
+            {isOpen && (
+                <div
+                    onClick={() => setIsOpen(false)}
+                    aria-hidden
+                    className="md:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+                />
+            )}
+            <aside
+                role="navigation"
+                aria-label="All tools"
+                className={`
+                    fixed md:relative inset-y-0 left-0 z-50
+                    w-full max-w-sm md:w-64 md:max-w-none
+                    bg-bg-surface/95 md:bg-bg-surface/80 backdrop-blur-xl border-r border-white/5
+                    flex flex-col transform transition-transform duration-300 ease-in-out
+                    ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+                    h-screen overflow-hidden shadow-2xl md:shadow-none
+                `}
+            >
             {/* Header: Brand & New Chat */}
             <div className="p-4 space-y-4">
                 <div className="flex items-center justify-between mb-2">
@@ -125,10 +143,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                         className="h-8 w-auto select-none"
                         draggable={false}
                     />
-                    <button 
+                    <button
                         onClick={() => setIsOpen(false)}
-                        className="md:hidden p-1.5 text-text-secondary hover:text-white"
-                        aria-label="Close sidebar"
+                        className="md:hidden touch-target p-2 text-text-secondary hover:text-white rounded-lg hover:bg-white/5"
+                        aria-label="Close menu"
                     >
                         <CloseIcon className="w-5 h-5" />
                     </button>
@@ -305,8 +323,21 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <button onClick={onUpgrade} className="mt-2 px-3 py-1 text-[10px] font-bold bg-accent text-black rounded hover:bg-white hover:text-accent transition-colors">Upgrade Now</button>
                     </div>
                 )}
+
+                {/* Mobile-only Sign Out — desktop has its own logout button in
+                    Header. Hidden on `md+` so it doesn't double up. */}
+                {onLogout && (
+                    <button
+                        onClick={() => { onLogout(); setIsOpen(false); }}
+                        className="md:hidden mt-3 w-full touch-target flex items-center justify-center gap-2 py-2 text-text-secondary hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all border border-white/5"
+                    >
+                        <LogoutIcon className="w-4 h-4" />
+                        <span className="text-xs font-medium">Sign Out</span>
+                    </button>
+                )}
             </div>
-        </aside>
+            </aside>
+        </>
     );
 };
 

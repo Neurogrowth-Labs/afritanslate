@@ -359,9 +359,9 @@ const Chat: React.FC<ChatProps> = ({
                             </div>
                         )}
 
-                        <div className="flex items-end gap-2 px-2">
+                        <div className="flex items-end gap-1 sm:gap-2 px-2">
                             {!isVisualMode && (
-                                <button onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="p-2.5 mb-1.5 text-text-secondary hover:text-white hover:bg-white/10 rounded-xl transition-colors">
+                                <button onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="touch-target flex items-center justify-center mb-1 text-text-secondary hover:text-white hover:bg-white/10 rounded-xl transition-colors" aria-label="Attach file">
                                     <AttachmentIcon className="w-5 h-5" />
                                     <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" multiple />
                                 </button>
@@ -373,21 +373,22 @@ const Chat: React.FC<ChatProps> = ({
                                 onChange={(e) => { setInputText(e.target.value); setError(null); }}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
                                 placeholder={isTranscribing ? "Transcribing..." : isRecording ? "Recording..." : "Type your message..."}
-                                className="flex-1 bg-transparent py-3 max-h-[150px] resize-none outline-none text-sm text-white placeholder:text-text-secondary/50 custom-scrollbar"
+                                className="flex-1 min-w-0 bg-transparent py-3 max-h-[150px] resize-none outline-none text-sm text-white placeholder:text-text-secondary/50 custom-scrollbar"
                                 rows={1}
                                 disabled={isTranscribing || isLoading}
                             />
 
                             {!isVisualMode && (
-                                <button onClick={handleMicRecording} disabled={isLoading} className={`p-2.5 mb-1.5 rounded-xl transition-colors ${isRecording ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-text-secondary hover:text-white hover:bg-white/10'}`}>
+                                <button onClick={handleMicRecording} disabled={isLoading} className={`touch-target flex items-center justify-center mb-1 rounded-xl transition-colors ${isRecording ? 'bg-red-500/20 text-red-500 animate-pulse' : 'text-text-secondary hover:text-white hover:bg-white/10'}`} aria-label={isRecording ? 'Stop recording' : 'Record audio'}>
                                     {isRecording ? <StopIcon className="w-5 h-5" /> : <MicrophoneIcon className="w-5 h-5" />}
                                 </button>
                             )}
 
-                            <button 
-                                onClick={handleSendMessage} 
-                                disabled={isLoading || isTranscribing || (!inputText.trim() && attachments.length === 0)} 
-                                className="p-2.5 mb-1.5 bg-accent text-bg-main rounded-xl hover:bg-white hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                            <button
+                                onClick={handleSendMessage}
+                                disabled={isLoading || isTranscribing || (!inputText.trim() && attachments.length === 0)}
+                                className="touch-target flex items-center justify-center mb-1 bg-accent text-bg-main rounded-xl hover:bg-white hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                                aria-label="Send message"
                             >
                                 {isLoading ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div> : <SendIcon className="w-5 h-5" />}
                             </button>

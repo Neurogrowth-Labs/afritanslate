@@ -104,16 +104,16 @@ const GlossaryVault: React.FC<GlossaryVaultProps> = ({ userId }) => {
     const uniqueBrands = Array.from(new Set(terms.map(t => t.brand_name).filter(Boolean)));
 
     return (
-        <div className="flex flex-col h-full animate-fade-in p-6 max-w-7xl mx-auto overflow-hidden">
+        <div className="flex flex-col h-full animate-fade-in p-3 sm:p-6 max-w-7xl mx-auto overflow-y-auto md:overflow-hidden">
             {/* HEADER */}
-            <div className="flex justify-between items-center mb-8 bg-bg-surface p-6 rounded-2xl border border-white/5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6 sm:mb-8 bg-bg-surface p-4 sm:p-6 rounded-2xl border border-white/5 shadow-xl">
                 <div>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">Glossary Vault</h1>
-                    <p className="text-text-secondary mt-1">Your enterprise brand memory and terminology consistency center.</p>
+                    <h1 className="text-xl sm:text-3xl font-bold text-white tracking-tight">Glossary Vault</h1>
+                    <p className="text-sm text-text-secondary mt-1">Your enterprise brand memory and terminology consistency center.</p>
                 </div>
                 <button 
                     onClick={() => { resetForm(); setIsModalOpen(true); }}
-                    className="flex items-center gap-2 px-6 py-3 bg-accent text-bg-main font-black rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-accent/20"
+                    className="w-full sm:w-auto touch-target flex items-center justify-center gap-2 px-6 py-3 bg-accent text-bg-main font-black rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-accent/20"
                 >
                     <PlusIcon className="w-5 h-5" /> ADD NEW TERM
                 </button>
@@ -154,7 +154,7 @@ const GlossaryVault: React.FC<GlossaryVaultProps> = ({ userId }) => {
 
             {/* TERMS TABLE */}
             <div className="flex-1 min-h-0 bg-bg-surface rounded-2xl border border-white/5 shadow-xl overflow-hidden flex flex-col">
-                <div className="overflow-x-auto custom-scrollbar">
+                <div className="overflow-x-auto custom-scrollbar table-scroll-hint">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-white/5 text-[10px] font-bold text-text-secondary uppercase tracking-widest">

@@ -124,16 +124,16 @@ const AudioTranscriber: React.FC = () => {
                 <div className="w-16 h-16 bg-accent/10 rounded-2xl flex items-center justify-center mb-4 border border-accent/20">
                     <MicrophoneIcon className="w-8 h-8 text-accent" />
                 </div>
-                <h1 className="text-4xl font-bold text-text-primary">Audio Transcriber</h1>
-                <p className="text-lg text-text-secondary mt-2 max-w-2xl">Upload an audio file to get a highly accurate text transcription powered by AI.</p>
+                <h1 className="text-2xl sm:text-4xl font-bold text-text-primary">Audio Transcriber</h1>
+                <p className="text-sm sm:text-lg text-text-secondary mt-2 max-w-2xl">Upload an audio file to get a highly accurate text transcription powered by AI.</p>
                 <div 
                     onDrop={onDrop} 
                     onDragOver={onDragOver}
-                    className="mt-8 w-full max-w-2xl h-64 border-2 border-dashed border-border-default rounded-lg flex flex-col items-center justify-center bg-bg-surface/50 hover:border-accent hover:bg-bg-surface transition-colors"
+                    className="mt-6 sm:mt-8 w-full max-w-2xl h-48 sm:h-64 border-2 border-dashed border-border-default rounded-lg flex flex-col items-center justify-center bg-bg-surface/50 hover:border-accent hover:bg-bg-surface transition-colors px-4"
                 >
-                    <p className="text-text-primary">Drag & drop your audio file here</p>
+                    <p className="text-text-primary text-center">Drag & drop your audio file here</p>
                     <p className="text-text-secondary my-2">or</p>
-                     <label className="bg-accent text-white font-semibold px-4 py-2 rounded-md cursor-pointer hover:bg-accent/90 transition-colors">
+                     <label className="touch-target inline-flex items-center justify-center bg-accent text-white font-semibold px-4 py-2 rounded-md cursor-pointer hover:bg-accent/90 transition-colors">
                         Click to upload
                         <input type="file" className="hidden" onChange={handleFileSelect} accept="audio/*" />
                     </label>
@@ -145,45 +145,45 @@ const AudioTranscriber: React.FC = () => {
     }
 
     return (
-        <div className="flex flex-col h-full animate-fade-in p-4">
+        <div className="flex flex-col h-full animate-fade-in p-3 sm:p-4">
             <div className="flex-shrink-0 pb-4 mb-4 border-b border-border-default">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-accent/10 rounded-lg border border-accent/20">
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <div className="p-2 bg-accent/10 rounded-lg border border-accent/20 flex-shrink-0">
                             <MicrophoneIcon className="w-6 h-6 text-accent" />
                         </div>
-                        <div>
-                            <h1 className="text-2xl font-bold text-white">Audio Transcriber</h1>
-                            <p className="text-sm text-text-secondary truncate max-w-xs sm:max-w-md flex items-center gap-2">
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-xl sm:text-2xl font-bold text-white">Audio Transcriber</h1>
+                            <p className="text-sm text-text-secondary truncate flex items-center gap-2">
                                {audioFile.name}
                             </p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                         {!transcript && (
-                             <button onClick={handleTranscribe} disabled={isLoading} className="px-4 py-2 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 disabled:bg-border-default disabled:cursor-not-allowed transition-colors">
+                             <button onClick={handleTranscribe} disabled={isLoading} className="flex-1 md:flex-none touch-target px-4 py-2 bg-accent text-white font-semibold rounded-md hover:bg-accent/90 disabled:bg-border-default disabled:cursor-not-allowed transition-colors">
                                 {isLoading ? 'Transcribing...' : 'Transcribe Audio'}
                             </button>
                         )}
                         {transcript && (
                             <>
-                                <button onClick={handleCopy} className="flex items-center gap-2 px-4 py-2 bg-bg-surface text-white font-semibold rounded-md hover:bg-border-default transition-colors">
+                                <button onClick={handleCopy} className="touch-target flex items-center gap-2 px-4 py-2 bg-bg-surface text-white font-semibold rounded-md hover:bg-border-default transition-colors">
                                     {isCopied ? <CheckIcon className="w-4 h-4 text-green-400" /> : <CopyIcon />} {isCopied ? 'Copied!' : 'Copy'}
                                 </button>
-                                <button onClick={handleExportWord} className="flex items-center gap-2 px-4 py-2 bg-bg-surface text-white font-semibold rounded-md hover:bg-border-default transition-colors">
+                                <button onClick={handleExportWord} className="touch-target flex items-center gap-2 px-4 py-2 bg-bg-surface text-white font-semibold rounded-md hover:bg-border-default transition-colors">
                                     <WordIcon className="w-5 h-5" /> Export Word
                                 </button>
-                                <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2 bg-bg-surface text-white font-semibold rounded-md hover:bg-border-default transition-colors">
+                                <button onClick={handleExportPDF} className="touch-target flex items-center gap-2 px-4 py-2 bg-bg-surface text-white font-semibold rounded-md hover:bg-border-default transition-colors">
                                     <PdfIcon className="w-5 h-5" /> Export PDF
                                 </button>
                             </>
                         )}
-                        <button onClick={handleReset} className="px-4 py-2 bg-bg-surface text-white font-semibold rounded-md hover:bg-border-default transition-colors">Start Over</button>
+                        <button onClick={handleReset} className="touch-target px-4 py-2 bg-bg-surface text-white font-semibold rounded-md hover:bg-border-default transition-colors">Start Over</button>
                     </div>
                 </div>
 
                 {!transcript && !isLoading && (
-                    <div className="mt-4 max-w-sm">
+                    <div className="mt-4 w-full max-w-sm">
                         <label className="block text-sm font-medium text-text-secondary mb-2">Transcription Style</label>
                         <div className="flex bg-bg-main border border-border-default rounded-lg p-1">
                             <button onClick={() => setTranscriptionStyle('normal')} className={`w-1/2 py-1.5 rounded-md text-sm font-semibold transition-colors ${transcriptionStyle === 'normal' ? 'bg-accent text-white' : 'text-text-secondary hover:bg-border-default'}`}>

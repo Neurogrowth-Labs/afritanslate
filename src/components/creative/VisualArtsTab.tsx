@@ -497,7 +497,7 @@ const GeneratingState: React.FC<{ aspect: string }> = ({ aspect }) => (
         exit={{ opacity: 0 }}
         className="space-y-3"
     >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[0, 1, 2, 3].map((i) => (
                 <div
                     key={i}
@@ -603,7 +603,7 @@ const ImageGrid: React.FC<{
     images: GeneratedImagePayload[];
     aspect: string;
 }> = ({ images, aspect }) => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {[0, 1, 2, 3].map((i) => {
             const img = images[i];
             const isPrimary = i === 0;

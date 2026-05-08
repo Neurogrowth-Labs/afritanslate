@@ -7,6 +7,7 @@ import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessag
 
 // Import all components needed for the app
 import Sidebar from './components/Sidebar';
+import BottomNav from './components/BottomNav';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import Library from './components/Library';
@@ -483,6 +484,7 @@ const TranslatorApp: React.FC<{
               isOffline={isOffline}
               offlinePacks={offlinePacks}
               onToggleOfflinePack={() => {}}
+              onLogout={handleLogout}
           />
           <div className="flex flex-col flex-1 h-full min-w-0 overflow-hidden relative md:border-l border-border-default">
               <Header
@@ -497,7 +499,7 @@ const TranslatorApp: React.FC<{
                   isOffline={isOffline}
                   onLogout={handleLogout}
               />
-              <main className="flex-1 overflow-hidden bg-[#0d0d0d] relative min-h-0 flex flex-col">
+              <main className="flex-1 overflow-hidden bg-[#0d0d0d] relative min-h-0 flex flex-col pb-16 md:pb-0">
                   <div className={`flex-1 min-h-0 ${isFullHeightView ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar'}`}>
                     <div className={!isFullHeightView ? "p-4 sm:p-6 lg:p-8 min-h-full" : "h-full"}>
                         {renderContent()}
@@ -508,6 +510,12 @@ const TranslatorApp: React.FC<{
                   )}
               </main>
           </div>
+          <BottomNav
+              currentView={currentView}
+              currentMode={currentMode}
+              onSetView={handleSetView}
+              onSetMode={handleSetMode}
+          />
           <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} highlightedPlan={highlightedPlan} onChoosePlan={(plan) => { setSelectedPlanForPayment(plan); setIsUpgradeModalOpen(false); setCurrentView('payment'); }} onContactSales={() => { setIsUpgradeModalOpen(false); setCurrentView('contact');}} />
           
           {/* Delete Confirmation Modal */}

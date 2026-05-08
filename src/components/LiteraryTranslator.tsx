@@ -117,21 +117,21 @@ const LiteraryTranslator: React.FC<LiteraryTranslatorProps> = ({ isOffline = fal
             </div>
 
             <div className="flex-shrink-0 px-4 py-3 bg-bg-surface/30">
-                <div className="flex items-center gap-4 flex-wrap">
-                    <div className="min-w-[140px]">
+                <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 flex-wrap">
+                    <div className="flex-1 min-w-0 md:min-w-[140px]">
                         <LanguageSelector label="From" languages={LANGUAGES} value={sourceLang} onChange={setSourceLang} />
                     </div>
-                    <div className="text-text-secondary">→</div>
-                    <div className="min-w-[140px]">
+                    <div className="hidden md:block text-text-secondary">→</div>
+                    <div className="flex-1 min-w-0 md:min-w-[140px]">
                         <LanguageSelector label="To" languages={LANGUAGES} value={targetLang} onChange={setTargetLang} />
                     </div>
                     
-                    <div className="min-w-[140px]">
+                    <div className="flex-1 min-w-0 md:min-w-[140px]">
                         <label className="text-[9px] font-bold text-text-secondary uppercase tracking-wider mb-1 block">Genre</label>
                         <select
                             value={genre}
                             onChange={(e) => setGenre(e.target.value)}
-                            className="w-full bg-black/20 border border-white/5 rounded-md px-2 py-1.5 text-xs text-white focus:ring-1 focus:ring-accent outline-none"
+                            className="w-full bg-black/20 border border-white/5 rounded-md px-2 py-2 text-xs text-white focus:ring-1 focus:ring-accent outline-none"
                         >
                             {GENRES.map(g => (
                                 <option key={g} value={g}>{g}</option>
@@ -142,7 +142,7 @@ const LiteraryTranslator: React.FC<LiteraryTranslatorProps> = ({ isOffline = fal
                     <button
                         onClick={handleTranslate}
                         disabled={isTranslating || !sourceText.trim()}
-                        className="ml-auto px-6 py-2 bg-accent text-bg-main font-bold rounded-xl hover:bg-white hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                        className="w-full md:w-auto md:ml-auto touch-target px-6 py-2 bg-accent text-bg-main font-bold rounded-xl hover:bg-white hover:text-accent disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                     >
                         {isTranslating ? (
                             <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
@@ -154,8 +154,8 @@ const LiteraryTranslator: React.FC<LiteraryTranslatorProps> = ({ isOffline = fal
                 </div>
             </div>
 
-            <div className="flex-1 flex gap-4 p-4 min-h-0">
-                <div className="flex-1 bg-bg-surface/40 border border-white/5 rounded-xl flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row gap-4 p-3 sm:p-4 min-h-0 overflow-y-auto md:overflow-hidden">
+                <div className="flex-1 min-h-[240px] md:min-h-0 bg-bg-surface/40 border border-white/5 rounded-xl flex flex-col overflow-hidden">
                     <div className="p-3 border-b border-white/5 bg-white/5">
                         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Source Text</span>
                     </div>
@@ -167,7 +167,7 @@ const LiteraryTranslator: React.FC<LiteraryTranslatorProps> = ({ isOffline = fal
                     />
                 </div>
 
-                <div className="flex-1 bg-[#0c0c0c]/80 border border-white/5 rounded-xl flex flex-col overflow-hidden">
+                <div className="flex-1 min-h-[240px] md:min-h-0 bg-[#0c0c0c]/80 border border-white/5 rounded-xl flex flex-col overflow-hidden">
                     <div className="p-3 border-b border-white/5 bg-black/40 flex items-center justify-between">
                         <span className="text-[10px] font-bold text-accent uppercase tracking-widest">Translation</span>
                         {versions.length > 0 && (

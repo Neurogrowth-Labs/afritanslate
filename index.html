@@ -34,6 +34,89 @@
         color: #e5e5e5;
         font-family: 'Inter', sans-serif;
         line-height: 1.35;
+        overflow-x: hidden;
+      }
+
+      /* ── Mobile responsiveness foundation ───────────────────────────── */
+
+      /*
+       * iOS Safari auto-zooms when a focused form control has font-size < 16px.
+       * Force every text input to >= 16px on small viewports so focusing a
+       * field never zooms the page.
+       */
+      @media (max-width: 1024px) {
+        input[type="text"],
+        input[type="email"],
+        input[type="password"],
+        input[type="search"],
+        input[type="tel"],
+        input[type="url"],
+        input[type="number"],
+        input:not([type]),
+        textarea,
+        select {
+          font-size: max(16px, 1rem);
+        }
+      }
+
+      /* Ensure body text is at least 14px on mobile (Tailwind's `text-base`
+         resolves to 13px in this app's overridden scale). */
+      @media (max-width: 767px) {
+        body {
+          font-size: 14px;
+          line-height: 1.45;
+        }
+      }
+
+      /* 44px minimum touch target for any element marked with .touch-target.
+         Used by the bottom-nav, hamburger, and other mobile-only buttons. */
+      .touch-target {
+        min-height: 44px;
+        min-width: 44px;
+      }
+
+      /* Visible :active state for any interactive element on touch devices.
+         Pairs with the no-hover-only-UI rule. */
+      @media (hover: none) {
+        button:active,
+        a:active,
+        [role="button"]:active {
+          opacity: 0.7;
+          transition: opacity 0.05s ease-out;
+        }
+      }
+
+      /* Hint that a horizontally-scrollable table can be scrolled. Apply via
+         the `.table-scroll-hint` wrapper around `<table>` or wide content. */
+      .table-scroll-hint {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        position: relative;
+      }
+      .table-scroll-hint::after {
+        content: "";
+        position: sticky;
+        top: 0;
+        right: 0;
+        width: 24px;
+        height: 100%;
+        pointer-events: none;
+        background: linear-gradient(to right, transparent, rgba(244, 163, 0, 0.08));
+        display: block;
+      }
+
+      /* Bottom-sheet style for modal dialogs on mobile. Target via the
+         `.mobile-bottom-sheet` class on the modal's outer container. */
+      @media (max-width: 767px) {
+        .mobile-bottom-sheet {
+          align-items: flex-end !important;
+        }
+        .mobile-bottom-sheet > * {
+          width: 100% !important;
+          max-width: 100% !important;
+          border-radius: 16px 16px 0 0 !important;
+          max-height: 90dvh;
+        }
       }
 
       /* Slim, premium scrollbars */
