@@ -99,7 +99,12 @@ const BottomNav: React.FC<BottomNavProps> = ({
         currentView === 'creative' ||
         currentView === 'motion' ||
         currentView === 'image';
-    const isMeetingsActive = currentMode === 'meetings';
+    // Meetings is the only mode-based entry; the others are view-based, so we
+    // need to scope this to `currentView === 'chat'` (the only view a Meetings
+    // session lives under). Without that scope, a user who taps Meetings then
+    // Glossary would see both tabs lit up because `handleSetView` in App.tsx
+    // only clears `currentMode` when navigating into `'chat'`.
+    const isMeetingsActive = currentMode === 'meetings' && currentView === 'chat';
     const isGlossaryActive = currentView === 'glossary';
     const isPricingActive = currentView === 'pricing';
     const isProfileActive = currentView === 'profile';
