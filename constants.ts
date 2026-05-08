@@ -1,7 +1,8 @@
 
 import React from 'react';
-import type { Language, AfriTranslateModel, AddOn, LibraryItem, Tone, GlottologData } from './types';
+import type { Language, AfriTranslateModel, AddOn, LibraryItem, Tone } from './types';
 import { VoiceIcon, OfflineIcon, IndustryIcon } from './src/components/Icons';
+import { GLOTTOLOG_METADATA as SHARED_GLOTTOLOG_METADATA } from './shared/glottologMetadata';
 
 // Helper to map major languages to their legacy ISO codes for backward compatibility
 const LEGACY_CODE_MAP: Record<string, string> = {
@@ -852,24 +853,11 @@ const RAW_LANGUAGE_LIST = [
 // Generate and Sort the final LANGUAGES array
 export const LANGUAGES: Language[] = generateUniqueLanguages();
 
-export const GLOTTOLOG_METADATA: Record<string, GlottologData> = {
-  sw: { family: 'Atlantic-Congo', parent: 'Northeast Coastal Bantu', features: 'Agglutinative, 18 Noun Classes, SVO', glottocode: 'swah1253' },
-  yo: { family: 'Atlantic-Congo', parent: 'Yoruboid', features: 'Isolating, 3-Level Tone System, SVO, Serial Verbs', glottocode: 'yoru1245' },
-  ha: { family: 'Afroasiatic', parent: 'West Chadic', features: 'Gender (M/F), Tone, Implosives/Ejectives, SVO', glottocode: 'haus1257' },
-  zu: { family: 'Atlantic-Congo', parent: 'Nguni', features: 'Agglutinative, Clicks (q, c, x), 15+ Noun Classes', glottocode: 'zulu1248' },
-  ig: { family: 'Atlantic-Congo', parent: 'Igboid', features: 'Tonal (High/Low/Downstep), Agglutinative, Vowel Harmony', glottocode: 'igbo1259' },
-  am: { family: 'Afroasiatic', parent: 'Ethiosemitic', features: 'SOV, Ejectives, Palatalization, Gemination', glottocode: 'amha1242' },
-  rw: { family: 'Atlantic-Congo', parent: 'Rwanda-Rundi', features: 'Complex Verbal Morphology, 16 Noun Classes, Tonal', glottocode: 'kiny1244' },
-  ln: { family: 'Atlantic-Congo', parent: 'Bangi-Ntomba', features: 'Noun Classes, Vowel Harmony, SVO', glottocode: 'ling1263' },
-  wo: { family: 'Atlantic-Congo', parent: 'Fula-Wolof', features: 'Noun Class (Consonant Mutation), Non-Tonal', glottocode: 'wolo1247' },
-  so: { family: 'Afroasiatic', parent: 'Lowland East Cushitic', features: 'SOV, Tonal Accent, Gender, Pharyngeal Consonants', glottocode: 'soma1255' },
-  xh: { family: 'Atlantic-Congo', parent: 'Nguni', features: 'Clicks (q, c, x), Noun Classes, Agglutinative', glottocode: 'xhos1239' },
-  lg: { family: 'Atlantic-Congo', parent: 'West Nyanza', features: 'Agglutinative, Tonal, Noun Classes (Augments)', glottocode: 'gand1255' },
-  om: { family: 'Afroasiatic', parent: 'Oromoid', features: 'SOV, Ejectives, Pitch Accent', glottocode: 'west2720' },
-  ak: { family: 'Atlantic-Congo', parent: 'Potou-Tano', features: 'Tonal, Vowel Harmony, SVO', glottocode: 'akan1250' },
-  bm: { family: 'Mande', parent: 'Bambara-Dyula', features: 'Tonal (High/Low), SOV, Isolating', glottocode: 'bamb1269' },
-  ff: { family: 'Atlantic-Congo', parent: 'Senegambian', features: 'Noun Classes (Initial Mutation), SVO', glottocode: 'fula1264' }
-};
+// Re-exported from `shared/glottologMetadata.ts` so the Vercel serverless
+// functions in `api/` can read this table without transitively importing
+// React + the LANGUAGES mega-array via `constants.ts`. Existing client
+// imports `import { GLOTTOLOG_METADATA } from './constants'` keep working.
+export const GLOTTOLOG_METADATA = SHARED_GLOTTOLOG_METADATA;
 
 export const LANGUAGE_REGIONS: Record<string, string[]> = {
     'en': ['General', 'Nigeria (Pidgin)', 'South Africa', 'Kenya', 'Ghana', 'Liberia', 'UK', 'USA'],
