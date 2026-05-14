@@ -208,7 +208,7 @@ const Chat: React.FC<ChatProps> = ({
             <div className="max-w-md animate-fade-in">
                  <div className="w-20 h-20 rounded-2xl bg-bg-surface/50 backdrop-blur-sm flex-shrink-0 flex items-center justify-center mb-6 mx-auto border border-white/5 shadow-2xl">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 text-accent">
-                        <circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3(12 2a15.3 0 0 1 4 18 15.3 15.3 0 0 1-8 0 15.3 15.3 0 0 1 4-18z"></path>
+                        <circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 18 15.3 15.3 0 0 1-8 0 15.3 15.3 0 0 1 4-18z"></path>
                     </svg>
                 </div>
                 <h1 className="text-3xl font-bold text-white tracking-tight">AfriTranslate AI</h1>
