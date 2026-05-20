@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { MeetingExportRecord } from '../../types';
+import { getExportDownloadUrl } from '../../services/meetingInsightsClient';
 
 interface Props {
   jobId: string;
@@ -20,27 +21,16 @@ export default function MeetingExportToolbar({ jobId, exports }: Props) {
     exports.find((e) => e.format === format);
 
   const handleDownload = async (record: MeetingExportRecord) => {
-    if (!record.bucket || !record.path || !record.fileName) return;
+    if (!record.fileName) return;
     setDownloading(record.format);
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
-      const res = await fetch(
-        `${supabaseUrl}/storage/v1/object/sign/${record.bucket}/${record.path}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            apikey: supabaseKey,
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({ expiresIn: 300 }),
-        }
-      );
-      const { signedURL } = await res.json();
+      // F-3: ask the server to mint a signed URL after asserting the caller
+      // owns this job. We no longer hit Supabase Storage `/sign` directly
+      // with the public anon key.
+      const { signedUrl, fileName } = await getExportDownloadUrl(jobId, record.format);
       const a = document.createElement('a');
-      a.href = signedURL;
-      a.download = record.fileName;
+      a.href = signedUrl;
+      a.download = fileName ?? record.fileName;
       a.click();
     } catch (err) {
       console.error('Download failed:', err);

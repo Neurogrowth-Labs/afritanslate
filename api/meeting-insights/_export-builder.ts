@@ -257,6 +257,7 @@ export async function buildDOCX(
 
 export async function uploadExport(
   jobId: string,
+  userId: string,
   format: 'txt' | 'srt' | 'pdf' | 'docx',
   content: Buffer | string,
   bucket: string
@@ -269,7 +270,10 @@ export async function uploadExport(
   };
 
   const fileName = `meeting-insights-${jobId}.${format}`;
-  const path = `exports/${jobId}/${fileName}`;
+  // F-3: prefix the storage path with the owning user id so that, even if a
+  // bucket policy is ever loosened or a signed-url minter ever forgets to
+  // assert ownership, the path alone encodes which user it belongs to.
+  const path = `exports/${userId}/${jobId}/${fileName}`;
   const buffer = typeof content === 'string' ? Buffer.from(content, 'utf-8') : content;
 
   const { error } = await supabaseAdmin.storage
