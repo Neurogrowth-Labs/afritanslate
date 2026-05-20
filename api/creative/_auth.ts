@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyClerkBearer } from '../_lib/auth';
+import { verifyClerkBearer } from '../_lib/auth.js';
 
 /**
  * Legacy alias for backwards compatibility with existing import paths.
