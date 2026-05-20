@@ -297,22 +297,29 @@ CREATE POLICY "brand_glossaries_delete_own"
   USING ((auth.jwt() ->> 'sub') = user_id);
 
 -- ----------------------------------------------------------------------------
--- 12. Cultural insights — owner-only CRUD
+-- 12. Cultural insights — RLS enabled, no policies (deny-all default)
 -- ----------------------------------------------------------------------------
+--
+-- The live `public.cultural_insights` schema is:
+--   id, translation_id, risk_score, tone_analysis, cultural_notes,
+--   risk_flags, created_at
+--
+-- It has no `user_id` column, and `translation_id` references a
+-- `public.translations` table that does not exist in the live database
+-- (orphan FK from a deleted prototype). The only call site that writes to
+-- this table — `saveCulturalInsight()` in src/services/culturalService.ts —
+-- is never invoked from anywhere in the current codebase, and the table
+-- is empty in production.
+--
+-- With RLS enabled (section 2 above) and no policies defined, anon and
+-- authenticated callers are denied all access by default. The Supabase
+-- service role (used by server-side `/api/*` routes) still has full
+-- access because it bypasses RLS. This matches the table's actual usage
+-- (no browser code path needs it) without requiring schema surgery in
+-- this security migration.
+--
+-- If a future feature needs per-user cultural insights, add a `user_id
+-- text` column in a separate migration and then add owner-only policies
+-- here in a follow-up.
 
-CREATE POLICY "cultural_insights_select_own"
-  ON public.cultural_insights FOR SELECT
-  USING ((auth.jwt() ->> 'sub') = user_id);
-
-CREATE POLICY "cultural_insights_insert_own"
-  ON public.cultural_insights FOR INSERT
-  WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
-
-CREATE POLICY "cultural_insights_update_own"
-  ON public.cultural_insights FOR UPDATE
-  USING ((auth.jwt() ->> 'sub') = user_id)
-  WITH CHECK ((auth.jwt() ->> 'sub') = user_id);
-
-CREATE POLICY "cultural_insights_delete_own"
-  ON public.cultural_insights FOR DELETE
-  USING ((auth.jwt() ->> 'sub') = user_id);
+-- (intentionally no CREATE POLICY statements for public.cultural_insights)
