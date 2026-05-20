@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verifyToken } from '@clerk/backend';
 
+
 /**
  * Verify the Clerk Bearer token on an incoming API request.
  *

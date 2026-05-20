@@ -1,8 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
-import { verifyClerkToken } from './creative/_auth';
-import { GLOTTOLOG_METADATA } from '../shared/glottologMetadata';
-import { getLanguageName } from '../shared/languageNames';
+import { verifyClerkToken } from './creative/_auth.js';
+import { GLOTTOLOG_METADATA } from '../shared/glottologMetadata.js';
+import { getLanguageName } from '../shared/languageNames.js';
 
 /**
  * Single shared server-side Gemini proxy.

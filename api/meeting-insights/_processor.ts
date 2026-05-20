@@ -1,18 +1,18 @@
-import { supabaseAdmin } from './_supabase';
-import { generateContent } from './_ai-provider';
+import { supabaseAdmin } from './_supabase.js';
+import { generateContent } from './_ai-provider.js';
 import {
   buildTXT,
   buildSRT,
   buildPDF,
   buildDOCX,
   uploadExport,
-} from './_export-builder';
+} from './_export-builder.js';
 import type {
   TranscriptSegment,
   MeetingInsightsResult,
   TranscriptionStyle,
   LocalizationMode,
-} from '../../src/types';
+} from '../../src/types.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 

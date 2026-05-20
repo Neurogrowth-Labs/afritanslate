@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { MissingEnvError } from './_supabase';
+import { MissingEnvError } from './_supabase.js';
 
 type GenerativeModel = ReturnType<InstanceType<typeof GoogleGenerativeAI>['getGenerativeModel']>;
 

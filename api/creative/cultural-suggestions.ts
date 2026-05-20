@@ -1,10 +1,10 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
-import { verifyClerkToken } from './_auth';
+import { verifyClerkToken } from './_auth.js';
 import type {
     CulturalSuggestionsRequest,
     CulturalSuggestionsResponse,
-} from './_types';
+} from './_types.js';
 
 const MODEL_NAME = 'gemini-2.5-flash';
 
