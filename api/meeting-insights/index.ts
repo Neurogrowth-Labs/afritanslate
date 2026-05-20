@@ -1,9 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClerkClient } from '@clerk/backend';
-import { supabaseAdmin } from './_supabase';
+import { verifyClerkBearer } from '../_lib/auth';
+import { supabaseAdmin, MissingEnvError } from './_supabase';
 import type { MeetingSubmitRequest } from '../../src/types';
-
-const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY! });
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -11,20 +9,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Verify Clerk JWT
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Missing authorization header' });
-    }
-    const token = authHeader.slice(7);
-
-    let userId: string;
-    try {
-      const payload = await clerk.verifyToken(token);
-      userId = payload.sub;
-    } catch {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
+    const userId = await verifyClerkBearer(req, res);
+    if (!userId) return; // verifyClerkBearer already wrote the response
 
     // Validate request body
     const body = req.body as MeetingSubmitRequest;
@@ -70,6 +56,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     return res.status(201).json({ jobId: job.id, status: job.status });
   } catch (error) {
+    if (error instanceof MissingEnvError) {
+      console.error('[meeting-insights] missing env:', error.message);
+      return res.status(500).json({ error: error.message });
+    }
     console.error('[meeting-insights] create error:', error);
     return res.status(500).json({
       error: error instanceof Error ? error.message : String(error)
