@@ -53,8 +53,6 @@ const getDisplayName = (user: ReturnType<typeof useUser>['user']) => {
     return user?.fullName || user?.firstName || user?.username || email.split('@')[0] || 'AfriTranslate User';
 };
 
-const isLegacyProfileId = (profileId: string) => !profileId.startsWith('user_');
-
 // NOTE: The standalone ImageGenerator placeholder and VideoGenerator route are
 // now unified inside CreativeStudio (/studio/creative). VideoGenerator's AI
 // pipeline is preserved for re-use during the AI integration phase.
@@ -751,97 +749,28 @@ const App: React.FC = () => {
 
                 const clerkUserId = user.id;
                 const displayName = getDisplayName(user);
-                let matchedExistingUser = false;
 
-                const { data: existingProfile, error: existingProfileError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('email', primaryEmail)
-                    .maybeSingle();
+                // Atomic lookup / legacy migration / insert via SECURITY
+                // DEFINER RPC. The RPC reads `auth.jwt() ->> 'sub'` itself
+                // to identify the caller, so the browser only passes the
+                // email and display name. Replaces the prior cross-row
+                // browser flow that required public SELECT on profiles.
+                const { data: bootstrapData, error: bootstrapError } = await supabase
+                    .rpc('bootstrap_clerk_profile', {
+                        p_email: primaryEmail,
+                        p_display_name: displayName
+                    });
 
-                if (existingProfileError) {
-                    console.error('Profile bootstrap existing profile lookup failed:', existingProfileError);
-                    throw existingProfileError;
+                if (bootstrapError) {
+                    console.error('Profile bootstrap RPC failed:', bootstrapError);
+                    throw bootstrapError;
                 }
 
-                if (existingProfile) {
-                    matchedExistingUser = true;
-
-                    if (existingProfile.id === clerkUserId) {
-                        const { error: refreshProfileError } = await supabase
-                            .from('profiles')
-                            .update({
-                                email: primaryEmail,
-                                name: existingProfile.name || displayName
-                            })
-                            .eq('id', clerkUserId);
-
-                        if (refreshProfileError) {
-                            console.error('Profile bootstrap refresh failed:', refreshProfileError);
-                            throw refreshProfileError;
-                        }
-                    } else if (isLegacyProfileId(existingProfile.id)) {
-                        const legacyProfileId = existingProfile.id;
-
-                        const { error: profileMigrationError } = await supabase
-                            .from('profiles')
-                            .update({
-                                id: clerkUserId,
-                                email: primaryEmail,
-                                name: existingProfile.name || displayName
-                            })
-                            .eq('id', legacyProfileId);
-
-                        if (profileMigrationError) {
-                            console.error('Profile bootstrap legacy profile migration failed:', profileMigrationError);
-                            throw profileMigrationError;
-                        }
-
-                        const ownershipTables = [
-                            'conversations',
-                            'scheduled_meetings',
-                            'meeting_summaries',
-                            'brand_glossaries'
-                        ] as const;
-
-                        for (const tableName of ownershipTables) {
-                            const { error: ownershipError } = await supabase
-                                .from(tableName)
-                                .update({ user_id: clerkUserId })
-                                .eq('user_id', legacyProfileId);
-
-                            if (ownershipError) {
-                                console.error(`Profile bootstrap ownership migration failed for ${tableName}:`, ownershipError);
-                                throw ownershipError;
-                            }
-                        }
-                    } else {
-                        throw new Error(`A profile already exists for ${primaryEmail}, but it is linked to a different Clerk user.`);
-                    }
-                } else {
-                    const { error: insertProfileError } = await supabase
-                        .from('profiles')
-                        .insert({
-                            id: clerkUserId,
-                            email: primaryEmail,
-                            name: displayName,
-                            role: 'user',
-                            plan: 'Premium',
-                            trial_start_date: new Date().toISOString(),
-                            onboarding_completed: false
-                        });
-
-                    if (insertProfileError) {
-                        console.error('Profile bootstrap insert failed:', insertProfileError);
-                        throw insertProfileError;
-                    }
-
-                    wasJustSignedUpRef.current = true;
+                if (!bootstrapData || typeof bootstrapData !== 'object') {
+                    throw new Error('Profile bootstrap RPC returned an unexpected payload.');
                 }
 
-                if (matchedExistingUser) {
-                    wasJustSignedUpRef.current = false;
-                }
+                wasJustSignedUpRef.current = Boolean((bootstrapData as { was_inserted?: boolean }).was_inserted);
 
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
