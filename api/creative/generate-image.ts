@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI, Type } from '@google/genai';
-import { verifyClerkToken } from './_auth';
+import { verifyClerkToken } from './_auth.js';
 import type {
     GenerateImageRequest,
     GenerateImageSuccess,
     GenerateImageQuotaFallback,
     GeneratedImagePayload,
     ImageGenUseCase,
-} from './_types';
+} from './_types.js';
 
 // ── Models ───────────────────────────────────────────────────────────────────
 

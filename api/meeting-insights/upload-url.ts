@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyClerkBearer } from '../_lib/auth';
-import { supabaseAdmin, MissingEnvError } from './_supabase';
+import { verifyClerkBearer } from '../_lib/auth.js';
+import { supabaseAdmin, MissingEnvError } from './_supabase.js';
 
 const MAX_FILE_BYTES = 48 * 1024 * 1024; // 48 MB — Supabase free plan cap is 50 MB
 

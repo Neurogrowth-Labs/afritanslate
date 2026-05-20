@@ -1,5 +1,5 @@
-import { supabaseAdmin } from './_supabase';
-import type { TranscriptSegment, MeetingInsightsResult } from '../../src/types';
+import { supabaseAdmin } from './_supabase.js';
+import type { TranscriptSegment, MeetingInsightsResult } from '../../src/types.js';
 
 // ── Timestamp formatter ────────────────────────────────────────────────────────
 

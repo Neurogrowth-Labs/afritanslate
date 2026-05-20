@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyClerkBearer } from '../_lib/auth';
-import { supabaseAdmin, MissingEnvError } from './_supabase';
-import type { MeetingSubmitRequest } from '../../src/types';
+import { verifyClerkBearer } from '../_lib/auth.js';
+import { supabaseAdmin, MissingEnvError } from './_supabase.js';
+import type { MeetingSubmitRequest } from '../../src/types.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {

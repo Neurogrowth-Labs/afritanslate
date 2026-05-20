@@ -68,7 +68,7 @@ async function generateFromGemini(
   prompt: string,
   systemInstruction?: string
 ): Promise<string> {
-  const { geminiFlash, geminiPro } = await import('./_gemini');
+  const { geminiFlash, geminiPro } = await import('./_gemini.js');
   const isLocalizationPrompt = /localization engine|translate and localize/i.test(prompt);
   const model = isLocalizationPrompt ? geminiFlash : geminiPro;
   const userPrompt = systemInstruction ? `${systemInstruction}\n\n${prompt}` : prompt;

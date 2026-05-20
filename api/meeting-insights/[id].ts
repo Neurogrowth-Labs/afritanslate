@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { verifyClerkBearer } from '../_lib/auth';
-import { supabaseAdmin, MissingEnvError } from './_supabase';
-import { processJob } from './_processor';
+import { verifyClerkBearer } from '../_lib/auth.js';
+import { supabaseAdmin, MissingEnvError } from './_supabase.js';
+import { processJob } from './_processor.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { id } = req.query as { id: string };
