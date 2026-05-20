@@ -150,15 +150,35 @@ export async function pollMeetingJob(jobId: string): Promise<MeetingJobPollResul
 }
 
 // ── Get a signed download URL for an export file ──────────────────────────────
+//
+// F-3: routes through the server (which asserts Clerk ownership and mints
+// the signed URL with the service role) rather than calling Supabase
+// Storage `/sign` directly from the browser with the anon key.
+
+export interface ExportDownloadResponse {
+  signedUrl: string;
+  fileName: string | null;
+  mimeType: string | null;
+  expiresInSeconds: number;
+}
 
 export async function getExportDownloadUrl(
-  bucket: string,
-  path: string
-): Promise<string> {
-  // This uses the Supabase public URL pattern — exports bucket must allow authenticated reads
-  // or you can expose a signed-url endpoint later if needed
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-  return `${supabaseUrl}/storage/v1/object/sign/${bucket}/${path}`;
+  jobId: string,
+  format: 'txt' | 'srt' | 'pdf' | 'docx'
+): Promise<ExportDownloadResponse> {
+  const headers = await authHeaders();
+  const res = await fetch(
+    `${API_BASE}/${jobId}/export?format=${encodeURIComponent(format)}`,
+    {
+      method: 'GET',
+      headers,
+    }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(err.error ?? `HTTP ${res.status}`);
+  }
+  return res.json();
 }
 
 // ── Polling loop helper ────────────────────────────────────────────────────────
