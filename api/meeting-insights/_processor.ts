@@ -340,9 +340,13 @@ export async function processJob(jobId: string): Promise<void> {
     const txtContent = buildTXT(localizedSegments, insights, jobId);
     const srtContent = buildSRT(localizedSegments);
 
+    // F-3: thread the job owner id through to uploadExport so the storage
+    // path is `exports/<userId>/<jobId>/...` rather than `exports/<jobId>/...`.
+    const ownerUserId: string = job.user_id;
+
     await Promise.all([
-      uploadExport(jobId, 'txt', txtContent, EXPORT_BUCKET),
-      uploadExport(jobId, 'srt', srtContent, EXPORT_BUCKET),
+      uploadExport(jobId, ownerUserId, 'txt', txtContent, EXPORT_BUCKET),
+      uploadExport(jobId, ownerUserId, 'srt', srtContent, EXPORT_BUCKET),
     ]);
 
     const [pdfBuffer, docxBuffer] = await Promise.all([
@@ -351,8 +355,8 @@ export async function processJob(jobId: string): Promise<void> {
     ]);
 
     await Promise.all([
-      uploadExport(jobId, 'pdf', pdfBuffer, EXPORT_BUCKET),
-      uploadExport(jobId, 'docx', docxBuffer, EXPORT_BUCKET),
+      uploadExport(jobId, ownerUserId, 'pdf', pdfBuffer, EXPORT_BUCKET),
+      uploadExport(jobId, ownerUserId, 'docx', docxBuffer, EXPORT_BUCKET),
     ]);
 
     // ── Persist final job result ──

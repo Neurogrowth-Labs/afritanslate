@@ -5,6 +5,10 @@
       "destination": "/api/meeting-insights/upload-url"
     },
     {
+      "source": "/api/meeting-insights/:id/export",
+      "destination": "/api/meeting-insights/export?id=:id"
+    },
+    {
       "source": "/api/meeting-insights/:id",
       "destination": "/api/meeting-insights/[id]"
     },

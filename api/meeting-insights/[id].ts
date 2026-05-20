@@ -24,6 +24,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (secret !== expected) {
         return res.status(401).json({ error: 'Unauthorized' });
       }
+
+      // F-2: defense-in-depth — even with a valid webhook secret, only act
+      // on a job that actually exists and is in a re-processable state.
+      // Without this, a leaked secret would let an attacker pump arbitrary
+      // job ids into processJob(), which would burn Gemini quota per call.
+      const { data: jobRow, error: jobLookupError } = await supabaseAdmin
+        .from('meeting_insight_jobs')
+        .select('id, status')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (jobLookupError) {
+        console.error(`[meeting-insights/:id] job lookup failed for ${id}:`, jobLookupError);
+        return res.status(500).json({ error: 'Job lookup failed' });
+      }
+      if (!jobRow) {
+        return res.status(404).json({ error: 'Job not found' });
+      }
+
+      const reprocessableStatuses = new Set(['queued', 'uploading', 'failed']);
+      if (!reprocessableStatuses.has(jobRow.status)) {
+        return res.status(409).json({
+          error: 'Job is not in a re-processable state',
+          status: jobRow.status,
+        });
+      }
+
       // Acknowledge immediately, process async
       res.status(202).json({ message: 'Processing started' });
       processJob(id).catch((err) =>
