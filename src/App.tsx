@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SignIn, useClerk, useUser } from '@clerk/clerk-react';
+import { SignIn, useAuth, useClerk, useUser } from '@clerk/clerk-react';
 import { supabase } from '../supabaseClient';
 
 // --- MAIN APPLICATION IMPORTS --- //
@@ -722,6 +722,7 @@ const App: React.FC = () => {
     const [bootstrapError, setBootstrapError] = useState<string | null>(null);
     const wasJustSignedUpRef = useRef(false);
     const { isLoaded, isSignedIn, user } = useUser();
+    const { getToken } = useAuth();
     const { signOut } = useClerk();
 
     useEffect(() => {
@@ -742,49 +743,55 @@ const App: React.FC = () => {
             setBootstrapError(null);
 
             try {
-                const primaryEmail = getPrimaryEmail(user);
-                if (!primaryEmail) {
-                    throw new Error('Your Clerk account is missing a primary email address.');
+                // Atomic lookup / legacy migration / insert via the
+                // server-side endpoint `/api/bootstrap-profile`, which
+                // verifies the Clerk Bearer token, fetches the user's
+                // verified primary email from the Clerk Backend API
+                // (never trusting the request body for the email), and
+                // performs the bootstrap using the service-role Supabase
+                // client. Replaces an earlier SECURITY DEFINER RPC that
+                // was vulnerable to legacy-profile takeover because it
+                // accepted the email as a client-supplied parameter.
+                const token = await getToken();
+                if (!token) {
+                    throw new Error('Your Clerk session is missing — please sign in again.');
                 }
 
-                const clerkUserId = user.id;
-                const displayName = getDisplayName(user);
+                const response = await fetch('/api/bootstrap-profile', {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
 
-                // Atomic lookup / legacy migration / insert via SECURITY
-                // DEFINER RPC. The RPC reads `auth.jwt() ->> 'sub'` itself
-                // to identify the caller, so the browser only passes the
-                // email and display name. Replaces the prior cross-row
-                // browser flow that required public SELECT on profiles.
-                const { data: bootstrapData, error: bootstrapError } = await supabase
-                    .rpc('bootstrap_clerk_profile', {
-                        p_email: primaryEmail,
-                        p_display_name: displayName
-                    });
-
-                if (bootstrapError) {
-                    console.error('Profile bootstrap RPC failed:', bootstrapError);
-                    throw bootstrapError;
+                let payload: unknown = null;
+                try {
+                    payload = await response.json();
+                } catch {
+                    // fall through — handled by the !ok branch
                 }
 
-                if (!bootstrapData || typeof bootstrapData !== 'object') {
-                    throw new Error('Profile bootstrap RPC returned an unexpected payload.');
+                if (!response.ok) {
+                    const errMsg =
+                        (payload && typeof payload === 'object' && 'error' in payload && typeof (payload as { error?: unknown }).error === 'string')
+                            ? (payload as { error: string }).error
+                            : `Profile bootstrap failed (HTTP ${response.status}).`;
+                    throw new Error(errMsg);
                 }
 
-                wasJustSignedUpRef.current = Boolean((bootstrapData as { was_inserted?: boolean }).was_inserted);
-
-                const { data: profile, error: profileError } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', clerkUserId)
-                    .single();
-
-                if (profileError) {
-                    console.error('Profile bootstrap final profile fetch failed:', profileError);
-                    throw profileError;
+                if (!payload || typeof payload !== 'object' || !('profile' in payload)) {
+                    throw new Error('Profile bootstrap endpoint returned an unexpected payload.');
                 }
+
+                const { profile, was_inserted } = payload as {
+                    profile: User;
+                    was_inserted?: boolean;
+                };
+                wasJustSignedUpRef.current = Boolean(was_inserted);
 
                 if (!isCancelled) {
-                    setCurrentUser(profile as User);
+                    setCurrentUser(profile);
                 }
             } catch (error) {
                 console.error('Profile bootstrap failed with full error object:', error);
