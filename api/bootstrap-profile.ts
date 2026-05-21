@@ -159,19 +159,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .single();
             if (migrateErr) throw migrateErr;
 
-            // Re-key the foreign tables that scope by user_id.
-            await Promise.all([
-                supabase.from('conversations').update({ user_id: clerkUserId }).eq('user_id', legacyId),
-                supabase.from('scheduled_meetings').update({ user_id: clerkUserId }).eq('user_id', legacyId),
-                supabase.from('meeting_summaries').update({ user_id: clerkUserId }).eq('user_id', legacyId),
-                supabase.from('brand_glossaries').update({ user_id: clerkUserId }).eq('user_id', legacyId),
-            ]);
+            // Re-key the foreign tables that scope by user_id. The Supabase
+            // client returns { data, error } and does NOT throw on database
+            // errors, so each result is inspected and the first error is
+            // re-thrown to surface a 500 to the caller. Without this, a
+            // partial migration would silently return 200 to the user with
+            // their conversations/meetings/glossaries still orphaned under
+            // the legacy id.
+            const rekeyTables = [
+                'conversations',
+                'scheduled_meetings',
+                'meeting_summaries',
+                'brand_glossaries',
+            ] as const;
+            const rekeyResults = await Promise.all(
+                rekeyTables.map((table) =>
+                    supabase.from(table).update({ user_id: clerkUserId }).eq('user_id', legacyId),
+                ),
+            );
+            for (let i = 0; i < rekeyResults.length; i++) {
+                const { error } = rekeyResults[i];
+                if (error) {
+                    console.error(
+                        `[bootstrap-profile] re-key failed for table ${rekeyTables[i]}`,
+                        error,
+                    );
+                    throw error;
+                }
+            }
 
             res.status(200).json({ profile: migrated, was_inserted: false });
             return;
         }
 
-        // 4. Brand-new profile.
+        // 4. Brand-new profile. Matches the defaults the removed
+        //    bootstrap_clerk_profile RPC used (`plan='Premium'`,
+        //    `trial_start_date=NOW()`) so new users still get the
+        //    7-day Pro trial advertised on the landing page. The
+        //    trial transitions to Free automatically after 7 days
+        //    via src/utils/trialUtils.ts.
         const { data: inserted, error: insertErr } = await supabase
             .from('profiles')
             .insert({
@@ -179,7 +205,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 email: primaryEmail,
                 name: displayName,
                 role: 'user',
-                plan: 'Free',
+                plan: 'Premium',
+                trial_start_date: new Date().toISOString(),
                 onboarding_completed: false,
             })
             .select('*')
