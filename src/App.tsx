@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { SignIn, useAuth, useClerk, useUser } from '@clerk/clerk-react';
+import { useAuth, useClerk, useUser } from '@clerk/clerk-react';
 import { supabase } from '../supabaseClient';
 
 // --- MAIN APPLICATION IMPORTS --- //
@@ -38,6 +38,7 @@ import ConfirmationModal from './components/ConfirmationModal';
 import ProfileDashboard from './components/ProfileDashboard';
 import OnboardingAgent from './components/OnboardingAgent';
 import EmailTranslator from './components/EmailTranslator';
+import SignInExperience from './components/SignInExperience';
 import { SearchIcon, TranslateIcon, LiveIcon, MicrophoneIcon, GlobeIcon, BoltIcon, LockIcon, CheckIcon, DownloadIcon, ImageIcon } from './components/Icons';
 import { getNuancedTranslation } from '../services/geminiService'; // Import service
 import { generateOperationalManual } from '../services/pdfGenerator'; // Import PDF generator
@@ -850,46 +851,7 @@ const App: React.FC = () => {
 
     if (!isSignedIn) {
         if (appState.show && !PUBLIC_INFO_VIEWS.includes(appState.initialView!)) {
-            return (
-                <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center px-4 py-10">
-                    <div className="w-full max-w-5xl grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-center">
-                        <div className="hidden lg:block">
-                            <div className="mb-6">
-                                <img
-                                    src="/logo-transparent.svg"
-                                    alt="AfriTranslate AI"
-                                    className="h-10 w-auto mb-3 select-none"
-                                    draggable={false}
-                                />
-                                <p className="text-xs text-text-secondary uppercase tracking-[0.25em]">Culturally Intelligent Localization</p>
-                            </div>
-                            <h1 className="text-4xl font-brand font-bold leading-tight mb-4">Secure sign-in for your translation studio.</h1>
-                            <p className="text-text-secondary max-w-xl leading-relaxed">
-                                Clerk now manages access to the studio while your translations, storage, and product data remain in Supabase.
-                            </p>
-                        </div>
-                        <div className="w-full">
-                            <SignIn
-                                routing="hash"
-                                fallbackRedirectUrl="/"
-                                appearance={{
-                                    layout: {
-                                        logoImageUrl: '/logo-transparent.svg',
-                                        logoPlacement: 'inside',
-                                    },
-                                    variables: {
-                                        colorBackground: '#0a0a0a',
-                                        colorPrimary: '#f5a623',
-                                        colorText: '#ffffff',
-                                        colorInputBackground: '#1a1a1a',
-                                        colorInputText: '#ffffff'
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            );
+            return <SignInExperience />;
         }
 
         return <LandingPage initialView={appState.initialView} onStart={(view) => setAppState({ show: true, initialView: view })} />;
