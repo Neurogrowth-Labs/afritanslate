@@ -84,3 +84,17 @@ The profile insert at `src/App.tsx:812-822` hard-codes `role: 'user'` and `plan:
 - `user.plan === 'Training'` (e.g. ProfileDashboard team-invite block at `src/components/ProfileDashboard.tsx:241`)
 
 To test those surfaces at runtime, either flip the row in Supabase before signing in, or use the asset-equivalent shell-grep + Tailwind-compile-runtime-proof pattern documented in `testing-the-app/SKILL.md`.
+
+## Local Vite does NOT serve `/api/*` routes (Vercel serverless functions)
+
+After the Phase 4 hotfix (PR #20), bootstrap moved from a Supabase RPC to `POST /api/bootstrap-profile`. The `/api/*` routes are Vercel serverless functions and **`npm run dev` (plain Vite) does not run them** — every `/api/*` request returns Vite's HTML 404 fallback.
+
+**Symptom:** Sign in locally → Clerk auth succeeds → app immediately renders **"We could not load your studio profile / Profile bootstrap failed (HTTP 404)"** error screen with only a Sign Out button. This looks identical to the old placeholder-Supabase failure but the cause is different.
+
+The UI / unauthenticated branch itself is fine — Clerk progresses through email → password → authenticated normally. The 404 happens AFTER auth in `src/App.tsx`'s `bootstrapProfile` effect.
+
+**Workarounds for local end-to-end testing of post-auth surfaces:**
+
+1. **`vercel dev` instead of `npm run dev`** — runs both Vite and the serverless functions, but requires `CLERK_SECRET_KEY` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`. Neither is saved as a session secret today; both would need to be requested with `should_save=true` if you take this path.
+2. **Test against a Vercel preview deploy** — open the PR and use the auto-generated preview URL. This exercises the full stack with production env vars wired.
+3. **For UI-only PRs that only affect the unauthenticated branch** (e.g. sign-in redesign, landing-page tweaks), the visual rendering of the redesigned screen is fully verifiable on `npm run dev`; treat the post-auth bootstrap as out-of-scope for local testing and rely on the Phase 4 production re-probe evidence on PR #20 for the bootstrap path.
