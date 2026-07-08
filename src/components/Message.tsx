@@ -141,28 +141,28 @@ const UserMessage: React.FC<{ message: ChatMessage; isEditing: boolean; onSetEdi
     return (
         <div className="flex justify-end animate-fade-in">
             <div className="group relative max-w-xl">
-                <div className="bg-accent text-white p-3 rounded-xl rounded-br-lg shadow-sm">
+                <div className="bg-white text-black p-3 rounded-xl rounded-br-lg shadow-sm border border-white/20">
                     {isEditing ? (
                         <div>
                             <textarea 
                                 value={editText} 
                                 onChange={(e) => setEditText(e.target.value)}
-                                className="w-full bg-accent/80 p-2 rounded-md focus:ring-2 focus:ring-white/50 outline-none text-sm"
+                                className="w-full bg-neutral-100 text-black p-2 rounded-md focus:ring-2 focus:ring-black/30 outline-none text-sm"
                                 rows={3}
                                 autoFocus
                             />
                             <div className="flex justify-end gap-2 mt-2">
-                                <button onClick={() => onSetEditing(null)} className="text-xs px-2 py-1 rounded bg-white/20 hover:bg-white/30">Cancel</button>
-                                <button onClick={handleSave} className="text-xs px-2 py-1 rounded bg-white text-accent font-semibold hover:bg-gray-200">Save</button>
+                                <button onClick={() => onSetEditing(null)} className="text-xs px-2 py-1 rounded bg-black/10 hover:bg-black/20 text-black">Cancel</button>
+                                <button onClick={handleSave} className="text-xs px-2 py-1 rounded bg-black text-white font-semibold hover:bg-neutral-800">Save</button>
                             </div>
                         </div>
                     ) : (
                         <p className="text-base whitespace-pre-wrap">{message.originalText}</p>
                     )}
                     {message.attachments && message.attachments.length > 0 && (
-                         <ul className="mt-2 pt-2 border-t border-white/20">
+                         <ul className="mt-2 pt-2 border-t border-black/10">
                             {message.attachments.map((file, index) => (
-                                <li key={index} className="flex items-center gap-2 text-sm text-white/80">
+                                <li key={index} className="flex items-center gap-2 text-sm text-black/70">
                                     <AttachmentIcon className="w-4 h-4" />
                                     <span>{file.name}</span>
                                 </li>
@@ -170,7 +170,7 @@ const UserMessage: React.FC<{ message: ChatMessage; isEditing: boolean; onSetEdi
                         </ul>
                     )}
                     {message.originalAudioFileName && (
-                         <div className="mt-2 pt-2 border-t border-white/20 flex items-center gap-2 text-sm text-white/80">
+                         <div className="mt-2 pt-2 border-t border-black/10 flex items-center gap-2 text-sm text-black/70">
                             <MicrophoneIcon className="w-4 h-4"/>
                             <span>Transcribed from: <em className="italic">{message.originalAudioFileName}</em></span>
                         </div>
@@ -307,14 +307,15 @@ const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => 
 
 const LoadingMessage: React.FC = () => {
   return (
-    <div className="flex justify-start animate-fade-in">
-        <div className="bg-bg-surface text-text-primary p-4 rounded-xl rounded-bl-lg shadow-sm border border-border-default flex flex-col gap-2 min-w-[180px]">
-            <div className="flex items-center space-x-1.5">
-                <span className="h-2 w-2 bg-accent rounded-full animate-pulse-warm [animation-delay:-0.3s]"></span>
-                <span className="h-2 w-2 bg-accent rounded-full animate-pulse-warm [animation-delay:-0.15s]"></span>
-                <span className="h-2 w-2 bg-accent rounded-full animate-pulse-warm"></span>
+    <div className="flex justify-start animate-fade-in" role="status" aria-live="polite">
+        <div className="bg-bg-surface text-text-primary p-4 rounded-xl rounded-bl-lg shadow-sm border border-white/15 flex flex-col gap-3 min-w-[260px]">
+            <div className="flex items-center gap-3">
+                <div className="h-5 w-5 rounded-full border-2 border-white/25 border-t-white animate-spin" aria-hidden="true" />
+                <div>
+                    <p className="text-sm font-bold text-white">Translating...</p>
+                    <p className="text-[11px] text-text-secondary mt-0.5">Checking language, tone, and cultural nuance.</p>
+                </div>
             </div>
-            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.1em] animate-pulse">AfriTranslate is thinking...</p>
         </div>
     </div>
   );

@@ -44,14 +44,14 @@ const NavButton: React.FC<{ label: string; icon: React.ReactNode; isActive: bool
     <button
         onClick={onClick}
         className={`flex items-center gap-3 w-full px-3 py-2 md:py-2 rounded-lg text-[13px] font-medium transition-all group relative ${
-            isActive 
-            ? 'bg-gradient-to-r from-accent/10 to-transparent text-white border-l-2 border-accent' 
+            isActive
+            ? 'bg-gradient-to-r from-white/10 to-transparent text-white border-l-2 border-white'
             : 'text-text-secondary hover:bg-white/5 hover:text-text-primary border-l-2 border-transparent'
         } ${disabled ? 'opacity-30 cursor-not-allowed' : ''} ${isLocked ? 'opacity-70 hover:opacity-100' : ''}`}
     >
-        <div className={`transition-colors ${isActive ? 'text-accent' : 'text-text-secondary group-hover:text-text-primary'}`}>{icon}</div>
+        <div className={`transition-colors ${isActive ? 'text-white' : 'text-text-secondary group-hover:text-text-primary'}`}>{icon}</div>
         <span className="flex-1 text-left truncate">{label}</span>
-        {isLocked && <LockIcon className="w-3.5 h-3.5 text-accent/70" />}
+        {isLocked && <LockIcon className="w-3.5 h-3.5 text-white/70" />}
     </button>
 );
 
@@ -94,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     // Trial status computed from profile
     const trialStatus = currentUser ? getTrialStatus({ plan: currentUser.plan, trial_start_date: (currentUser as any).trial_start_date || null }) : null;
     const hasPremiumTrialAccess = trialStatus ? (trialStatus.isPremium || trialStatus.isOnTrial) : false;
-    
+
     const hasAccess = (minLevel: number) => {
         if (hasPremiumTrialAccess) return true; // Trial or Premium grants access
         if (currentLevel >= 2) return true; // Paid Premium and above
@@ -151,23 +151,23 @@ const Sidebar: React.FC<SidebarProps> = ({
                         <CloseIcon className="w-5 h-5" />
                     </button>
                 </div>
-                
-                <button 
+
+                <button
                     onClick={() => { onNewChat(); setIsOpen(false); }}
                     className="w-full h-10 md:h-10 bg-white/5 border border-white/10 text-white font-semibold rounded-lg flex items-center justify-center gap-2 hover:bg-white/10 hover:border-white/20 transition-all shadow-sm group"
                 >
                     <PlusIcon />
-                    <span className="group-hover:text-accent transition-colors">New Project</span>
+                    <span className="group-hover:text-white transition-colors">New Project</span>
                 </button>
 
                 <div className="relative group">
-                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary group-focus-within:text-accent transition-colors" />
-                    <input 
+                    <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-secondary group-focus-within:text-white transition-colors" />
+                    <input
                         type="text"
                         placeholder="Search projects..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full h-9 md:h-9 pl-8 pr-3 bg-black/20 border border-white/5 rounded-lg text-[11px] text-text-primary focus:ring-1 focus:ring-accent/50 focus:border-accent/50 outline-none placeholder:text-text-secondary/50 transition-all"
+                        className="w-full h-9 md:h-9 pl-8 pr-3 bg-black/20 border border-white/5 rounded-lg text-[11px] text-text-primary focus:ring-1 focus:ring-white/50 focus:border-white/50 outline-none placeholder:text-text-secondary/50 transition-all"
                     />
                 </div>
             </div>
@@ -274,7 +274,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                                     </button>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); onDeleteConversation(convo.id); }}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-text-secondary hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
                                     >
                                         <TrashIcon className="w-3.5 h-3.5" />
                                     </button>
@@ -292,16 +292,16 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <NavButton label="My Profile" icon={<UserIcon className="w-4 h-4" />} isActive={currentView === 'profile'} onClick={() => { onSetView('profile'); setIsOpen(false); }} />
                 <NavButton label="Library" icon={<LibraryIcon className="w-4 h-4" />} isActive={currentView === 'library'} onClick={() => { onShowLibrary(); setIsOpen(false); }} />
                 <NavButton label="Plans" icon={<PriceTagIcon className="w-4 h-4" />} isActive={currentView === 'pricing'} onClick={() => { onShowPricing(); setIsOpen(false); }} />
-                
+
                 <div className="mt-3 px-3 py-2 bg-gradient-to-r from-white/5 to-transparent rounded-lg border border-white/5 flex items-center justify-between">
                     <div className="flex flex-col">
                         <span className="text-[9px] text-text-secondary font-bold uppercase tracking-wider">Plan</span>
-                        <span className="text-xs font-bold text-accent drop-shadow-sm">{currentUser?.plan || 'Free'}</span>
+                        <span className="text-xs font-bold text-white drop-shadow-sm">{currentUser?.plan || 'Free'}</span>
                     </div>
                     {currentUser?.plan !== 'Entreprise' && (
                         <button
                             onClick={onUpgrade}
-                            className="text-[9px] font-bold text-bg-main bg-accent px-2.5 py-1 rounded shadow-lg shadow-accent/20 hover:bg-white hover:text-accent transition-all"
+                            className="text-[9px] font-bold text-bg-main bg-white px-2.5 py-1 rounded shadow-lg shadow-white/10 hover:bg-neutral-200 hover:text-black transition-all"
                         >
                             UPGRADE
                         </button>
@@ -310,17 +310,17 @@ const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Trial Banner */}
                 {trialStatus && trialStatus.isOnTrial && (
-                    <div className="mt-3 p-3 rounded-lg border border-yellow-600 bg-gradient-to-br from-yellow-900 to-yellow-800 text-yellow-300">
+                    <div className="mt-3 p-3 rounded-lg border border-white/20 bg-white/10 text-white">
                         <div className="text-xs font-bold uppercase tracking-wider">⚡ Premium Trial</div>
                         <div className="text-lg font-black">{trialStatus.daysRemaining} days remaining</div>
-                        <button onClick={onUpgrade} className="mt-2 px-3 py-1 text-[10px] font-bold border border-yellow-600 rounded text-yellow-300 hover:bg-yellow-700/20">Upgrade to keep Premium</button>
+                        <button onClick={onUpgrade} className="mt-2 px-3 py-1 text-[10px] font-bold border border-white/30 rounded text-white hover:bg-white/10">Upgrade to keep Premium</button>
                     </div>
                 )}
                 {trialStatus && trialStatus.trialExpired && (
                     <div className="mt-3 p-3 rounded-lg border border-white/10 bg-gray-800 text-gray-400">
                         <div className="text-xs font-bold uppercase tracking-wider">🔒 Trial Ended</div>
                         <div className="text-sm">Upgrade to access Premium features</div>
-                        <button onClick={onUpgrade} className="mt-2 px-3 py-1 text-[10px] font-bold bg-accent text-black rounded hover:bg-white hover:text-accent transition-colors">Upgrade Now</button>
+                        <button onClick={onUpgrade} className="mt-2 px-3 py-1 text-[10px] font-bold bg-white text-black rounded hover:bg-neutral-200 hover:text-black transition-colors">Upgrade Now</button>
                     </div>
                 )}
 
@@ -329,7 +329,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 {onLogout && (
                     <button
                         onClick={() => { onLogout(); setIsOpen(false); }}
-                        className="md:hidden mt-3 w-full touch-target flex items-center justify-center gap-2 py-2 text-text-secondary hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all border border-white/5"
+                        className="md:hidden mt-3 w-full touch-target flex items-center justify-center gap-2 py-2 text-text-secondary hover:text-white hover:bg-white/10 rounded-lg transition-all border border-white/5"
                     >
                         <LogoutIcon className="w-4 h-4" />
                         <span className="text-xs font-medium">Sign Out</span>

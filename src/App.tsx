@@ -78,11 +78,11 @@ const TranslatorApp: React.FC<{
     const [currentUser, setCurrentUser] = useState<User | null>(initialUser);
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
-    
+
     const [conversations, setConversations] = useState<(Omit<Conversation, 'messages'>)[]>([]);
     const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
     const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
-    
+
     const [currentView, setCurrentView] = useState<View>(() => {
         // If the user deep-linked into /studio/creative, start in 'creative'
         // synchronously so the URL-sync effect does not race against the
@@ -96,7 +96,7 @@ const TranslatorApp: React.FC<{
     const [currentMode, setCurrentMode] = useState<TranslationMode>('chat');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    
+
     // Chat Configuration State (for new chats or creating context)
     const [chatConfig, setChatConfig] = useState({ source: 'en', target: 'sw', tone: 'Friendly' });
 
@@ -190,7 +190,7 @@ const TranslatorApp: React.FC<{
         const { data } = await supabase.from('library_items').select('*').order('id', { ascending: false });
         setLibraryItems(data || []);
     };
-    
+
     useEffect(() => {
         if (!currentUser) return;
         fetchLibraryItems();
@@ -241,8 +241,8 @@ const TranslatorApp: React.FC<{
         setIsLoading(true);
         handleSetView('chat');
         // Ensure we are in chat mode when selecting a conversation, usually conversations are chats
-        setCurrentMode('chat'); 
-        
+        setCurrentMode('chat');
+
         const { data: convoData } = await supabase.from('conversations').select('*').eq('id', id).eq('user_id', currentUser?.id).single();
         if (convoData) {
             const { data: messagesData } = await supabase.from('chat_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
@@ -325,7 +325,7 @@ const TranslatorApp: React.FC<{
 
             // 4. Update UI & DB with AI Response
             setActiveConversation({ ...currentConvo, messages: [...messagesWithUser, aiMsg] });
-            
+
             await supabase.from('chat_messages').insert({
                 conversation_id: conversationId,
                 role: 'ai',
@@ -344,7 +344,7 @@ const TranslatorApp: React.FC<{
     const handleRateMessage = async (id: number, rating: 'good' | 'bad') => {
         // Optimistic update
         if (activeConversation) {
-            const updatedMessages = activeConversation.messages.map(m => 
+            const updatedMessages = activeConversation.messages.map(m =>
                 m.id === id ? { ...m, rating } : m
             );
             setActiveConversation({ ...activeConversation, messages: updatedMessages });
@@ -370,10 +370,10 @@ const TranslatorApp: React.FC<{
     const handleConfirmDeleteConversation = async () => {
         if (deletingConversationId !== null) {
             const id = deletingConversationId;
-            
+
             // Optimistic UI update
             setConversations(prev => prev.filter(c => c.id !== id));
-            
+
             // If deleting the active chat, reset to new chat
             if (activeConversation?.id === id) {
                 handleNewChat();
@@ -381,7 +381,7 @@ const TranslatorApp: React.FC<{
 
             // Perform DB deletion
             await supabase.from('conversations').delete().eq('id', id).eq('user_id', currentUser?.id);
-            
+
             // Close modal
             setIsDeleteModalOpen(false);
             setDeletingConversationId(null);
@@ -412,7 +412,7 @@ const TranslatorApp: React.FC<{
         if (currentView === 'useCases') return <UseCasesPage />;
         if (currentView === 'testimonials') return <TestimonialsPage />;
         if (currentView === 'glossary' && currentUser) return <GlossaryVault userId={currentUser.id} />;
-        
+
         switch(currentMode) {
             case 'script': return <ScriptTranslator />;
             case 'book': return <BookTranslator />;
@@ -421,8 +421,8 @@ const TranslatorApp: React.FC<{
             case 'transcriber': return <AudioTranscriber />;
             case 'studio': return <TranslationStudio userId={currentUser.id} />;
             case 'chat':
-                return <Chat 
-                    isOffline={isOffline} 
+                return <Chat
+                    isOffline={isOffline}
                     messages={activeConversation?.messages || []}
                     onSendMessage={handleChatSendMessage}
                     onRateMessage={handleRateMessage}
@@ -438,22 +438,22 @@ const TranslatorApp: React.FC<{
                 return <TranslationStudio />;
         }
     };
-    
+
     if (!currentUser) return null;
 
     if (currentUser.role === 'admin') {
-        return <AdminPortal 
-            currentLibrary={libraryItems} 
-            users={allUsers} 
-            onAddItem={handleAddItem} 
-            onUpdateItem={handleUpdateItem} 
-            onDeleteItem={handleDeleteItem} 
-            onLogout={handleLogout} 
-            currentUser={currentUser} 
+        return <AdminPortal
+            currentLibrary={libraryItems}
+            users={allUsers}
+            onAddItem={handleAddItem}
+            onUpdateItem={handleUpdateItem}
+            onDeleteItem={handleDeleteItem}
+            onLogout={handleLogout}
+            currentUser={currentUser}
             onUpdateUserRole={handleUpdateUserRole}
         />;
     }
-    
+
     // Identify views that manage their own full-height layout and internal scrolling (App-like behavior)
     // vs views that act like traditional web pages (Page-like behavior)
     const fullHeightViews: (View | TranslationMode)[] = [
@@ -518,9 +518,9 @@ const TranslatorApp: React.FC<{
               onUpgrade={() => { setHighlightedPlan(null); setIsUpgradeModalOpen(true); }}
           />
           <UpgradeModal isOpen={isUpgradeModalOpen} onClose={() => setIsUpgradeModalOpen(false)} highlightedPlan={highlightedPlan} onChoosePlan={(plan) => { setSelectedPlanForPayment(plan); setIsUpgradeModalOpen(false); setCurrentView('payment'); }} onContactSales={() => { setIsUpgradeModalOpen(false); setCurrentView('contact');}} />
-          
+
           {/* Delete Confirmation Modal */}
-          <ConfirmationModal 
+          <ConfirmationModal
               isOpen={isDeleteModalOpen}
               onClose={() => { setIsDeleteModalOpen(false); setDeletingConversationId(null); }}
               onConfirm={handleConfirmDeleteConversation}
@@ -546,29 +546,29 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                     <>
                         {/* HERO SECTION */}
                         <section className="relative py-24 md:py-32 overflow-hidden flex flex-col items-center text-center">
-                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(244,163,0,0.08),transparent_70%)] pointer-events-none"></div>
-                            
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.08),transparent_70%)] pointer-events-none"></div>
+
                             <div className="relative z-10 container mx-auto px-4 max-w-5xl">
                                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold tracking-widest text-text-secondary uppercase mb-8 animate-fade-in">
                                     <span className="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
                                     The Enterprise Standard for African Localization
                                 </div>
-                                
+
                                 <h1 className="text-5xl md:text-7xl font-brand font-bold text-white tracking-tight mb-6 animate-slide-in-up leading-[1.1]">
                                     Unlock the World's Next <br />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-yellow-200">Global Growth Engine.</span>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-neutral-400">Global Growth Engine.</span>
                                 </h1>
-                                
+
                                 <p className="mt-6 max-w-2xl mx-auto text-base md:text-lg text-text-secondary leading-relaxed animate-slide-in-up delay-100">
                                     AfriTranslate Studio is the first AI infrastructure designed to bridge the gap between global business and African cultural reality. Scale operations, marketing, and support across 54 countries with culturally intelligent automation.
                                 </p>
-                                
+
                                 <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-in-up delay-200">
-                                    <button onClick={() => onStart('chat')} className="px-8 py-4 bg-accent text-bg-main font-bold text-sm rounded-xl hover:scale-105 hover:shadow-[0_0_30px_rgba(244,163,0,0.4)] transition-all duration-300 w-full sm:w-auto">
+                                    <button onClick={() => onStart('chat')} className="px-8 py-4 bg-white text-black font-bold text-sm rounded-xl hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.25)] transition-all duration-300 w-full sm:w-auto">
                                         LAUNCH STUDIO
                                     </button>
-                                    <button onClick={() => { 
-                                        const demoEl = document.getElementById('demo-section'); 
+                                    <button onClick={() => {
+                                        const demoEl = document.getElementById('demo-section');
                                         demoEl?.scrollIntoView({ behavior: 'smooth' });
                                     }} className="px-8 py-4 bg-white/5 border border-white/10 text-white font-bold text-sm rounded-xl hover:bg-white/10 transition-all w-full sm:w-auto">
                                         VIEW CAPABILITIES
@@ -596,7 +596,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
 
                         {/* INTERACTIVE DEMO */}
                         <div id="demo-section" className="py-24 bg-bg-surface/30 border-b border-border-default relative">
-                            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent"></div>
+                            <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
                             <DemoSection isLandingSection={true} />
                         </div>
 
@@ -606,10 +606,10 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                                 <h2 className="text-3xl font-bold text-white mb-4">Strategic Advantages</h2>
                                 <p className="text-text-secondary max-w-2xl mx-auto">Why Fortune 500 companies and NGOs choose AfriTranslate for their African expansion strategies.</p>
                             </div>
-                            
+
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-accent/30 transition-colors group">
-                                    <div className="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center mb-6 text-blue-400 group-hover:scale-110 transition-transform">
+                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-white/30 transition-colors group">
+                                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 text-white group-hover:scale-110 transition-transform">
                                         <GlobeIcon className="w-6 h-6" />
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-3">Hyper-Localization at Scale</h3>
@@ -617,9 +617,9 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                                         Move beyond generic translation. Our engine adapts content to regional dialects, ensuring your marketing resonates with Hausa speakers in Kano differently than Yoruba speakers in Lagos.
                                     </p>
                                 </div>
-                                
-                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-accent/30 transition-colors group">
-                                    <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center mb-6 text-red-400 group-hover:scale-110 transition-transform">
+
+                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-white/30 transition-colors group">
+                                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 text-white group-hover:scale-110 transition-transform">
                                         <LockIcon className="w-6 h-6" />
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-3">Brand Safety & Nuance</h3>
@@ -627,9 +627,9 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                                         Avoid costly cultural misunderstandings. Our system flags potential taboos and suggests culturally appropriate alternatives for sensitive topics in real-time.
                                     </p>
                                 </div>
-                                
-                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-accent/30 transition-colors group">
-                                    <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-6 text-accent group-hover:scale-110 transition-transform">
+
+                                <div className="p-8 rounded-2xl bg-bg-surface border border-white/5 hover:border-white/30 transition-colors group">
+                                    <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-6 text-white group-hover:scale-110 transition-transform">
                                         <BoltIcon className="w-6 h-6" />
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-3">Seamless Integration</h3>
@@ -658,10 +658,10 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                         {/* FINAL CTA */}
                         <section className="py-24 text-center px-4">
                             <div className="max-w-3xl mx-auto bg-gradient-to-b from-bg-surface to-bg-main border border-white/10 rounded-3xl p-12 relative overflow-hidden">
-                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-accent/5 blur-3xl rounded-full -z-10"></div>
+                                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-white/5 blur-3xl rounded-full -z-10"></div>
                                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to expand your reach?</h2>
                                 <p className="text-text-secondary mb-8">Join 10,000+ creators, businesses, and NGOs using AfriTranslate to connect authentically with the African continent.</p>
-                                <button onClick={() => onStart('chat')} className="px-10 py-4 bg-accent text-bg-main font-bold rounded-xl hover:bg-white hover:text-accent transition-all shadow-xl text-sm uppercase tracking-wide">
+                                <button onClick={() => onStart('chat')} className="px-10 py-4 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 hover:text-black transition-all shadow-xl text-sm uppercase tracking-wide">
                                     Get Started for Free
                                 </button>
                                 <p className="mt-4 text-[10px] text-text-secondary uppercase tracking-widest">No credit card required • 14-day Pro trial included</p>
@@ -673,7 +673,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
     };
 
     return (
-        <div className="bg-bg-main h-full w-full text-text-primary selection:bg-accent selection:text-bg-main overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
+        <div className="bg-bg-main h-full w-full text-text-primary selection:bg-white/20 selection:text-white overflow-x-hidden overflow-y-auto custom-scrollbar flex flex-col">
             <header className="sticky top-0 z-50 bg-bg-main/80 backdrop-blur-md border-b border-border-default h-16 flex-shrink-0 transition-all">
                 <div className="container mx-auto px-6 h-full flex items-center justify-between">
                     <button onClick={() => setCurrentView('home')} className="flex items-center hover:opacity-80 transition-opacity group" aria-label="AfriTranslate AI — home">
@@ -685,11 +685,11 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                         />
                     </button>
                     <nav className="hidden lg:flex items-center gap-8">
-                        <button onClick={() => setCurrentView('about')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Mission</button>
-                        <button onClick={() => setCurrentView('useCases')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'useCases' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Solutions</button>
-                        <button onClick={() => setCurrentView('testimonials')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'testimonials' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Stories</button>
+                        <button onClick={() => setCurrentView('about')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'about' ? 'text-white' : 'text-text-secondary hover:text-white'}`}>Mission</button>
+                        <button onClick={() => setCurrentView('useCases')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'useCases' ? 'text-white' : 'text-text-secondary hover:text-white'}`}>Solutions</button>
+                        <button onClick={() => setCurrentView('testimonials')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'testimonials' ? 'text-white' : 'text-text-secondary hover:text-white'}`}>Stories</button>
                     </nav>
-                    <button onClick={() => onStart('chat')} className="px-5 py-2 bg-white/5 border border-white/10 text-white font-bold text-xs rounded-lg hover:bg-white/10 hover:border-accent/30 hover:text-accent transition-all">
+                    <button onClick={() => onStart('chat')} className="px-5 py-2 bg-white/5 border border-white/10 text-white font-bold text-xs rounded-lg hover:bg-white/10 hover:border-white/30 hover:text-white transition-all">
                         Log In
                     </button>
                 </div>
@@ -697,15 +697,15 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
             <main className="flex-1">
                 {renderContent()}
             </main>
-            <Footer 
-                onShowTerms={() => onStart('terms')} 
-                onShowPrivacy={() => onStart('privacy')} 
-                onShowLanding={() => setCurrentView('home')} 
+            <Footer
+                onShowTerms={() => onStart('terms')}
+                onShowPrivacy={() => onStart('privacy')}
+                onShowLanding={() => setCurrentView('home')}
             />
             {/* Download Manual section in Footer area */}
             <div className="bg-black/30 border-t border-white/5 py-2 text-center">
-                <button 
-                    onClick={generateOperationalManual} 
+                <button
+                    onClick={generateOperationalManual}
                     className="text-[10px] text-text-secondary hover:text-white flex items-center justify-center gap-1.5 mx-auto transition-colors font-mono"
                 >
                     <DownloadIcon className="w-3 h-3" />
@@ -829,7 +829,7 @@ const App: React.FC = () => {
     };
 
     if (!isLoaded || (isSignedIn && isBootstrappingProfile)) {
-        return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;
+        return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div></div>;
     }
 
     if (bootstrapError) {
@@ -840,7 +840,7 @@ const App: React.FC = () => {
                     <p className="text-sm text-text-secondary mb-5">{bootstrapError}</p>
                     <button
                         onClick={handleLogout}
-                        className="px-5 py-2.5 bg-accent text-bg-main font-bold rounded-lg hover:bg-accent/90 transition-colors"
+                        className="px-5 py-2.5 bg-white text-black font-bold rounded-lg hover:bg-neutral-200 transition-colors"
                     >
                         Sign Out
                     </button>
@@ -858,7 +858,7 @@ const App: React.FC = () => {
     }
 
     if (!currentUser) {
-        return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-accent border-t-transparent rounded-full animate-spin"></div></div>;
+        return <div className="bg-bg-main h-screen w-screen flex items-center justify-center"><div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin"></div></div>;
     }
 
     return <TranslatorApp
