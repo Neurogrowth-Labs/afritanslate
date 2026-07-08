@@ -99,9 +99,6 @@ const Chat: React.FC<ChatProps> = ({
         return LANGUAGE_REGIONS[targetLang] || LANGUAGE_REGIONS['en']; // Fallback
     }, [targetLang]);
 
-    const sourceLanguageName = useMemo(() => LANGUAGES.find(lang => lang.code === sourceLang)?.name || sourceLang.toUpperCase(), [sourceLang]);
-    const targetLanguageName = useMemo(() => LANGUAGES.find(lang => lang.code === targetLang)?.name || targetLang.toUpperCase(), [targetLang]);
-
     useLayoutEffect(() => {
         const updateComposerHeight = () => {
             const nextHeight = composerRef.current?.offsetHeight ?? 192;
