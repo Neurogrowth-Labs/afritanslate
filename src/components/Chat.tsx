@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
 import type { ChatMessage } from '../types';
 import { LANGUAGES, TONES, LIVE_VOICES, LANGUAGE_REGIONS } from '../../constants';
 import * as geminiService from '../../services/geminiService';
@@ -90,6 +90,8 @@ const Chat: React.FC<ChatProps> = ({
     const audioChunksRef = useRef<Blob[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const composerRef = useRef<HTMLDivElement>(null);
+    const [composerHeight, setComposerHeight] = useState(192);
     const audioContextRef = useRef<AudioContext | null>(null);
 
     // Filter regions based on target language
@@ -97,7 +99,26 @@ const Chat: React.FC<ChatProps> = ({
         return LANGUAGE_REGIONS[targetLang] || LANGUAGE_REGIONS['en']; // Fallback
     }, [targetLang]);
 
-    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isLoading]);
+    useLayoutEffect(() => {
+        const updateComposerHeight = () => {
+            const nextHeight = composerRef.current?.offsetHeight ?? 192;
+            setComposerHeight(nextHeight);
+        };
+
+        updateComposerHeight();
+
+        if (!composerRef.current || typeof ResizeObserver === 'undefined') {
+            return;
+        }
+
+        const observer = new ResizeObserver(updateComposerHeight);
+        observer.observe(composerRef.current);
+        return () => observer.disconnect();
+    }, [attachments.length, error, isVisualMode, showRegionSelect]);
+
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, [messages, isLoading, composerHeight]);
 
     // Reset region when lang changes, but keep custom if user typed it
     useEffect(() => {
@@ -225,7 +246,10 @@ const Chat: React.FC<ChatProps> = ({
 
     return (
         <div className="flex flex-col h-full w-full overflow-hidden bg-transparent relative">
-            <div className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 custom-scrollbar pb-32">
+            <div
+                className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 custom-scrollbar"
+                style={{ paddingBottom: `${composerHeight + 24}px` }}
+            >
                 {showWelcome ? <WelcomeScreen /> : (
                     <div className="max-w-4xl mx-auto space-y-8">
                         {messages.length === 0 && conversationId && (
@@ -262,13 +286,17 @@ const Chat: React.FC<ChatProps> = ({
                             </React.Fragment>
                         ))}
                         {isLoading && <Message message={{id:0, conversation_id: 0, role:'ai', originalText:'', created_at: ''}} isLoading={true} />}
-                        <div ref={messagesEndRef} className="h-4" />
+                        <div
+                            ref={messagesEndRef}
+                            className="h-4"
+                            style={{ scrollMarginBottom: `${composerHeight + 24}px` }}
+                        />
                     </div>
                 )}
             </div>
 
             {/* Floating Input Area */}
-            <div className="flex-shrink-0 absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-bg-main via-bg-main to-transparent z-20 pointer-events-none">
+            <div ref={composerRef} className="flex-shrink-0 absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-bg-main via-bg-main to-transparent z-20 pointer-events-none">
                 <div className="max-w-4xl mx-auto pointer-events-auto">
                     {/* Quick Action Buttons */}
                     <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 pb-1">

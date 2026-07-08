@@ -3,7 +3,7 @@
 <html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>AfriTranslate AI | Studio</title>
@@ -16,9 +16,9 @@
         --bg-main: #121212;
         --bg-surface: #171717;
         --border-color: #262626;
-        --accent: #F4A300;
+        --accent: #ffffff;
       }
-      
+
       html, body, #root {
         height: 100dvh;
         width: 100%;
@@ -101,7 +101,7 @@
         width: 24px;
         height: 100%;
         pointer-events: none;
-        background: linear-gradient(to right, transparent, rgba(244, 163, 0, 0.08));
+        background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.08));
         display: block;
       }
 
@@ -146,7 +146,7 @@
         border-radius: 10px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: rgba(244, 163, 0, 0.5); /* Accent color with opacity */
+        background: rgba(255, 255, 255, 0.35); /* Accent color with opacity */
       }
 
       * {
@@ -166,7 +166,7 @@
       }
       .prose strong { color: #fff; font-weight: 600; }
       .prose h1, .prose h2, .prose h3 { color: #fff; margin-top: 1em; margin-bottom: 0.5em; font-weight: 600; }
-      
+
       .animate-fade-in {
         animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
@@ -224,13 +224,13 @@
               '6xl': '64px',
             },
             colors: {
-              'brand-primary': '#F4A300',
+              'brand-primary': '#ffffff',
               'bg-main': '#121212',
               'bg-surface': '#171717',
               'border-default': '#262626',
               'text-primary': '#e5e5e5',
               'text-secondary': '#737373',
-              'accent': '#F4A300',
+              'accent': '#ffffff',
             },
             animation: {
                 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
@@ -255,7 +255,7 @@
 }
 </script>
 </head>
-  <body class="antialiased selection:bg-accent/30 selection:text-white">
+  <body class="antialiased selection:bg-white/20 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
