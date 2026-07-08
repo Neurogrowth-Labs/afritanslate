@@ -238,23 +238,55 @@ const TranslatorApp: React.FC<{
     };
 
     const handleSelectConversation = async (id: number) => {
-        setIsLoading(true);
-        handleSetView('chat');
-        // Ensure we are in chat mode when selecting a conversation, usually conversations are chats
-        setCurrentMode('chat');
+        // Prevent unnecessary reload if the selected conversation is already visible.
+        if (activeConversation?.id === id && !isLoading) {
+            setIsSidebarOpen(false);
+            return;
+        }
 
-        const { data: convoData } = await supabase.from('conversations').select('*').eq('id', id).eq('user_id', currentUser?.id).single();
-        if (convoData) {
-            const { data: messagesData } = await supabase.from('chat_messages').select('*').eq('conversation_id', id).order('created_at', { ascending: true });
-            const convo = { ...convoData, messages: messagesData as ChatMessage[] };
+        try {
+            setIsLoading(true);
+            setActiveConversation(null);
+            handleSetView('chat');
+            // Ensure we are in chat mode when selecting a conversation, usually conversations are chats
+            setCurrentMode('chat');
+
+            const { data: convoData, error: convoError } = await supabase
+                .from('conversations')
+                .select('*')
+                .eq('id', id)
+                .eq('user_id', currentUser?.id)
+                .maybeSingle();
+
+            if (convoError) throw convoError;
+            if (!convoData) throw new Error('Conversation not found');
+
+            const { data: messagesData, error: messagesError } = await supabase
+                .from('chat_messages')
+                .select('*')
+                .eq('conversation_id', id)
+                .order('created_at', { ascending: true });
+
+            if (messagesError) throw messagesError;
+
+            const convo: Conversation = {
+                ...convoData,
+                messages: (messagesData || []) as ChatMessage[],
+            };
+
             setActiveConversation(convo);
             setChatConfig({
-                source: convo.source_lang,
-                target: convo.target_lang,
-                tone: convo.tone
+                source: convo.source_lang || 'en',
+                target: convo.target_lang || 'sw',
+                tone: convo.tone || 'Friendly'
             });
+        } catch (err) {
+            console.error('Error loading conversation:', err);
+            setActiveConversation(null);
+        } finally {
+            setIsLoading(false);
+            setIsSidebarOpen(false);
         }
-        setIsLoading(false);
     };
 
     const handleChatSendMessage = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
@@ -433,6 +465,7 @@ const TranslatorApp: React.FC<{
                     onTargetLangChange={(lang) => setChatConfig(prev => ({ ...prev, target: lang }))}
                     onToneChange={(tone) => setChatConfig(prev => ({ ...prev, tone }))}
                     isLoading={isLoading}
+                    conversationId={activeConversation?.id}
                 />;
             default:
                 return <TranslationStudio />;
