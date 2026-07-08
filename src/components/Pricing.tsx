@@ -29,16 +29,16 @@ const Pricing: React.FC<PricingProps> = ({ onChoosePlan, onContactSales, current
                 {standardModels.map((model) => {
                     const isCurrentPlan = model.name === currentUserPlan;
                     return (
-                        <div 
-                            key={model.name} 
+                        <div
+                            key={model.name}
                             className={`bg-bg-surface p-5 rounded-lg border flex flex-col relative transition-all duration-300 ${
                                 model.isFeatured && !isCurrentPlan
-                                ? 'border-accent ring-1 ring-accent' 
+                                ? 'border-white ring-1 ring-white'
                                 : 'border-border-default'
-                            } ${isCurrentPlan ? 'border-accent bg-accent/5' : 'hover:border-accent/70 hover:-translate-y-0.5'}`}
+                            } ${isCurrentPlan ? 'border-white bg-white/5' : 'hover:border-white/70 hover:-translate-y-0.5'}`}
                         >
                             {model.isFeatured && !isCurrentPlan && (
-                                <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Popular</div>
+                                <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Popular</div>
                             )}
                              {isCurrentPlan && (
                                 <div className="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 bg-border-default text-text-primary text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">Current</div>
@@ -55,19 +55,19 @@ const Pricing: React.FC<PricingProps> = ({ onChoosePlan, onContactSales, current
                             <ul className="space-y-2 text-text-primary text-xs mb-6 flex-grow">
                                 {model.features?.map(feature => (
                                     <li key={feature} className="flex items-start gap-2">
-                                        <CheckIcon className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                                        <CheckIcon className="w-4 h-4 text-white flex-shrink-0 mt-0.5" />
                                         <span>{feature}</span>
                                     </li>
                                 ))}
                             </ul>
-                            <button 
+                            <button
                                 onClick={() => onChoosePlan(model.name)}
                                 disabled={isCurrentPlan}
                                 className={`w-full mt-auto py-2 text-xs font-bold rounded transition-colors ${
                                 isCurrentPlan
                                 ? 'bg-bg-main text-text-secondary cursor-default border border-border-default'
-                                : model.isFeatured 
-                                ? 'bg-accent text-white hover:bg-accent/90' 
+                                : model.isFeatured
+                                ? 'bg-white text-black hover:bg-white/90'
                                 : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
                             }`}>
                                 {isCurrentPlan ? 'Active Plan' : 'Select Plan'}
@@ -76,10 +76,10 @@ const Pricing: React.FC<PricingProps> = ({ onChoosePlan, onContactSales, current
                     );
                 })}
             </div>
-            
+
             {/* Enterprise Card */}
             {enterpriseModel && (
-                 <div className={`mt-4 bg-bg-surface p-4 rounded-lg border flex flex-col md:flex-row items-center gap-4 ${currentUserPlan === 'Entreprise' ? 'border-accent bg-accent/5' : 'border-border-default'}`}>
+                 <div className={`mt-4 bg-bg-surface p-4 rounded-lg border flex flex-col md:flex-row items-center gap-4 ${currentUserPlan === 'Entreprise' ? 'border-white bg-white/5' : 'border-border-default'}`}>
                     <div className="flex-grow text-center md:text-left">
                         <h3 className="text-lg font-semibold text-white">{enterpriseModel.name}</h3>
                         <p className="text-text-secondary text-xs mt-1">
@@ -87,7 +87,7 @@ const Pricing: React.FC<PricingProps> = ({ onChoosePlan, onContactSales, current
                         </p>
                     </div>
                     <div className="flex-shrink-0">
-                         <button 
+                         <button
                             onClick={onContactSales}
                              disabled={currentUserPlan === 'Entreprise'}
                             className="px-4 py-2 bg-white/5 border border-white/10 text-white text-xs font-bold rounded hover:bg-white/10 transition-colors disabled:opacity-50 disabled:cursor-default">
@@ -102,13 +102,13 @@ const Pricing: React.FC<PricingProps> = ({ onChoosePlan, onContactSales, current
                 <h2 className="text-lg font-bold text-white mb-4">Add-ons</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     {ADD_ONS.map(addon => (
-                        <div key={addon.name} className="bg-bg-surface p-3 rounded-lg border border-border-default flex gap-3 hover:border-accent/50 transition-colors">
+                        <div key={addon.name} className="bg-bg-surface p-3 rounded-lg border border-border-default flex gap-3 hover:border-white/50 transition-colors">
                              <div className="bg-bg-main p-2 rounded-md h-fit flex-shrink-0">
-                                <addon.icon className="w-4 h-4 text-accent" />
+                                <addon.icon className="w-4 h-4 text-white" />
                             </div>
                             <div>
                                 <h4 className="font-semibold text-white text-xs">{addon.name}</h4>
-                                <p className="text-xs text-accent font-bold mt-0.5">{addon.price}</p>
+                                <p className="text-xs text-white font-bold mt-0.5">{addon.price}</p>
                                 <p className="text-[10px] text-text-secondary mt-1 leading-tight">{addon.description}</p>
                             </div>
                         </div>
