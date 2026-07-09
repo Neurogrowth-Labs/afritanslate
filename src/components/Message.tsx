@@ -47,8 +47,8 @@ const ThumbsDownIcon = ({ filled }: { filled: boolean }) => (
     </svg>
 );
 
-const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
-    const rawHtml = marked.parse(content, { gfm: true, breaks: true }) as string; 
+const MarkdownRenderer: React.FC<{ content?: string | null }> = ({ content }) => {
+    const rawHtml = marked.parse(content || '', { gfm: true, breaks: true }) as string; 
     const sanitizedHtml = DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
     
     return (
@@ -131,7 +131,7 @@ const GroundingSources: React.FC<{ sources: GroundingSource[] }> = ({ sources })
 );
 
 const UserMessage: React.FC<{ message: ChatMessage; isEditing: boolean; onSetEditing: (id: number | null) => void; onSaveEdit: (id: number, newText: string) => void }> = ({ message, isEditing, onSetEditing, onSaveEdit }) => {
-    const [editText, setEditText] = useState(message.originalText);
+    const [editText, setEditText] = useState(message.originalText || '');
 
     const handleSave = () => {
         onSaveEdit(message.id, editText);
@@ -157,7 +157,7 @@ const UserMessage: React.FC<{ message: ChatMessage; isEditing: boolean; onSetEdi
                             </div>
                         </div>
                     ) : (
-                        <p className="text-base whitespace-pre-wrap">{message.originalText}</p>
+                        <p className="text-base whitespace-pre-wrap">{message.originalText || ''}</p>
                     )}
                     {message.attachments && message.attachments.length > 0 && (
                          <ul className="mt-2 pt-2 border-t border-black/10">
@@ -201,7 +201,7 @@ const UserMessage: React.FC<{ message: ChatMessage; isEditing: boolean; onSetEdi
 const AIMessage: React.FC<{ message: ChatMessage; onRegenerate: (id: number) => void; onRate: (id: number, rating: 'good' | 'bad') => void; onPlayTTS: (text: string) => void; isOffline?: boolean }> = ({ message, onRegenerate, onRate, onPlayTTS, isOffline = false }) => {
     const handleCopy = (text: string) => navigator.clipboard.writeText(text);
     
-    const textToPlay = message.translation ? message.translation.culturallyAwareTranslation : message.originalText;
+    const textToPlay = message.translation ? message.translation.culturallyAwareTranslation : (message.originalText || '');
 
     return (
         <div className="flex justify-start animate-fade-in">

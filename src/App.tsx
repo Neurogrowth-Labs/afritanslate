@@ -96,6 +96,7 @@ const TranslatorApp: React.FC<{
     const [currentMode, setCurrentMode] = useState<TranslationMode>('chat');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [chatLoadError, setChatLoadError] = useState<string | null>(null);
 
     // Chat Configuration State (for new chats or creating context)
     const [chatConfig, setChatConfig] = useState({ source: 'en', target: 'sw', tone: 'Friendly' });
@@ -237,6 +238,22 @@ const TranslatorApp: React.FC<{
         setCurrentMode('chat');
     };
 
+    const normalizeChatMessage = (message: Partial<ChatMessage> & Record<string, unknown>): ChatMessage => ({
+        ...message,
+        id: Number(message.id),
+        conversation_id: Number(message.conversation_id),
+        role: message.role === 'user' ? 'user' : 'ai',
+        originalText: String(message.originalText ?? message.original_text ?? ''),
+        translation: message.translation as ChatMessage['translation'],
+        rating: message.rating as ChatMessage['rating'],
+        attachments: Array.isArray(message.attachments) ? message.attachments as ChatMessage['attachments'] : undefined,
+        groundingSources: Array.isArray(message.groundingSources) ? message.groundingSources as ChatMessage['groundingSources'] : undefined,
+        imageURL: typeof message.imageURL === 'string' ? message.imageURL : undefined,
+        originalAudioFileName: typeof message.originalAudioFileName === 'string' ? message.originalAudioFileName : undefined,
+        isOfflineTranslation: Boolean(message.isOfflineTranslation),
+        created_at: String(message.created_at ?? new Date().toISOString()),
+    });
+
     const handleSelectConversation = async (id: number) => {
         // Prevent unnecessary reload if the selected conversation is already visible.
         if (activeConversation?.id === id && !isLoading) {
@@ -246,6 +263,7 @@ const TranslatorApp: React.FC<{
 
         try {
             setIsLoading(true);
+            setChatLoadError(null);
             setActiveConversation(null);
             handleSetView('chat');
             // Ensure we are in chat mode when selecting a conversation, usually conversations are chats
@@ -271,7 +289,7 @@ const TranslatorApp: React.FC<{
 
             const convo: Conversation = {
                 ...convoData,
-                messages: (messagesData || []) as ChatMessage[],
+                messages: (messagesData || []).map(normalizeChatMessage),
             };
 
             setActiveConversation(convo);
@@ -283,6 +301,7 @@ const TranslatorApp: React.FC<{
         } catch (err) {
             console.error('Error loading conversation:', err);
             setActiveConversation(null);
+            setChatLoadError('We could not load that past chat. Please try again, or start a new chat.');
         } finally {
             setIsLoading(false);
             setIsSidebarOpen(false);
@@ -292,6 +311,7 @@ const TranslatorApp: React.FC<{
     const handleChatSendMessage = async (text: string, attachments: File[], audioSourceFileName: string | null) => {
         if (!currentUser) return;
         setIsLoading(true);
+        setChatLoadError(null);
 
         try {
             let conversationId = activeConversation?.id;
@@ -466,6 +486,7 @@ const TranslatorApp: React.FC<{
                     onToneChange={(tone) => setChatConfig(prev => ({ ...prev, tone }))}
                     isLoading={isLoading}
                     conversationId={activeConversation?.id}
+                    loadError={chatLoadError}
                 />;
             default:
                 return <TranslationStudio />;
