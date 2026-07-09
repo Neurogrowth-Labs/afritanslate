@@ -42,6 +42,7 @@ interface ChatProps {
     onToneChange: (tone: string) => void;
     isLoading: boolean;
     conversationId?: number;
+    loadError?: string | null;
 }
 
 const QUICK_ACTIONS = [
@@ -54,7 +55,7 @@ const QUICK_ACTIONS = [
 
 const Chat: React.FC<ChatProps> = ({ 
     isOffline, isVisualMode = false, messages, onSendMessage, onRateMessage,
-    sourceLang, targetLang, tone, onSourceLangChange, onTargetLangChange, onToneChange, isLoading, conversationId
+    sourceLang, targetLang, tone, onSourceLangChange, onTargetLangChange, onToneChange, isLoading, conversationId, loadError
 }) => {
     const [inputText, setInputText] = useState('');
     const [attachments, setAttachments] = useState<File[]>([]);
@@ -253,7 +254,12 @@ const Chat: React.FC<ChatProps> = ({
                 className="flex-1 min-h-0 overflow-y-auto p-4 md:p-8 custom-scrollbar"
                 style={{ paddingBottom: `${composerHeight + 24}px` }}
             >
-                {showWelcome ? <WelcomeScreen /> : (
+                {loadError ? (
+                    <div className="max-w-2xl mx-auto mt-10 rounded-2xl border border-red-500/30 bg-red-950/20 p-5 text-center text-sm text-red-100 shadow-xl animate-fade-in">
+                        <p className="font-bold text-white">Past chat failed to load</p>
+                        <p className="mt-2 text-red-100/80">{loadError}</p>
+                    </div>
+                ) : showWelcome ? <WelcomeScreen /> : (
                     <div className="max-w-4xl mx-auto space-y-8">
                         {messages.length === 0 && conversationId && (
                             <div className="text-center text-text-secondary text-sm mt-10 animate-fade-in">
