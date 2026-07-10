@@ -451,7 +451,7 @@ const TranslatorApp: React.FC<{
         if (currentView === 'profile' && currentUser) return <ProfileDashboard user={currentUser} onUpdateUser={setCurrentUser} />;
         if (currentView === 'library') return <Library libraryItems={libraryItems} onSelectExample={() => {}} />;
         if (currentView === 'pricing') return <Pricing onChoosePlan={(plan) => {setSelectedPlanForPayment(plan); setCurrentView('payment');}} onContactSales={() => setCurrentView('contact')} currentUserPlan={currentUser?.plan || 'Free'} />;
-        if (currentView === 'payment') return <Payment selectedItemName={selectedPlanForPayment} onBack={() => setCurrentView('pricing')} onPaymentSuccess={(plan) => { setSelectedPlanForPayment(plan); setCurrentView('paymentSuccess'); }} />;
+        if (currentView === 'payment') return <Payment selectedItemName={selectedPlanForPayment} currentUser={currentUser} onBack={() => setCurrentView('pricing')} onPaymentSuccess={(plan) => { setSelectedPlanForPayment(plan); setCurrentView('paymentSuccess'); }} />;
         if (currentView === 'paymentSuccess') return <PaymentSuccess planName={selectedPlanForPayment} onGoToDashboard={handleNewChat} />;
         if (currentView === 'terms') return <TermsOfService />;
         if (currentView === 'privacy') return <PrivacyPolicy />;
