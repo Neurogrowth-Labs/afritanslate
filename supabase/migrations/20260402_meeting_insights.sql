@@ -73,6 +73,13 @@ alter table meeting_insight_segments enable row level security;
 alter table meeting_insight_exports  enable row level security;
 
 -- Jobs: users own their own rows; service role bypasses RLS
+-- Supabase may re-run this setup SQL against a database where these policies
+-- already exist, so drop by canonical name before recreating them.
+drop policy if exists "Users can read own jobs" on meeting_insight_jobs;
+drop policy if exists "Users can insert own jobs" on meeting_insight_jobs;
+drop policy if exists "Users can read own segments" on meeting_insight_segments;
+drop policy if exists "Users can read own exports" on meeting_insight_exports;
+
 create policy "Users can read own jobs"
   on meeting_insight_jobs for select
   using (user_id = auth.uid()::text);
