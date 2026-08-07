@@ -3,7 +3,7 @@ import { useAuth, useClerk, useUser } from '@clerk/clerk-react';
 import { supabase } from '../supabaseClient';
 
 // --- MAIN APPLICATION IMPORTS --- //
-import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
+import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole, TranslationResult } from './types';
 
 // Import all components needed for the app
 import Sidebar from './components/Sidebar';
@@ -238,21 +238,60 @@ const TranslatorApp: React.FC<{
         setCurrentMode('chat');
     };
 
-    const normalizeChatMessage = (message: Partial<ChatMessage> & Record<string, unknown>): ChatMessage => ({
-        ...message,
-        id: Number(message.id),
-        conversation_id: Number(message.conversation_id),
-        role: message.role === 'user' ? 'user' : 'ai',
-        originalText: String(message.originalText ?? message.original_text ?? ''),
-        translation: message.translation as ChatMessage['translation'],
-        rating: message.rating as ChatMessage['rating'],
-        attachments: Array.isArray(message.attachments) ? message.attachments as ChatMessage['attachments'] : undefined,
-        groundingSources: Array.isArray(message.groundingSources) ? message.groundingSources as ChatMessage['groundingSources'] : undefined,
-        imageURL: typeof message.imageURL === 'string' ? message.imageURL : undefined,
-        originalAudioFileName: typeof message.originalAudioFileName === 'string' ? message.originalAudioFileName : undefined,
-        isOfflineTranslation: Boolean(message.isOfflineTranslation),
-        created_at: String(message.created_at ?? new Date().toISOString()),
-    });
+    const isRecord = (value: unknown): value is Record<string, unknown> =>
+        typeof value === 'object' && value !== null && !Array.isArray(value);
+
+    const parseJsonField = (value: unknown): unknown => {
+        if (typeof value !== 'string') return value;
+        try {
+            return JSON.parse(value);
+        } catch {
+            return value;
+        }
+    };
+
+    const normalizeTranslation = (value: unknown): TranslationResult | undefined => {
+        const parsed = parseJsonField(value);
+        if (!isRecord(parsed)) return undefined;
+
+        return {
+            directTranslation: String(parsed.directTranslation ?? parsed.direct_translation ?? ''),
+            culturallyAwareTranslation: String(
+                parsed.culturallyAwareTranslation ?? parsed.culturally_aware_translation ?? parsed.text ?? ''
+            ),
+            explanation: String(parsed.explanation ?? parsed.nuance_explanation ?? ''),
+            pronunciation: typeof parsed.pronunciation === 'string' ? parsed.pronunciation : undefined,
+            original: typeof parsed.original === 'string' ? parsed.original : undefined,
+            linguisticAnalysis: isRecord(parsed.linguisticAnalysis)
+                ? parsed.linguisticAnalysis as TranslationResult['linguisticAnalysis']
+                : isRecord(parsed.linguistic_analysis)
+                    ? parsed.linguistic_analysis as TranslationResult['linguisticAnalysis']
+                    : undefined,
+        };
+    };
+
+    const normalizeChatMessage = (message: Partial<ChatMessage> & Record<string, unknown>): ChatMessage => {
+        const attachments = parseJsonField(message.attachments);
+        const groundingSources = parseJsonField(message.groundingSources ?? message.grounding_sources);
+        const numericId = Number(message.id);
+        const numericConversationId = Number(message.conversation_id);
+
+        return {
+            ...message,
+            id: Number.isFinite(numericId) ? numericId : Date.now(),
+            conversation_id: Number.isFinite(numericConversationId) ? numericConversationId : 0,
+            role: message.role === 'user' ? 'user' : 'ai',
+            originalText: String(message.originalText ?? message.original_text ?? message.content ?? ''),
+            translation: normalizeTranslation(message.translation),
+            rating: message.rating === 'good' || message.rating === 'bad' ? message.rating : undefined,
+            attachments: Array.isArray(attachments) ? attachments as ChatMessage['attachments'] : undefined,
+            groundingSources: Array.isArray(groundingSources) ? groundingSources as ChatMessage['groundingSources'] : undefined,
+            imageURL: typeof message.imageURL === 'string' ? message.imageURL : typeof message.image_url === 'string' ? message.image_url : undefined,
+            originalAudioFileName: typeof message.originalAudioFileName === 'string' ? message.originalAudioFileName : typeof message.original_audio_file_name === 'string' ? message.original_audio_file_name : undefined,
+            isOfflineTranslation: Boolean(message.isOfflineTranslation ?? message.is_offline_translation),
+            created_at: String(message.created_at ?? new Date().toISOString()),
+        };
+    };
 
     const handleSelectConversation = async (id: number) => {
         // Prevent unnecessary reload if the selected conversation is already visible.

@@ -1,5 +1,6 @@
 
-import React, { useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
+import React, { Component, useState, useRef, useEffect, useMemo, useLayoutEffect } from 'react';
+import type { ReactNode } from 'react';
 import type { ChatMessage } from '../types';
 import { LANGUAGES, TONES, LIVE_VOICES, LANGUAGE_REGIONS } from '../../constants';
 import * as geminiService from '../../services/geminiService';
@@ -43,6 +44,32 @@ interface ChatProps {
     isLoading: boolean;
     conversationId?: number;
     loadError?: string | null;
+}
+
+
+class ChatMessageErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+    state = { hasError: false };
+
+    static getDerivedStateFromError() {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error: unknown) {
+        console.error('Error rendering past chat message:', error);
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="rounded-xl border border-red-500/30 bg-red-950/20 p-4 text-sm text-red-100">
+                    <p className="font-bold text-white">One message could not be displayed</p>
+                    <p className="mt-1 text-red-100/80">The rest of this past chat is still available.</p>
+                </div>
+            );
+        }
+
+        return this.props.children;
+    }
 }
 
 const QUICK_ACTIONS = [
@@ -269,16 +296,18 @@ const Chat: React.FC<ChatProps> = ({
                         )}
                         {messages.map((msg, index) => (
                             <React.Fragment key={msg.id || index}>
-                                <Message 
-                                    message={msg}
-                                    isEditing={editingMessageId === msg.id}
-                                    onSetEditing={setEditingMessageId}
-                                    onSaveEdit={() => {}}
-                                    onRegenerate={() => {}}
-                                    onRate={onRateMessage}
-                                    onPlayTTS={handlePlayTTS}
-                                    isOffline={isOffline}
-                                />
+                                <ChatMessageErrorBoundary>
+                                    <Message
+                                        message={msg}
+                                        isEditing={editingMessageId === msg.id}
+                                        onSetEditing={setEditingMessageId}
+                                        onSaveEdit={() => {}}
+                                        onRegenerate={() => {}}
+                                        onRate={onRateMessage}
+                                        onPlayTTS={handlePlayTTS}
+                                        isOffline={isOffline}
+                                    />
+                                </ChatMessageErrorBoundary>
                                 {msg.role === 'ai' && !isLoading && index === messages.length - 1 && (
                                     <div className="flex flex-wrap gap-2 mt-2 animate-fade-in">
                                         {['Make it more formal', 'Adapt for youth', 'Check cultural risks'].map(suggestion => (
