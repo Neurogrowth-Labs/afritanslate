@@ -564,7 +564,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                                 </h1>
                                 
                                 <p className="mt-6 max-w-2xl mx-auto text-base md:text-lg text-text-secondary leading-relaxed animate-slide-in-up delay-100">
-                                    AfriTranslate Studio is the first AI infrastructure designed to bridge the gap between global business and African cultural reality. Scale operations, marketing, and support across 54 countries with culturally intelligent automation.
+                                    Gallo Studio is the first AI infrastructure designed to bridge the gap between global business and African cultural reality. Scale operations, marketing, and support across 54 countries with culturally intelligent automation.
                                 </p>
                                 
                                 <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-in-up delay-200">
@@ -608,7 +608,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                         <section className="py-24 container mx-auto px-4 max-w-6xl">
                             <div className="text-center mb-16">
                                 <h2 className="text-3xl font-bold text-white mb-4">Strategic Advantages</h2>
-                                <p className="text-text-secondary max-w-2xl mx-auto">Why Fortune 500 companies and NGOs choose AfriTranslate for their African expansion strategies.</p>
+                                <p className="text-text-secondary max-w-2xl mx-auto">Why Fortune 500 companies and NGOs choose Gallo for their African expansion strategies.</p>
                             </div>
                             
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -638,7 +638,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-3">Seamless Integration</h3>
                                     <p className="text-sm text-text-secondary leading-relaxed">
-                                        Connect AfriTranslate directly into your CMS, CRM, or support platform via our robust API. Designed for developers, optimized for enterprise scale.
+                                        Connect Gallo directly into your CMS, CRM, or support platform via our robust API. Designed for developers, optimized for enterprise scale.
                                     </p>
                                 </div>
                             </div>
@@ -664,7 +664,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                             <div className="max-w-3xl mx-auto bg-gradient-to-b from-bg-surface to-bg-main border border-white/10 rounded-3xl p-12 relative overflow-hidden">
                                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-accent/5 blur-3xl rounded-full -z-10"></div>
                                 <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Ready to expand your reach?</h2>
-                                <p className="text-text-secondary mb-8">Join 10,000+ creators, businesses, and NGOs using AfriTranslate to connect authentically with the African continent.</p>
+                                <p className="text-text-secondary mb-8">Join 10,000+ creators, businesses, and NGOs using Gallo to connect authentically with the African continent.</p>
                                 <button onClick={() => onStart('chat')} className="px-10 py-4 bg-accent text-bg-main font-bold rounded-xl hover:bg-white hover:text-accent transition-all shadow-xl text-sm uppercase tracking-wide">
                                     Get Started for Free
                                 </button>
@@ -684,7 +684,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                         <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-accent to-yellow-600 flex items-center justify-center text-bg-main shadow-lg group-hover:shadow-accent/20 transition-all">
                             <LogoIcon className="w-5 h-5" />
                         </div>
-                        <span className="text-lg font-brand font-bold text-white tracking-tight">AfriTranslate AI</span>
+                        <span className="text-lg font-brand font-bold text-white tracking-tight">Gallo AI</span>
                     </button>
                     <nav className="hidden lg:flex items-center gap-8">
                         <button onClick={() => setCurrentView('about')} className={`text-xs font-bold uppercase tracking-wider transition-colors ${currentView === 'about' ? 'text-accent' : 'text-text-secondary hover:text-white'}`}>Mission</button>

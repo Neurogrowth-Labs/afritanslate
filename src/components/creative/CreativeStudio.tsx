@@ -77,7 +77,7 @@ const CreativeStudio: React.FC<CreativeStudioProps> = ({ defaultTab = 'motion' }
                         <div>
                             <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Creative Studio</h1>
                             <p className="text-[12px] text-text-secondary">
-                                One canvas for African motion + visual storytelling. Powered by AfriTranslate AI.
+                                One canvas for African motion + visual storytelling. Powered by Gallo AI.
                             </p>
                         </div>
                     </div>

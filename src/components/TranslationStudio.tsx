@@ -248,7 +248,7 @@ const TranslationStudio: React.FC<TranslationStudioProps> = ({ userId }) => {
 
     const content = `
 ===========================================
-AFRITRANSLATE - TRANSLATION EXPORT
+GALLO - TRANSLATION EXPORT
 ===========================================
 
 SOURCE TEXT:

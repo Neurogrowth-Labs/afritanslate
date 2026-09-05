@@ -62,7 +62,7 @@ const UseCasesPage: React.FC = () => {
                     Solutions for Every Sector
                 </h1>
                 <p className="text-lg text-text-secondary max-w-3xl mx-auto leading-relaxed">
-                    From Nollywood scriptwriters to pan-African bank executives, AfriTranslate AI adapts to the specific vocabulary and cultural expectations of your industry.
+                    From Nollywood scriptwriters to pan-African bank executives, Gallo AI adapts to the specific vocabulary and cultural expectations of your industry.
                 </p>
             </div>
             
@@ -134,7 +134,7 @@ const UseCasesPage: React.FC = () => {
             <div className="mt-16 bg-gradient-to-r from-accent/10 to-transparent rounded-2xl p-10 text-center border border-accent/20 relative overflow-hidden">
                 <div className="relative z-10">
                     <h2 className="text-2xl font-bold text-white mb-3">Ready to localize your impact?</h2>
-                    <p className="text-base text-text-secondary max-w-xl mx-auto mb-8">Join the thousands of professionals using AfriTranslate to bridge the cultural gap.</p>
+                    <p className="text-base text-text-secondary max-w-xl mx-auto mb-8">Join the thousands of professionals using Gallo to bridge the cultural gap.</p>
                     <button className="px-8 py-3 bg-accent text-bg-main text-sm font-bold rounded-xl hover:scale-105 transition-transform shadow-xl">
                         Get Started Now
                     </button>

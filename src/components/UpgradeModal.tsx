@@ -36,7 +36,7 @@ const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, highlighte
           </button>
           
           <div className="text-center mb-8">
-            <h2 id="upgrade-modal-title" className="text-3xl font-bold text-white">Upgrade Your AfriTranslate AI Plan</h2>
+            <h2 id="upgrade-modal-title" className="text-3xl font-bold text-white">Upgrade Your Gallo AI Plan</h2>
             <p className="text-text-secondary mt-2">Unlock powerful features to enhance your translation experience.</p>
           </div>
 
