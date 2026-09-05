@@ -258,12 +258,12 @@ const Chat: React.FC<ChatProps> = ({
                  <div className="w-20 h-20 rounded-2xl bg-white flex-shrink-0 flex items-center justify-center mb-6 mx-auto border border-white/10 shadow-2xl shadow-white/10 p-3">
                     <img
                         src="/logo-transparent.svg"
-                        alt="AfriTranslate AI"
+                        alt="Gallo AI"
                         className="h-full w-full object-contain"
                         draggable={false}
                     />
                 </div>
-                <h1 className="text-3xl font-bold text-white tracking-tight">AfriTranslate AI</h1>
+                <h1 className="text-3xl font-bold text-white tracking-tight">Gallo AI</h1>
                 <p className="text-text-secondary mt-3 text-sm leading-relaxed">
                     Your culturally intelligent translation partner. Start a conversation to begin bridging worlds.
                 </p>

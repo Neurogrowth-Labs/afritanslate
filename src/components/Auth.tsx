@@ -105,7 +105,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin, onSignUp, onGoogleLogin, er
                     <div className="flex justify-center mb-2 text-accent">
                         <LogoIcon className="w-12 h-12" />
                     </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">{showAdminUI ? 'Admin Portal' : 'AfriTranslate AI'}</h1>
+                    <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">{showAdminUI ? 'Admin Portal' : 'Gallo AI'}</h1>
                      { showAdminUI ? (
                         <p className="text-text-primary h-10 flex flex-col items-center justify-center">
                             <span className="text-sm font-semibold text-amber-500 animate-fade-in">Administrator Access</span>
