@@ -653,7 +653,7 @@ const LandingPage: React.FC<{ initialView?: View; onStart: (view?: View) => void
                                 </h1>
 
                                 <p className="mt-6 max-w-2xl mx-auto text-base md:text-lg text-text-secondary leading-relaxed animate-slide-in-up delay-100">
-                                    AfriTranslate Studio is the first AI infrastructure designed to bridge the gap between global business and African cultural reality. Scale operations, marketing, and support across 54 countries with culturally intelligent automation.
+                                    Gallo Studio is the first AI infrastructure designed to bridge the gap between global business and African cultural reality. Scale operations, marketing, and support across 54 countries with culturally intelligent automation.
                                 </p>
 
                                 <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-slide-in-up delay-200">
