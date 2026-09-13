@@ -3,7 +3,7 @@ import { useAuth, useClerk, useUser } from '@clerk/clerk-react';
 import { supabase } from '../supabaseClient';
 
 // --- MAIN APPLICATION IMPORTS --- //
-import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, UserRole } from './types';
+import type { User, View, TranslationMode, Conversation, LibraryItem, ChatMessage, GroundingSource, LinguisticAnalysis, MessageAttachment, TranslationResult, UserRole } from './types';
 
 // Import all components needed for the app
 import Sidebar from './components/Sidebar';
@@ -238,21 +238,114 @@ const TranslatorApp: React.FC<{
         setCurrentMode('chat');
     };
 
-    const normalizeChatMessage = (message: Partial<ChatMessage> & Record<string, unknown>): ChatMessage => ({
-        ...message,
-        id: Number(message.id),
-        conversation_id: Number(message.conversation_id),
-        role: message.role === 'user' ? 'user' : 'ai',
-        originalText: String(message.originalText ?? message.original_text ?? ''),
-        translation: message.translation as ChatMessage['translation'],
-        rating: message.rating as ChatMessage['rating'],
-        attachments: Array.isArray(message.attachments) ? message.attachments as ChatMessage['attachments'] : undefined,
-        groundingSources: Array.isArray(message.groundingSources) ? message.groundingSources as ChatMessage['groundingSources'] : undefined,
-        imageURL: typeof message.imageURL === 'string' ? message.imageURL : undefined,
-        originalAudioFileName: typeof message.originalAudioFileName === 'string' ? message.originalAudioFileName : undefined,
-        isOfflineTranslation: Boolean(message.isOfflineTranslation),
-        created_at: String(message.created_at ?? new Date().toISOString()),
-    });
+    const isRecord = (value: unknown): value is Record<string, unknown> =>
+        typeof value === 'object' && value !== null && !Array.isArray(value);
+
+    const parseJsonField = (value: unknown): unknown => {
+        if (typeof value !== 'string') return value;
+        try {
+            return JSON.parse(value);
+        } catch {
+            return value;
+        }
+    };
+
+    const asText = (value: unknown, fallback = ''): string =>
+        typeof value === 'string' ? value : typeof value === 'number' || typeof value === 'boolean' ? String(value) : fallback;
+
+    const normalizeLinguisticAnalysis = (value: unknown): LinguisticAnalysis | undefined => {
+        const parsed = parseJsonField(value);
+        if (!isRecord(parsed)) return undefined;
+
+        const structural = isRecord(parsed.structural) ? parsed.structural : {};
+        const sociolinguistic = isRecord(parsed.sociolinguistic) ? parsed.sociolinguistic : {};
+        const glottolog = isRecord(parsed.glottolog) ? parsed.glottolog : undefined;
+
+        return {
+            structural: {
+                tonality: asText(structural.tonality) || undefined,
+                nounClasses: asText(structural.nounClasses ?? structural.noun_classes) || undefined,
+                phonetics: asText(structural.phonetics) || undefined,
+                grammarNotes: asText(structural.grammarNotes ?? structural.grammar_notes) || undefined,
+            },
+            sociolinguistic: {
+                intellectualization: asText(sociolinguistic.intellectualization) || undefined,
+                translanguaging: asText(sociolinguistic.translanguaging) || undefined,
+                culturalContext: asText(sociolinguistic.culturalContext ?? sociolinguistic.cultural_context) || undefined,
+            },
+            glottolog: glottolog ? {
+                family: asText(glottolog.family),
+                parent: asText(glottolog.parent),
+                glottocode: asText(glottolog.glottocode),
+                features: asText(glottolog.features),
+            } : undefined,
+        };
+    };
+
+    const normalizeTranslation = (value: unknown): TranslationResult | undefined => {
+        const parsed = parseJsonField(value);
+        if (!isRecord(parsed)) return undefined;
+
+        return {
+            directTranslation: asText(parsed.directTranslation ?? parsed.direct_translation),
+            culturallyAwareTranslation: asText(
+                parsed.culturallyAwareTranslation ?? parsed.culturally_aware_translation ?? parsed.text
+            ),
+            explanation: asText(parsed.explanation ?? parsed.nuance_explanation),
+            pronunciation: asText(parsed.pronunciation) || undefined,
+            original: asText(parsed.original) || undefined,
+            linguisticAnalysis: normalizeLinguisticAnalysis(parsed.linguisticAnalysis ?? parsed.linguistic_analysis),
+        };
+    };
+
+    const normalizeAttachments = (value: unknown): MessageAttachment[] | undefined => {
+        const parsed = parseJsonField(value);
+        if (!Array.isArray(parsed)) return undefined;
+
+        const attachments = parsed.flatMap((attachment): MessageAttachment[] => {
+            if (!isRecord(attachment)) return [];
+            const name = asText(attachment.name);
+            return name ? [{ name, type: asText(attachment.type) }] : [];
+        });
+        return attachments.length > 0 ? attachments : undefined;
+    };
+
+    const normalizeGroundingSources = (value: unknown): GroundingSource[] | undefined => {
+        const parsed = parseJsonField(value);
+        if (!Array.isArray(parsed)) return undefined;
+
+        const sources = parsed.flatMap((source): GroundingSource[] => {
+            if (!isRecord(source)) return [];
+            const uri = asText(source.uri ?? source.url);
+            if (!uri) return [];
+            return [{ uri, title: asText(source.title ?? source.name, 'Web Source') }];
+        });
+        return sources.length > 0 ? sources : undefined;
+    };
+
+    const normalizeBoolean = (value: unknown): boolean =>
+        value === true || value === 1 || value === 'true' || value === '1';
+
+    const normalizeChatMessage = (message: unknown, index: number): ChatMessage => {
+        const row = isRecord(message) ? message : {};
+        const numericId = Number(row.id);
+        const numericConversationId = Number(row.conversation_id ?? row.conversationId);
+
+        return {
+            id: Number.isFinite(numericId) ? numericId : -(index + 1),
+            conversation_id: Number.isFinite(numericConversationId) ? numericConversationId : 0,
+            role: row.role === 'user' ? 'user' : 'ai',
+            originalText: asText(row.originalText ?? row.original_text ?? row.content),
+            translation: normalizeTranslation(row.translation),
+            rating: row.rating === 'good' || row.rating === 'bad' ? row.rating : undefined,
+            attachments: normalizeAttachments(row.attachments),
+            groundingSources: normalizeGroundingSources(row.groundingSources ?? row.grounding_sources),
+            imageURL: asText(row.imageURL ?? row.image_url) || undefined,
+            originalAudioFileName: asText(row.originalAudioFileName ?? row.original_audio_file_name) || undefined,
+            isOfflineTranslation: normalizeBoolean(row.isOfflineTranslation ?? row.is_offline_translation),
+            created_at: asText(row.created_at) || new Date(0).toISOString(),
+        };
+    };
 
     const handleSelectConversation = async (id: number) => {
         // Prevent unnecessary reload if the selected conversation is already visible.
