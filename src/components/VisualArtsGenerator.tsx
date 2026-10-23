@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { PaletteIcon, ImageIcon, DownloadIcon, SparklesIcon } from './Icons';
-import * as geminiService from '../services/geminiService';
+import * as geminiService from '../../services/geminiService';
 
 interface VisualArtsGeneratorProps {
     isOffline?: boolean;

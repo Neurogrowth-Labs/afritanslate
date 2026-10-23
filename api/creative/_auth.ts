@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from '../_lib/http.js';
 import { verifyClerkBearer } from '../_lib/auth.js';
 
 /**
@@ -6,8 +6,8 @@ import { verifyClerkBearer } from '../_lib/auth.js';
  * New code should import `verifyClerkBearer` from `api/_lib/auth` directly.
  */
 export async function verifyClerkToken(
-    req: VercelRequest,
-    res: VercelResponse,
+    req: ApiRequest,
+    res: ApiResponse,
 ): Promise<string | null> {
     return verifyClerkBearer(req, res);
 }

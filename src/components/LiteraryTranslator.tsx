@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { BookIcon, TranslateIcon, InfoIcon } from './Icons';
-import * as geminiService from '../services/geminiService';
-import { LANGUAGES } from '../constants';
+import * as geminiService from '../../services/geminiService';
+import { LANGUAGES } from '../../constants';
 import LanguageSelector from './LanguageSelector';
 
 interface LiteraryTranslatorProps {

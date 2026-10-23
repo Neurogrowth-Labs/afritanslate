@@ -263,9 +263,9 @@ const TranslatorApp: React.FC<{
             pronunciation: typeof parsed.pronunciation === 'string' ? parsed.pronunciation : undefined,
             original: typeof parsed.original === 'string' ? parsed.original : undefined,
             linguisticAnalysis: isRecord(parsed.linguisticAnalysis)
-                ? parsed.linguisticAnalysis as TranslationResult['linguisticAnalysis']
+                ? parsed.linguisticAnalysis as unknown as TranslationResult['linguisticAnalysis']
                 : isRecord(parsed.linguistic_analysis)
-                    ? parsed.linguistic_analysis as TranslationResult['linguisticAnalysis']
+                    ? parsed.linguistic_analysis as unknown as TranslationResult['linguisticAnalysis']
                     : undefined,
         };
     };

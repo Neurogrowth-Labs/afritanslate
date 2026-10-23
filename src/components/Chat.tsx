@@ -48,6 +48,7 @@ interface ChatProps {
 
 
 class ChatMessageErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+    declare props: Readonly<{ children: ReactNode }> ;
     state = { hasError: false };
 
     static getDerivedStateFromError() {
@@ -71,6 +72,8 @@ class ChatMessageErrorBoundary extends Component<{ children: ReactNode }, { hasE
         return this.props.children;
     }
 }
+
+const getLanguageLabel = (code: string) => LANGUAGES.find((language) => language.code === code)?.name ?? code;
 
 const QUICK_ACTIONS = [
   { label: '🔄 Rewrite', prefix: 'Rewrite this more naturally: ' },
@@ -342,7 +345,7 @@ const Chat: React.FC<ChatProps> = ({
                                 <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin" aria-hidden="true" />
                                 <div>
                                     <p className="text-sm font-bold">Translating your request...</p>
-                                    <p className="text-[11px] text-text-secondary mt-0.5">{sourceLanguageName} → {targetLanguageName}. This can take a moment for cultural nuance checks.</p>
+                                    <p className="text-[11px] text-text-secondary mt-0.5">{getLanguageLabel(sourceLang)} → {getLanguageLabel(targetLang)}. This can take a moment for cultural nuance checks.</p>
                                 </div>
                             </div>
                         </div>

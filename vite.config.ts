@@ -15,6 +15,18 @@ export default defineConfig(() => {
         host: '0.0.0.0',
       },
       plugins: [react()],
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              react: ['react', 'react-dom', 'react-dom/client'],
+              clerk: ['@clerk/clerk-react'],
+              pdf: ['jspdf', 'docx'],
+              animation: ['framer-motion'],
+            },
+          },
+        },
+      },
       resolve: {
         // Force `@google/genai` to resolve to its explicit web entry point
         // (`@google/genai/web`) for the browser bundle. The default `.`

@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from './_lib/http.js';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyClerkToken } from './creative/_auth.js';
 import { GLOTTOLOG_METADATA } from '../shared/glottologMetadata.js';
@@ -1277,8 +1277,8 @@ function validateBody(body: unknown): ProxyRequestBody | string {
 }
 
 export default async function handler(
-    req: VercelRequest,
-    res: VercelResponse,
+    req: ApiRequest,
+    res: ApiResponse,
 ) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');

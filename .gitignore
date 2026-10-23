@@ -27,3 +27,6 @@ temp_interactive_push.bat
 .gitignore
 config.bat
 branch_structure.json
+.env
+.env.*
+!.env.example

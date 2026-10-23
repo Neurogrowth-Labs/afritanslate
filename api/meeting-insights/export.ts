@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from '../_lib/http.js';
 import { verifyClerkBearer } from '../_lib/auth.js';
 import { supabaseAdmin, MissingEnvError } from './_supabase.js';
 
@@ -19,7 +19,7 @@ import { supabaseAdmin, MissingEnvError } from './_supabase.js';
 const ALLOWED_FORMATS = new Set(['txt', 'srt', 'pdf', 'docx']);
 const SIGNED_URL_TTL_SECONDS = 5 * 60;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

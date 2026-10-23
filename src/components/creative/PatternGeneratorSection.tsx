@@ -90,7 +90,7 @@ async function fetchGeneratedPattern(
                 : `Request failed (${res.status})`;
         throw new Error(message);
     }
-    return payload as GeneratePatternResponse;
+    return payload as unknown as GeneratePatternResponse;
 }
 
 // ── Sanitisation (defence in depth) ──────────────────────────────────────────

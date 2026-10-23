@@ -21,12 +21,23 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@components/*": ["src/components/*"],
-      "@services/*": ["services/*"],
-      "@src/*": ["src/*"],
-      "@/*": ["./*"]
+      "@components/*": [
+        "src/components/*"
+      ],
+      "@services/*": [
+        "services/*"
+      ],
+      "@src/*": [
+        "src/*"
+      ],
+      "@/*": [
+        "./*"
+      ]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "App.tsx"
+  ]
 }
