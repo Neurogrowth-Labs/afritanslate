@@ -161,7 +161,7 @@ async function fetchGeneratedImages(
         throw new Error(message);
     }
 
-    return payload as GenerateImageResponse;
+    return payload as unknown as GenerateImageResponse;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────

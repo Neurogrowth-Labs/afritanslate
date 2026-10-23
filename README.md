@@ -27,8 +27,15 @@ View your app in AI Studio: https://ai.studio/apps/drive/1CCDbqTr4f__r60q46vBQI0
    `process.env.GEMINI_API_KEY`. Inlining a server key into the Vite client
    bundle would expose it to anyone who downloads the site (this was security
    finding F-01, fixed in May 2026).
-3. Run the app:
-   `npm run dev`
+3. Verify the release checks, then run the app:
+   ```bash
+   npm run typecheck
+   npm test
+   npm run build
+   npm run dev
+   ```
+
+Use `.env.example` as the non-secret template. Never commit a populated `.env` file.
 
 ## Server-side environment (Vercel)
 
@@ -40,4 +47,6 @@ GEMINI_API_KEY=...                 # required by every /api/* route
 SUPABASE_URL=...                   # not VITE_-prefixed; used by service-role admin
 SUPABASE_SERVICE_ROLE_KEY=...      # used only inside /api/*
 CLERK_SECRET_KEY=...               # used only inside /api/* for Bearer auth
+OPENROUTER_API_KEY=...              # meeting-insights primary AI provider
+MEETING_INSIGHTS_WEBHOOK_SECRET=... # internal meeting job processor trigger
 ```

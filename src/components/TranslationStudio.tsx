@@ -211,10 +211,10 @@ const TranslationStudio: React.FC<TranslationStudioProps> = ({ userId }) => {
   const highlightRisks = (text: string, riskFlags: CulturalTranslationResult['risk_flags']) => {
     if (!riskFlags || riskFlags.length === 0) return text;
 
-    let highlightedText: (string | JSX.Element)[] = [text];
+    let highlightedText: (string | React.ReactElement)[] = [text];
 
     riskFlags.forEach(flag => {
-      const newHighlightedText: (string | JSX.Element)[] = [];
+      const newHighlightedText: (string | React.ReactElement)[] = [];
       highlightedText.forEach(part => {
         if (typeof part !== 'string') {
           newHighlightedText.push(part);

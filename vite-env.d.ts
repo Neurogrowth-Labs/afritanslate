@@ -13,3 +13,11 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare global {
+  interface Window {
+    aistudio?: { hasSelectedApiKey(): Promise<boolean>; openSelectKey(): Promise<void> };
+  }
+}
+
+export {};

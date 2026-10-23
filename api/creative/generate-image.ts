@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from '../_lib/http.js';
 import { GoogleGenAI, Type } from '@google/genai';
 import { verifyClerkToken } from './_auth.js';
 import type {
@@ -213,8 +213,8 @@ function isQuotaOrUnavailableError(err: unknown): boolean {
 // ── Handler ──────────────────────────────────────────────────────────────────
 
 export default async function handler(
-    req: VercelRequest,
-    res: VercelResponse,
+    req: ApiRequest,
+    res: ApiResponse,
 ) {
     if (req.method !== 'POST') {
         res.setHeader('Allow', 'POST');

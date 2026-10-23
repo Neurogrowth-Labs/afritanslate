@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import * as geminiService from '../services/geminiService';
+import * as geminiService from '../../services/geminiService';
 import { SparklesIcon, SendIcon, CloseIcon, MinimizeIcon, MaximizeIcon } from './Icons';
 
 interface AIAssistantProps {

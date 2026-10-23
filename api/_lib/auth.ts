@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { ApiRequest, ApiResponse } from './http.js';
 import { verifyToken } from '@clerk/backend';
 
 
@@ -21,8 +21,8 @@ import { verifyToken } from '@clerk/backend';
  * normal JSON 500 instead of FUNCTION_INVOCATION_FAILED.
  */
 export async function verifyClerkBearer(
-    req: VercelRequest,
-    res: VercelResponse,
+    req: ApiRequest,
+    res: ApiResponse,
 ): Promise<string | null> {
     const secretKey = process.env.CLERK_SECRET_KEY;
     if (!secretKey) {

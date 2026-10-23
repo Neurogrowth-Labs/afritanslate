@@ -2,7 +2,7 @@
 import React, { useState, useCallback } from 'react';
 import { transcribeAudio } from '../../services/geminiService';
 import { CheckIcon, MicrophoneIcon, WordIcon, PdfIcon } from './Icons';
-import type { TranscriptionStyle } from '../types';
+import type { AudioTranscriptionStyle } from '../types';
 
 const CopyIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-4 h-4">
@@ -17,7 +17,7 @@ const AudioTranscriber: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isCopied, setIsCopied] = useState(false);
-    const [transcriptionStyle, setTranscriptionStyle] = useState<TranscriptionStyle>('normal');
+    const [transcriptionStyle, setTranscriptionStyle] = useState<AudioTranscriptionStyle>('normal');
 
     const handleFileChange = (file: File | null) => {
         if (file) {

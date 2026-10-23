@@ -68,21 +68,11 @@ async function generateFromGemini(
   prompt: string,
   systemInstruction?: string
 ): Promise<string> {
-  const { geminiFlash, geminiPro } = await import('./_gemini.js');
+  const { generateGeminiContent } = await import('./_gemini.js');
   const isLocalizationPrompt = /localization engine|translate and localize/i.test(prompt);
-  const model = isLocalizationPrompt ? geminiFlash : geminiPro;
+  const model = isLocalizationPrompt ? 'gemini-2.5-flash' : 'gemini-2.5-pro';
   const userPrompt = systemInstruction ? `${systemInstruction}\n\n${prompt}` : prompt;
-
-  const result = await model.generateContent({
-    contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-  });
-
-  const text = result.response.text();
-  if (!text.trim()) {
-    throw new Error('Gemini returned empty content');
-  }
-
-  return text;
+  return generateGeminiContent(model, userPrompt);
 }
 
 export async function generateContent(

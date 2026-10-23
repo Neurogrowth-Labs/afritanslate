@@ -4,7 +4,7 @@ import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { summarizeMeeting } from '../../services/geminiService';
 import { MOCK_MEETING_TRANSCRIPT, LANGUAGES } from '../../constants';
 import { GoogleMeetIcon, TeamsIcon, ZoomIcon, CalendarIcon, ClockIcon, TrashIcon, MicrophoneIcon, MeetingIcon, CheckIcon, DownloadIcon, SearchIcon, ThinkingIcon, UsersIcon } from './Icons';
-import type { MeetingMode, User, ScheduledMeeting, MeetingAnalysisResult, ActionItem } from '../types';
+import type { MeetingMode, User, ScheduledMeeting, MeetingAnalysisResult, ActionItem, SentimentSection } from '../types';
 import LanguageSelector from './LanguageSelector';
 import { supabase } from '../../supabaseClient';
 
